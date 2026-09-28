@@ -1,0 +1,47 @@
+services:
+  frontend:
+    container_name: fiap-pos-ia-frontend
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  backend:
+    container_name: fiap-pos-ia-backend
+    build:
+      context: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      MONGO_DB_USER: fiap-pos-ia-user
+      MONGO_DB_PASSWORD: fiap-pos-ia-password
+      MONGO_DB_NAME: fiap-pos-ia-db
+      MONGO_DB_SERVER: mongodb://mongodb:27017
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    container_name: fiap-pos-ia-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: fiap-pos-ia-user
+      MONGO_INITDB_ROOT_PASSWORD: fiap-pos-ia-password
+      MONGO_INITDB_DATABASE: fiap-pos-ia-db
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  mongodb_data:
