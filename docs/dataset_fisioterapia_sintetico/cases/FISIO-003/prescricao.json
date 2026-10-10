@@ -1,0 +1,31 @@
+{
+  "prescription_id": "RX-FISIO-003",
+  "synthetic": true,
+  "exercise_id": "SUPINE_PELVIC_TILT",
+  "starting_position": "Deitado de costas sobre colchonete, joelhos flexionados e pés apoiados.",
+  "instructions": [
+    "Inclinar suavemente a pelve",
+    "Aproximar a região lombar do colchonete sem elevar as nádegas",
+    "Retornar ao neutro com controle",
+    "Manter respiração contínua"
+  ],
+  "target_repetitions": 5,
+  "target_sets": 1,
+  "external_load": false,
+  "expected_sequence": [
+    "posição inicial",
+    "inclinação pélvica pequena",
+    "retorno controlado"
+  ],
+  "observable_checks": [
+    "elevação das nádegas",
+    "movimento abrupto",
+    "sequência temporal",
+    "repetições"
+  ],
+  "not_to_infer": [
+    "dor clínica",
+    "diagnóstico ou gravidade",
+    "ativação muscular interna"
+  ]
+}

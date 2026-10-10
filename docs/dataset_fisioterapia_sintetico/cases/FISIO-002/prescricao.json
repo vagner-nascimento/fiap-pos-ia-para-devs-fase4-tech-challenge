@@ -1,0 +1,31 @@
+{
+  "prescription_id": "RX-FISIO-002",
+  "synthetic": true,
+  "exercise_id": "SHOULDER_PENDULUM",
+  "side": "esquerdo",
+  "starting_position": "Uma mão apoiada em mesa estável; tronco ligeiramente inclinado; braço esquerdo relaxado e pendente.",
+  "instructions": [
+    "Manter o braço relaxado",
+    "Produzir pequenas oscilações suaves",
+    "Evitar elevação ativa do ombro"
+  ],
+  "duration_seconds": 15,
+  "external_load": false,
+  "expected_sequence": [
+    "posição apoiada",
+    "braço pendente",
+    "oscilação pequena e controlada"
+  ],
+  "observable_checks": [
+    "presença de apoio",
+    "posição do braço",
+    "amplitude aparente",
+    "flexão do cotovelo",
+    "elevação compensatória do ombro"
+  ],
+  "not_to_infer": [
+    "integridade de tendões",
+    "dor real",
+    "adequação clínica individual"
+  ]
+}

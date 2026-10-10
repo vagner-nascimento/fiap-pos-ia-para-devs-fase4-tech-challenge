@@ -1,0 +1,51 @@
+{
+  "case_id": "FISIO-001",
+  "case_name": "Extensão de joelho sentado",
+  "body_region": "joelho direito",
+  "synthetic": true,
+  "object_classes": [],
+  "clips": [
+    {
+      "clip_id": "001-C01",
+      "label": "referencia_correta",
+      "description": "Cinco repetições controladas; tronco estável.",
+      "audio": "Fisioterapeuta: Sente-se confortavelmente. Estenda lentamente o joelho direito, sem inclinar o tronco. Retorne com controle. Vamos realizar cinco repetições.",
+      "expected": [
+        "sequência correta",
+        "cinco repetições",
+        "tronco estável"
+      ]
+    },
+    {
+      "clip_id": "001-E01",
+      "label": "amplitude_reduzida",
+      "description": "Executar extensão parcial, sem desconforto real.",
+      "audio": "Fisioterapeuta: Estenda o joelho direito até onde foi combinado e retorne lentamente.",
+      "expected": [
+        "amplitude aparentemente menor que a referência",
+        "não concluir causa clínica"
+      ]
+    },
+    {
+      "clip_id": "001-E02",
+      "label": "compensacao_tronco",
+      "description": "Inclinar o tronco para trás durante a extensão.",
+      "audio": "Fisioterapeuta: Mantenha o tronco estável enquanto estende o joelho.",
+      "expected": [
+        "inclinação do tronco sincronizada com a extensão",
+        "divergência entre instrução e vídeo"
+      ]
+    },
+    {
+      "clip_id": "001-E03",
+      "label": "ritmo_acelerado",
+      "description": "Fazer retorno abrupto e ritmo irregular, sem movimento extremo.",
+      "audio": "Fisioterapeuta: Faça o movimento lentamente e controle o retorno.",
+      "expected": [
+        "ritmo irregular",
+        "retorno rápido"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}

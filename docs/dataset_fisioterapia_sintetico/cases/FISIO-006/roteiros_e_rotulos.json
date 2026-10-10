@@ -1,0 +1,42 @@
+{
+  "case_id": "FISIO-006",
+  "case_name": "Abdução de ombro com faixa elástica leve",
+  "body_region": "ombro direito",
+  "synthetic": true,
+  "object_classes": [
+    "faixa elástica de baixa resistência"
+  ],
+  "clips": [
+    {
+      "clip_id": "006-C01",
+      "label": "referencia_correta",
+      "description": "Elevação lateral suave, tronco estável, faixa visível.",
+      "audio": "Fisioterapeuta: Com a faixa leve, eleve o braço para o lado sem inclinar o tronco. Retorne lentamente.",
+      "expected": [
+        "faixa detectada",
+        "trajetória lateral",
+        "tronco estável"
+      ]
+    },
+    {
+      "clip_id": "006-E01",
+      "label": "inclinacao_tronco",
+      "description": "Inclinar o tronco lateralmente para acompanhar a elevação.",
+      "audio": "Fisioterapeuta: Mantenha o tronco estável enquanto eleva o braço.",
+      "expected": [
+        "inclinação lateral do tronco"
+      ]
+    },
+    {
+      "clip_id": "006-E02",
+      "label": "faixa_fora_de_quadro",
+      "description": "Executar movimento com faixa parcialmente fora do enquadramento.",
+      "audio": "Fisioterapeuta: Continue o movimento lentamente.",
+      "expected": [
+        "objeto não detectável ou detecção de baixa confiança",
+        "sistema deve declarar limitação visual"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}

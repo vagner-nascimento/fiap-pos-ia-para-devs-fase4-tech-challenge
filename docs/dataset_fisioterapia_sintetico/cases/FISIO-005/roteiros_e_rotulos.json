@@ -1,0 +1,42 @@
+{
+  "case_id": "FISIO-005",
+  "case_name": "Flexão de ombro com bastão leve",
+  "body_region": "ombros",
+  "synthetic": true,
+  "object_classes": [
+    "bastão de PVC leve ou cabo de espuma"
+  ],
+  "clips": [
+    {
+      "clip_id": "005-C01",
+      "label": "referencia_correta",
+      "description": "Segurar o bastão com as duas mãos e elevar/baixar de forma controlada.",
+      "audio": "Fisioterapeuta: Segure o bastão com as duas mãos. Eleve lentamente até a amplitude confortável combinada e retorne.",
+      "expected": [
+        "bastão detectado",
+        "duas mãos em contato aparente",
+        "movimento controlado"
+      ]
+    },
+    {
+      "clip_id": "005-E01",
+      "label": "objeto_nao_utilizado",
+      "description": "Segurar o bastão, mas movimentar apenas um braço enquanto o bastão inclina.",
+      "audio": "Fisioterapeuta: Use as duas mãos para guiar o bastão durante a elevação.",
+      "expected": [
+        "objeto presente",
+        "coordenação bilateral assimétrica"
+      ]
+    },
+    {
+      "clip_id": "005-E02",
+      "label": "pegada_alterada",
+      "description": "Soltar uma mão brevemente durante a repetição, em ambiente seguro.",
+      "audio": "Fisioterapeuta: Mantenha as duas mãos no bastão durante todo o movimento.",
+      "expected": [
+        "uma mão perde contato aparente com o objeto"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}

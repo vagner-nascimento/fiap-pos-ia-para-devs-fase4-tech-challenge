@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-005",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P005",
+    "age_years": 51,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Caso sintético de limitação funcional do ombro, usado para testar detecção de objeto e coordenação bilateral.",
+  "scenario_condition": "Rigidez leve simulada, sem afirmar diagnóstico específico.",
+  "simulated_functional_findings": [
+    "Movimento bilateral assimétrico",
+    "Possível flexão dos cotovelos durante elevação"
+  ],
+  "functional_goal": "Detectar o bastão e observar elevação coordenada dentro da amplitude confortável simulada.",
+  "limitations": [
+    "Utilizar bastão leve e sem carga",
+    "Não forçar amplitude",
+    "Não inferir lesão ou diagnóstico pela assimetria isolada"
+  ],
+  "linked_prescription": "RX-FISIO-005"
+}

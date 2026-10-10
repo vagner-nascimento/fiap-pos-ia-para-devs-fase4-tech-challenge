@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-007",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P007",
+    "age_years": 42,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Cenário sintético para testar detecção de halter e análise de flexão do cotovelo.",
+  "scenario_condition": "Treino de reconhecimento de objeto e controle de movimento; não representa prescrição clínica real.",
+  "simulated_functional_findings": [
+    "Possível balanço do tronco",
+    "Possível extensão incompleta do cotovelo no retorno"
+  ],
+  "functional_goal": "Detectar halter e avaliar flexão/extensão aparente do cotovelo com controle postural.",
+  "limitations": [
+    "Usar halter de espuma ou peso muito leve adequado ao ator",
+    "Não testar carga máxima",
+    "Não estimar peso real visualmente"
+  ],
+  "linked_prescription": "RX-FISIO-007"
+}

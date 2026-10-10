@@ -1,0 +1,36 @@
+{
+  "prescription_id": "RX-FISIO-006",
+  "synthetic": true,
+  "exercise_id": "SHOULDER_ABDUCTION_BAND",
+  "object": {
+    "class": "faixa_elástica",
+    "resistance": "muito leve",
+    "anchor": "nenhum; faixa segurada com as mãos"
+  },
+  "starting_position": "Em pé, faixa segura com as mãos conforme demonstração; braço direito próximo ao corpo.",
+  "instructions": [
+    "Elevar o braço direito lateralmente dentro da amplitude confortável simulada",
+    "Manter o tronco estável",
+    "Retornar lentamente"
+  ],
+  "target_repetitions": 5,
+  "target_sets": 1,
+  "external_load": true,
+  "expected_sequence": [
+    "faixa detectável",
+    "elevação lateral controlada",
+    "retorno controlado"
+  ],
+  "observable_checks": [
+    "presença da faixa",
+    "trajetória do braço",
+    "inclinação do tronco",
+    "elevação do ombro",
+    "repetições"
+  ],
+  "not_to_infer": [
+    "tensão exata da faixa",
+    "força muscular",
+    "segurança clínica individual"
+  ]
+}

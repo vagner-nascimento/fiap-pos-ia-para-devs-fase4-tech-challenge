@@ -1,0 +1,52 @@
+{
+  "case_id": "FISIO-003",
+  "case_name": "Inclinação pélvica em decúbito dorsal",
+  "body_region": "coluna lombar e pelve",
+  "synthetic": true,
+  "object_classes": [
+    "colchonete"
+  ],
+  "clips": [
+    {
+      "clip_id": "003-C01",
+      "label": "referencia_correta",
+      "description": "Cinco inclinações pequenas e controladas, sem levantar as nádegas.",
+      "audio": "Fisioterapeuta: Deite de costas, flexione os joelhos e apoie os pés. Incline suavemente a pelve e retorne. Continue respirando.",
+      "expected": [
+        "pelve inclina sem elevação das nádegas",
+        "ritmo controlado"
+      ]
+    },
+    {
+      "clip_id": "003-E01",
+      "label": "elevacao_pelve",
+      "description": "Elevar as nádegas, transformando o movimento em ponte parcial.",
+      "audio": "Fisioterapeuta: Faça apenas uma inclinação pélvica pequena; não levante as nádegas.",
+      "expected": [
+        "nádegas se afastam do colchonete",
+        "desvio da sequência prescrita"
+      ]
+    },
+    {
+      "clip_id": "003-E02",
+      "label": "movimento_abrupto",
+      "description": "Executar inclinação e retorno rapidamente.",
+      "audio": "Fisioterapeuta: Faça o movimento lentamente e retorne com controle.",
+      "expected": [
+        "velocidade elevada",
+        "retorno abrupto"
+      ]
+    },
+    {
+      "clip_id": "003-E03",
+      "label": "fala_sem_movimento",
+      "description": "Dizer que completou cinco repetições, mas fazer apenas três.",
+      "audio": "Paciente: Pronto, fiz cinco. Fisioterapeuta: Vamos conferir a contagem no vídeo.",
+      "expected": [
+        "contagem visual igual a três",
+        "divergência entre fala e vídeo"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}

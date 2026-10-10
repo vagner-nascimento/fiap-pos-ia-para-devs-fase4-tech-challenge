@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-002",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P002",
+    "age_years": 48,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Relato fictício de desconforto e mobilidade reduzida no ombro esquerdo.",
+  "scenario_condition": "Quadro musculoesquelético em acompanhamento no cenário sintético; não representa avaliação real.",
+  "simulated_functional_findings": [
+    "Braço tende a ser mantido rígido",
+    "Pode ocorrer elevação compensatória do ombro"
+  ],
+  "functional_goal": "Observar relaxamento do braço, oscilação pendular pequena e compensações visíveis.",
+  "limitations": [
+    "Não usar em lesão aguda real sem avaliação profissional",
+    "Não inferir diagnóstico a partir do movimento",
+    "Interromper a simulação se houver desconforto real"
+  ],
+  "linked_prescription": "RX-FISIO-002"
+}

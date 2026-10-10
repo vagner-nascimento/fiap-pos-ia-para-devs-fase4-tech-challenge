@@ -1,0 +1,42 @@
+{
+  "case_id": "FISIO-007",
+  "case_name": "Flexão de cotovelo com halter leve",
+  "body_region": "cotovelo direito",
+  "synthetic": true,
+  "object_classes": [
+    "halter leve de espuma ou peso mínimo"
+  ],
+  "clips": [
+    {
+      "clip_id": "007-C01",
+      "label": "referencia_correta",
+      "description": "Cinco flexões controladas com halter muito leve e tronco estável.",
+      "audio": "Fisioterapeuta: Mantenha o cotovelo próximo ao tronco. Flexione lentamente e retorne com controle.",
+      "expected": [
+        "halter detectado",
+        "cotovelo flexiona",
+        "tronco estável"
+      ]
+    },
+    {
+      "clip_id": "007-E01",
+      "label": "balanco_tronco",
+      "description": "Usar leve balanço do tronco para simular compensação, sem carga relevante.",
+      "audio": "Fisioterapeuta: Evite balançar o tronco. Faça o movimento com controle.",
+      "expected": [
+        "balanço do tronco sincronizado com a repetição"
+      ]
+    },
+    {
+      "clip_id": "007-E02",
+      "label": "retorno_incompleto",
+      "description": "Não retornar até a posição inicial definida na cena.",
+      "audio": "Fisioterapeuta: Retorne à posição inicial antes da próxima repetição.",
+      "expected": [
+        "retorno incompleto",
+        "segmentação de repetição possivelmente afetada"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}

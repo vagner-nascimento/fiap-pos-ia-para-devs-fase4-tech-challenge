@@ -1,0 +1,32 @@
+{
+  "prescription_id": "RX-FISIO-004",
+  "synthetic": true,
+  "exercise_id": "SUPINE_KNEE_ROLLS",
+  "starting_position": "Deitado de costas sobre colchonete, joelhos flexionados e juntos.",
+  "instructions": [
+    "Levar os joelhos suavemente para um lado",
+    "Retornar ao centro",
+    "Repetir para o outro lado",
+    "Manter os ombros apoiados"
+  ],
+  "target_cycles": 3,
+  "external_load": false,
+  "expected_sequence": [
+    "centro",
+    "rotação lateral",
+    "retorno ao centro",
+    "rotação oposta",
+    "retorno ao centro"
+  ],
+  "observable_checks": [
+    "joelhos permanecem próximos",
+    "ombros apoiados",
+    "retorno ao centro",
+    "ciclos completos"
+  ],
+  "not_to_infer": [
+    "diagnóstico de coluna",
+    "dor real",
+    "ângulo de rotação sem calibração"
+  ]
+}

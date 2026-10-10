@@ -1,0 +1,52 @@
+{
+  "case_id": "FISIO-002",
+  "case_name": "Exercício pendular do ombro",
+  "body_region": "ombro esquerdo",
+  "synthetic": true,
+  "object_classes": [
+    "mesa ou apoio estável"
+  ],
+  "clips": [
+    {
+      "clip_id": "002-C01",
+      "label": "referencia_correta",
+      "description": "Braço relaxado, pequenas oscilações; mão contralateral apoiada.",
+      "audio": "Fisioterapeuta: Apoie a mão na mesa. Deixe o braço esquerdo relaxado e faça pequenas oscilações suaves.",
+      "expected": [
+        "apoio visível",
+        "braço pendente",
+        "oscilação pequena"
+      ]
+    },
+    {
+      "clip_id": "002-E01",
+      "label": "elevacao_ativa",
+      "description": "Elevar o ombro ativamente durante a oscilação.",
+      "audio": "Fisioterapeuta: Mantenha o ombro relaxado. Não precisa levantar o braço.",
+      "expected": [
+        "elevação do ombro",
+        "conflito entre instrução e execução"
+      ]
+    },
+    {
+      "clip_id": "002-E02",
+      "label": "amplitude_excessiva",
+      "description": "Oscilações maiores que a referência, mas confortáveis e seguras para o ator.",
+      "audio": "Fisioterapeuta: Faça oscilações pequenas e controladas.",
+      "expected": [
+        "amplitude aparente maior que a referência"
+      ]
+    },
+    {
+      "clip_id": "002-E03",
+      "label": "braco_rigido",
+      "description": "Manter braço e cotovelo rígidos, simulando dificuldade de relaxamento.",
+      "audio": "Paciente: Estou mantendo o braço contraído. Fisioterapeuta: Tente relaxá-lo, sem forçar.",
+      "expected": [
+        "rigidez aparente",
+        "fala não comprova por si só o estado muscular"
+      ]
+    }
+  ],
+  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+}
