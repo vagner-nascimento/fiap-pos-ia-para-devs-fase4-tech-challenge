@@ -1,0 +1,31 @@
+{
+  "prescription_id": "RX-FISIO-001",
+  "synthetic": true,
+  "exercise_id": "KNEE_EXTENSION_SEATED",
+  "side": "direito",
+  "starting_position": "Sentado em cadeira firme, tronco confortável, pés inicialmente apoiados.",
+  "instructions": [
+    "Estender lentamente o joelho direito",
+    "Manter o tronco estável",
+    "Retornar de forma controlada"
+  ],
+  "target_repetitions": 5,
+  "target_sets": 1,
+  "external_load": false,
+  "expected_sequence": [
+    "posição inicial",
+    "extensão controlada",
+    "retorno controlado"
+  ],
+  "observable_checks": [
+    "contagem de repetições",
+    "velocidade aparente",
+    "amplitude aparente",
+    "inclinação compensatória do tronco"
+  ],
+  "not_to_infer": [
+    "diagnóstico",
+    "intensidade real da dor",
+    "ângulo articular exato sem calibração"
+  ]
+}

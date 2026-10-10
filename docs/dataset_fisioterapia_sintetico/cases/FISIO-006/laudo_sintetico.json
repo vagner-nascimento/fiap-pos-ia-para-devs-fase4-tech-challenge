@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-006",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P006",
+    "age_years": 35,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Cenário fictício para análise de exercício com resistência elástica e detecção de objeto.",
+  "scenario_condition": "Objetivo funcional simulado de controle do movimento do ombro; sem diagnóstico específico atribuído.",
+  "simulated_functional_findings": [
+    "Possível inclinação lateral do tronco",
+    "Possível elevação do ombro durante abdução"
+  ],
+  "functional_goal": "Detectar faixa elástica e observar movimento do braço e compensações visíveis.",
+  "limitations": [
+    "Usar faixa íntegra de resistência muito leve",
+    "Não prender a faixa a objetos instáveis",
+    "Não inferir força ou tensão real somente pela imagem"
+  ],
+  "linked_prescription": "RX-FISIO-006"
+}

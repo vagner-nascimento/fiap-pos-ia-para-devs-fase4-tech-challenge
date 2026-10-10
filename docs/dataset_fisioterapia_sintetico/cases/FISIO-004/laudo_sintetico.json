@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-004",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P004",
+    "age_years": 44,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Relato fictício de desconforto lombar recorrente associado a rigidez durante rotação.",
+  "scenario_condition": "Cenário sintético para teste de mobilidade; não é indicação terapêutica real.",
+  "simulated_functional_findings": [
+    "Retorno incompleto à posição central",
+    "Possível separação dos joelhos durante rotação"
+  ],
+  "functional_goal": "Identificar posição inicial, direção da rotação, controle e retorno ao centro.",
+  "limitations": [
+    "Não estimar mobilidade vertebral exata por vídeo comum",
+    "Não diagnosticar a origem da dor",
+    "Não tratar assimetria visual como patologia por si só"
+  ],
+  "linked_prescription": "RX-FISIO-004"
+}

@@ -1,0 +1,78 @@
+{
+  "dataset_name": "Dataset Sintético Multimodal de Fisioterapia",
+  "version": "1.0",
+  "synthetic": true,
+  "purpose": "Desenvolvimento e teste de software de análise de vídeo, áudio, prescrição e detecção de objetos.",
+  "important_notice": "Todos os casos, pacientes, laudos, prescrições e falas são fictícios. Não constituem orientação médica ou fisioterapêutica.",
+  "cases": [
+    {
+      "id": "FISIO-001",
+      "name": "Extensão de joelho sentado",
+      "region": "joelho direito",
+      "objects": [],
+      "clip_count": 4
+    },
+    {
+      "id": "FISIO-002",
+      "name": "Exercício pendular do ombro",
+      "region": "ombro esquerdo",
+      "objects": [
+        "mesa ou apoio estável"
+      ],
+      "clip_count": 4
+    },
+    {
+      "id": "FISIO-003",
+      "name": "Inclinação pélvica em decúbito dorsal",
+      "region": "coluna lombar e pelve",
+      "objects": [
+        "colchonete"
+      ],
+      "clip_count": 4
+    },
+    {
+      "id": "FISIO-004",
+      "name": "Rotação controlada dos joelhos",
+      "region": "tronco e coluna lombar",
+      "objects": [
+        "colchonete"
+      ],
+      "clip_count": 4
+    },
+    {
+      "id": "FISIO-005",
+      "name": "Flexão de ombro com bastão leve",
+      "region": "ombros",
+      "objects": [
+        "bastão de PVC leve ou cabo de espuma"
+      ],
+      "clip_count": 3
+    },
+    {
+      "id": "FISIO-006",
+      "name": "Abdução de ombro com faixa elástica leve",
+      "region": "ombro direito",
+      "objects": [
+        "faixa elástica de baixa resistência"
+      ],
+      "clip_count": 3
+    },
+    {
+      "id": "FISIO-007",
+      "name": "Flexão de cotovelo com halter leve",
+      "region": "cotovelo direito",
+      "objects": [
+        "halter leve de espuma ou peso mínimo"
+      ],
+      "clip_count": 3
+    }
+  ],
+  "recording_guidance": [
+    "Use voluntários saudáveis e movimentos confortáveis; não provoque dor nem simule limitações com risco físico.",
+    "Grave plano geral com corpo e articulações relevantes visíveis; registre áudio sincronizado.",
+    "Use objetos leves e seguros; para halteres, prefira espuma ou carga mínima.",
+    "Marque cada clipe com case_id, clip_id, label e instrução executada.",
+    "Separe treino/validação/teste por participante, não por clipe.",
+    "Obtenha consentimento para imagem e voz; use apenas identificadores fictícios."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-001",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P001",
+    "age_years": 62,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Relato fictício de dor recorrente e rigidez no joelho direito após repouso.",
+  "scenario_condition": "Osteoartrite de joelho previamente documentada no cenário sintético.",
+  "simulated_functional_findings": [
+    "Extensão ativa aparentemente reduzida",
+    "Dificuldade leve em manter velocidade constante"
+  ],
+  "functional_goal": "Observar extensão ativa do joelho, controle do retorno e compensações do tronco.",
+  "limitations": [
+    "Não inferir gravidade da doença a partir do vídeo",
+    "Amplitude visual não equivale a goniometria clínica",
+    "Não utilizar carga externa"
+  ],
+  "linked_prescription": "RX-FISIO-001"
+}

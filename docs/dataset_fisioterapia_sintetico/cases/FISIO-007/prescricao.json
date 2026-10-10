@@ -1,0 +1,36 @@
+{
+  "prescription_id": "RX-FISIO-007",
+  "synthetic": true,
+  "exercise_id": "ELBOW_FLEXION_LIGHT_DUMBBELL",
+  "object": {
+    "class": "halter",
+    "material": "espuma ou plástico leve",
+    "load": "mínima e segura para gravação"
+  },
+  "starting_position": "Em pé ou sentado, braço direito próximo ao tronco, segurando o halter leve com pegada confortável.",
+  "instructions": [
+    "Flexionar o cotovelo lentamente",
+    "Manter o braço próximo ao tronco",
+    "Retornar de forma controlada"
+  ],
+  "target_repetitions": 5,
+  "target_sets": 1,
+  "external_load": true,
+  "expected_sequence": [
+    "halter visível",
+    "flexão do cotovelo",
+    "retorno controlado"
+  ],
+  "observable_checks": [
+    "classe do objeto",
+    "posição do cotovelo",
+    "balanço do tronco",
+    "controle do retorno",
+    "contagem"
+  ],
+  "not_to_infer": [
+    "peso exato do objeto",
+    "força muscular",
+    "diagnóstico de tendinopatia"
+  ]
+}

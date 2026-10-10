@@ -1,0 +1,23 @@
+{
+  "document_id": "LAUDO-SYN-003",
+  "synthetic": true,
+  "validity": "Documento fictício para teste de software; não é laudo clínico real.",
+  "patient": {
+    "id": "P003",
+    "age_years": 39,
+    "sex": "não especificado"
+  },
+  "presenting_context": "Relato fictício de lombalgia inespecífica recorrente.",
+  "scenario_condition": "Cenário de lombalgia sem sinais de alerta documentados; caso totalmente sintético.",
+  "simulated_functional_findings": [
+    "Controle pélvico variável",
+    "Possível elevação da pelve em vez de inclinação"
+  ],
+  "functional_goal": "Avaliar compreensão da instrução, controle da pelve e continuidade da respiração observável quando possível.",
+  "limitations": [
+    "Não diagnosticar causa de lombalgia",
+    "Não estimar dor pela expressão facial isoladamente",
+    "Não inferir respiração apenas pelo movimento do tronco"
+  ],
+  "linked_prescription": "RX-FISIO-003"
+}

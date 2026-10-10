@@ -1,0 +1,36 @@
+{
+  "prescription_id": "RX-FISIO-005",
+  "synthetic": true,
+  "exercise_id": "SHOULDER_FLEXION_WITH_STICK",
+  "object": {
+    "class": "bastão",
+    "material": "PVC leve ou espuma",
+    "load": "sem carga"
+  },
+  "starting_position": "Em pé ou sentado, segurando o bastão com as duas mãos à frente do corpo, conforme roteiro de gravação.",
+  "instructions": [
+    "Elevar o bastão lentamente até a amplitude confortável definida para a cena",
+    "Manter o movimento controlado",
+    "Retornar à posição inicial"
+  ],
+  "target_repetitions": 5,
+  "target_sets": 1,
+  "external_load": false,
+  "expected_sequence": [
+    "bastão visível nas duas mãos",
+    "elevação controlada",
+    "retorno controlado"
+  ],
+  "observable_checks": [
+    "presença e classe do objeto",
+    "posição das mãos",
+    "elevação dos braços",
+    "assimetria aparente",
+    "repetições"
+  ],
+  "not_to_infer": [
+    "força aplicada ao bastão",
+    "amplitude articular clínica exata",
+    "adequação terapêutica real"
+  ]
+}
