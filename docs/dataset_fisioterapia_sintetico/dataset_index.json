@@ -46,7 +46,7 @@
       "objects": [
         "bastão de PVC leve ou cabo de espuma"
       ],
-      "clip_count": 3
+      "clip_count": 4
     },
     {
       "id": "FISIO-006",
@@ -55,7 +55,7 @@
       "objects": [
         "faixa elástica de baixa resistência"
       ],
-      "clip_count": 3
+      "clip_count": 4
     },
     {
       "id": "FISIO-007",
@@ -64,7 +64,7 @@
       "objects": [
         "halter leve de espuma ou peso mínimo"
       ],
-      "clip_count": 3
+      "clip_count": 4
     }
   ],
   "recording_guidance": [
@@ -72,6 +72,9 @@
     "Grave plano geral com corpo e articulações relevantes visíveis; registre áudio sincronizado.",
     "Use objetos leves e seguros; para halteres, prefira espuma ou carga mínima.",
     "Marque cada clipe com case_id, clip_id, label e instrução executada.",
+    "Grave quatro clipes por case em evolução progressiva: C01 com erro mais evidente e dor apenas encenada, C02 com melhora parcial, C03 quase correto e C04 correto e sem dor.",
+    "Inclua em cada clipe somente sons do paciente no áudio: fala sobre dor ou bem-estar, interjeições, gemidos leves, suspiros ou respiração; não grave falas do fisioterapeuta.",
+    "Nos clipes iniciais dos cases com objetos, o objeto pode ficar escondido ou não ser utilizado; faça a transição até sua presença e uso corretos no C04.",
     "Separe treino/validação/teste por participante, não por clipe.",
     "Obtenha consentimento para imagem e voz; use apenas identificadores fictícios."
   ]

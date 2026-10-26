@@ -3,50 +3,37 @@
   "case_name": "Inclinação pélvica em decúbito dorsal",
   "body_region": "coluna lombar e pelve",
   "synthetic": true,
-  "object_classes": [
-    "colchonete"
-  ],
+  "object_classes": ["colchonete"],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "003-C01",
-      "label": "referencia_correta",
-      "description": "Cinco inclinações pequenas e controladas, sem levantar as nádegas.",
-      "audio": "Fisioterapeuta: Deite de costas, flexione os joelhos e apoie os pés. Incline suavemente a pelve e retorne. Continue respirando.",
-      "expected": [
-        "pelve inclina sem elevação das nádegas",
-        "ritmo controlado"
-      ]
+      "label": "inicio_elevacao_pelve_com_dor",
+      "description": "No colchonete, elevar as nádegas como ponte parcial e fazer o retorno abrupto; sem amplitude ou esforço excessivos.",
+      "audio": "Paciente: Aiii, minha lombar dói bastante.",
+      "expected": ["nádegas se afastam do colchonete", "movimento abrupto", "fala de dor simulada"]
     },
     {
-      "clip_id": "003-E01",
-      "label": "elevacao_pelve",
-      "description": "Elevar as nádegas, transformando o movimento em ponte parcial.",
-      "audio": "Fisioterapeuta: Faça apenas uma inclinação pélvica pequena; não levante as nádegas.",
-      "expected": [
-        "nádegas se afastam do colchonete",
-        "desvio da sequência prescrita"
-      ]
+      "clip_id": "003-C02",
+      "label": "melhora_com_desconforto",
+      "description": "Reduzir a elevação, aproximando a lombar do colchonete, mas ainda elevar discretamente as nádegas e acelerar o retorno.",
+      "audio": "Paciente: Uuui... melhorou, mas ainda sinto incômodo.",
+      "expected": ["elevação menor que C01", "nádegas ainda perdem contato brevemente", "retorno acelerado", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "003-E02",
-      "label": "movimento_abrupto",
-      "description": "Executar inclinação e retorno rapidamente.",
-      "audio": "Fisioterapeuta: Faça o movimento lentamente e retorne com controle.",
-      "expected": [
-        "velocidade elevada",
-        "retorno abrupto"
-      ]
+      "clip_id": "003-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Fazer cinco inclinações pequenas, mantendo as nádegas no colchonete na maior parte do tempo, com uma repetição hesitante.",
+      "audio": "Paciente: Quase não dói, só resta um desconforto.",
+      "expected": ["inclinação pequena", "nádegas predominantemente apoiadas", "uma hesitação", "fala de desconforto residual"]
     },
     {
-      "clip_id": "003-E03",
-      "label": "fala_sem_movimento",
-      "description": "Dizer que completou cinco repetições, mas fazer apenas três.",
-      "audio": "Paciente: Pronto, fiz cinco. Fisioterapeuta: Vamos conferir a contagem no vídeo.",
-      "expected": [
-        "contagem visual igual a três",
-        "divergência entre fala e vídeo"
-      ]
+      "clip_id": "003-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Cinco inclinações pélvicas pequenas e controladas, sem levantar as nádegas e mantendo respiração contínua.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["cinco repetições", "nádegas apoiadas", "ritmo controlado", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. A dor deve ser apenas verbal e encenada; não induzir dor ou lesão."
 }

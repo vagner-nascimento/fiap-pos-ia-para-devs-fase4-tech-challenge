@@ -3,40 +3,37 @@
   "case_name": "Flexão de ombro com bastão leve",
   "body_region": "ombros",
   "synthetic": true,
-  "object_classes": [
-    "bastão de PVC leve ou cabo de espuma"
-  ],
+  "object_classes": ["bastão de PVC leve ou cabo de espuma"],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "005-C01",
-      "label": "referencia_correta",
-      "description": "Segurar o bastão com as duas mãos e elevar/baixar de forma controlada.",
-      "audio": "Fisioterapeuta: Segure o bastão com as duas mãos. Eleve lentamente até a amplitude confortável combinada e retorne.",
-      "expected": [
-        "bastão detectado",
-        "duas mãos em contato aparente",
-        "movimento controlado"
-      ]
+      "label": "inicio_bastao_oculto_com_dor",
+      "description": "Deixar o bastão fora do enquadramento e elevar apenas um braço, com amplitude curta e dor apenas encenada.",
+      "audio": "Paciente: Aiii, meu ombro dói bastante e não consigo usar o bastão.",
+      "expected": ["bastão não detectável", "objeto não utilizado", "assimetria aparente", "fala de dor simulada"]
     },
     {
-      "clip_id": "005-E01",
-      "label": "objeto_nao_utilizado",
-      "description": "Segurar o bastão, mas movimentar apenas um braço enquanto o bastão inclina.",
-      "audio": "Fisioterapeuta: Use as duas mãos para guiar o bastão durante a elevação.",
-      "expected": [
-        "objeto presente",
-        "coordenação bilateral assimétrica"
-      ]
+      "clip_id": "005-C02",
+      "label": "melhora_bastao_parcial_com_desconforto",
+      "description": "Apresentar o bastão, segurá-lo com as duas mãos, mas deixar uma mão perder contato brevemente e inclinar o objeto.",
+      "audio": "Paciente: Uuui... melhorou, mas ainda sinto incômodo.",
+      "expected": ["bastão detectado", "contato bilateral intermitente", "inclinação assimétrica", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "005-E02",
-      "label": "pegada_alterada",
-      "description": "Soltar uma mão brevemente durante a repetição, em ambiente seguro.",
-      "audio": "Fisioterapeuta: Mantenha as duas mãos no bastão durante todo o movimento.",
-      "expected": [
-        "uma mão perde contato aparente com o objeto"
-      ]
+      "clip_id": "005-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Manter as duas mãos no bastão durante quase toda a elevação, com pequena assimetria e amplitude confortável.",
+      "audio": "Paciente: Quase não dói, só resta um desconforto.",
+      "expected": ["bastão detectado", "duas mãos em contato na maior parte do tempo", "pequena assimetria", "fala de desconforto residual"]
+    },
+    {
+      "clip_id": "005-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Segurar o bastão com as duas mãos e realizar cinco elevações e retornos controlados.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["bastão detectado", "duas mãos em contato", "movimento controlado", "cinco repetições", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. Use bastão leve; a dor deve ser apenas verbal e encenada."
 }

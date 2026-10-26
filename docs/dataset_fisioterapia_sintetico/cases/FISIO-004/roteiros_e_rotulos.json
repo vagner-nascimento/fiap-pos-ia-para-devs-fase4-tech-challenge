@@ -3,48 +3,37 @@
   "case_name": "Rotação controlada dos joelhos",
   "body_region": "tronco e coluna lombar",
   "synthetic": true,
-  "object_classes": [
-    "colchonete"
-  ],
+  "object_classes": ["colchonete"],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "004-C01",
-      "label": "referencia_correta",
-      "description": "Três ciclos controlados, joelhos juntos e retorno ao centro.",
-      "audio": "Fisioterapeuta: Mantenha os joelhos juntos. Leve-os suavemente para um lado, volte ao centro e repita para o outro.",
-      "expected": [
-        "joelhos próximos",
-        "ombros apoiados",
-        "retorno central visível"
-      ]
+      "label": "inicio_joelhos_separados_com_dor",
+      "description": "Separar os joelhos e elevar parcialmente um ombro ao trocar de lado, com rotação curta e desconforto apenas encenado.",
+      "audio": "Paciente: Aiii, minha lombar dói bastante.",
+      "expected": ["joelhos separados", "ombro perde contato", "retorno ao centro pouco claro", "fala de dor simulada"]
     },
     {
-      "clip_id": "004-E01",
-      "label": "joelhos_separados",
-      "description": "Separar os joelhos durante a rotação.",
-      "audio": "Fisioterapeuta: Mantenha os joelhos juntos durante o movimento.",
-      "expected": [
-        "distância entre joelhos aumenta"
-      ]
+      "clip_id": "004-C02",
+      "label": "melhora_com_desconforto",
+      "description": "Manter os joelhos mais próximos e os ombros quase apoiados, mas mudar de lado antes de completar o retorno ao centro.",
+      "audio": "Paciente: Uuui... está melhor, mas ainda incomoda.",
+      "expected": ["joelhos mais próximos que C01", "ombros quase apoiados", "retorno central incompleto", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "004-E02",
-      "label": "ombros_elevados",
-      "description": "Elevar um ombro do colchonete durante a rotação.",
-      "audio": "Fisioterapeuta: Tente manter os ombros apoiados, sem forçar a amplitude.",
-      "expected": [
-        "ombro perde contato aparente com o apoio"
-      ]
+      "clip_id": "004-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Realizar três ciclos com joelhos juntos e ombros apoiados, com uma pausa curta antes de retornar completamente ao centro.",
+      "audio": "Paciente: Quase não dói, só sinto um incômodo.",
+      "expected": ["joelhos próximos", "ombros apoiados", "retorno quase completo", "fala de desconforto residual"]
     },
     {
-      "clip_id": "004-E03",
-      "label": "retorno_incompleto",
-      "description": "Mudar de lado sem retornar completamente ao centro.",
-      "audio": "Fisioterapeuta: Volte ao centro antes de mudar de lado.",
-      "expected": [
-        "ausência de posição central entre lados"
-      ]
+      "clip_id": "004-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Realizar três ciclos controlados, joelhos juntos, ombros apoiados e retorno visível ao centro entre os lados.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["joelhos próximos", "ombros apoiados", "retorno central visível", "três ciclos completos", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. A dor deve ser apenas verbal e encenada; não induzir dor ou lesão."
 }

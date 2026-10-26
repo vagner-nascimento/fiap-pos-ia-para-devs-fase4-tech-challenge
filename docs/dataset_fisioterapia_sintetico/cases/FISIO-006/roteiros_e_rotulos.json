@@ -3,40 +3,37 @@
   "case_name": "Abdução de ombro com faixa elástica leve",
   "body_region": "ombro direito",
   "synthetic": true,
-  "object_classes": [
-    "faixa elástica de baixa resistência"
-  ],
+  "object_classes": ["faixa elástica de baixa resistência"],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "006-C01",
-      "label": "referencia_correta",
-      "description": "Elevação lateral suave, tronco estável, faixa visível.",
-      "audio": "Fisioterapeuta: Com a faixa leve, eleve o braço para o lado sem inclinar o tronco. Retorne lentamente.",
-      "expected": [
-        "faixa detectada",
-        "trajetória lateral",
-        "tronco estável"
-      ]
+      "label": "inicio_faixa_oculta_com_dor",
+      "description": "Deixar a faixa escondida ou fora do enquadramento e compensar a elevação com inclinação do tronco; sem resistência real.",
+      "audio": "Paciente: Aiii, meu ombro dói bastante.",
+      "expected": ["faixa não detectável", "objeto não utilizado", "inclinação do tronco", "fala de dor simulada"]
     },
     {
-      "clip_id": "006-E01",
-      "label": "inclinacao_tronco",
-      "description": "Inclinar o tronco lateralmente para acompanhar a elevação.",
-      "audio": "Fisioterapeuta: Mantenha o tronco estável enquanto eleva o braço.",
-      "expected": [
-        "inclinação lateral do tronco"
-      ]
+      "clip_id": "006-C02",
+      "label": "melhora_faixa_parcial_com_desconforto",
+      "description": "Apresentar a faixa e iniciar o uso, com parte dela fora do enquadramento e inclinação lateral reduzida.",
+      "audio": "Paciente: Uuui... melhorou, mas ainda sinto incômodo.",
+      "expected": ["faixa parcialmente detectável", "inclinação menor que C01", "trajetória lateral parcial", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "006-E02",
-      "label": "faixa_fora_de_quadro",
-      "description": "Executar movimento com faixa parcialmente fora do enquadramento.",
-      "audio": "Fisioterapeuta: Continue o movimento lentamente.",
-      "expected": [
-        "objeto não detectável ou detecção de baixa confiança",
-        "sistema deve declarar limitação visual"
-      ]
+      "clip_id": "006-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Faixa visível e elevação lateral quase correta, com tronco estável na maior parte do tempo e pequena compensação.",
+      "audio": "Paciente: Quase não dói, só resta um desconforto.",
+      "expected": ["faixa detectada", "trajetória lateral", "tronco predominantemente estável", "pequena compensação", "fala de desconforto residual"]
+    },
+    {
+      "clip_id": "006-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Faixa totalmente visível; realizar cinco elevações laterais suaves com tronco estável e retorno lento.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["faixa detectada", "trajetória lateral", "tronco estável", "cinco repetições", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. Use faixa de baixa resistência; a dor deve ser apenas verbal e encenada."
 }
