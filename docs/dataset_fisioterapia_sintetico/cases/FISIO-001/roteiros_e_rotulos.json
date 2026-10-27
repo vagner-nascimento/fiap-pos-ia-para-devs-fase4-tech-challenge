@@ -4,48 +4,36 @@
   "body_region": "joelho direito",
   "synthetic": true,
   "object_classes": [],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "001-C01",
-      "label": "referencia_correta",
-      "description": "Cinco repetições controladas; tronco estável.",
-      "audio": "Fisioterapeuta: Sente-se confortavelmente. Estenda lentamente o joelho direito, sem inclinar o tronco. Retorne com controle. Vamos realizar cinco repetições.",
-      "expected": [
-        "sequência correta",
-        "cinco repetições",
-        "tronco estável"
-      ]
+      "label": "inicio_amplitude_reduzida_com_dor",
+      "description": "Executar extensão curta, com tronco inclinando para trás e ritmo irregular; não forçar a amplitude.",
+      "audio": "Paciente: Aiii, está doendo bastante... vou parar logo.",
+      "expected": ["amplitude aparentemente reduzida", "compensação do tronco", "ritmo irregular", "fala de dor simulada"]
     },
     {
-      "clip_id": "001-E01",
-      "label": "amplitude_reduzida",
-      "description": "Executar extensão parcial, sem desconforto real.",
-      "audio": "Fisioterapeuta: Estenda o joelho direito até onde foi combinado e retorne lentamente.",
-      "expected": [
-        "amplitude aparentemente menor que a referência",
-        "não concluir causa clínica"
-      ]
+      "clip_id": "001-C02",
+      "label": "melhora_com_desconforto",
+      "description": "Aumentar um pouco a extensão e reduzir a compensação, ainda com retorno rápido e desconforto encenado.",
+      "audio": "Paciente: Uuui... melhorou, mas ainda sinto um incômodo leve.",
+      "expected": ["amplitude maior que C01", "compensação menor", "retorno ainda acelerado", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "001-E02",
-      "label": "compensacao_tronco",
-      "description": "Inclinar o tronco para trás durante a extensão.",
-      "audio": "Fisioterapeuta: Mantenha o tronco estável enquanto estende o joelho.",
-      "expected": [
-        "inclinação do tronco sincronizada com a extensão",
-        "divergência entre instrução e vídeo"
-      ]
+      "clip_id": "001-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Realizar quase toda a amplitude, com tronco estável na maior parte do tempo e pequena hesitação no retorno.",
+      "audio": "Paciente: Quase não dói, só sinto um desconforto.",
+      "expected": ["amplitude próxima da referência", "tronco predominantemente estável", "pequena hesitação", "fala de desconforto residual"]
     },
     {
-      "clip_id": "001-E03",
-      "label": "ritmo_acelerado",
-      "description": "Fazer retorno abrupto e ritmo irregular, sem movimento extremo.",
-      "audio": "Fisioterapeuta: Faça o movimento lentamente e controle o retorno.",
-      "expected": [
-        "ritmo irregular",
-        "retorno rápido"
-      ]
+      "clip_id": "001-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Cinco repetições controladas; tronco estável e retorno suave.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["cinco repetições", "amplitude confortável", "tronco estável", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. A dor deve ser apenas verbal e encenada; não induzir dor ou lesão."
 }

@@ -3,40 +3,37 @@
   "case_name": "Flexão de cotovelo com halter leve",
   "body_region": "cotovelo direito",
   "synthetic": true,
-  "object_classes": [
-    "halter leve de espuma ou peso mínimo"
-  ],
+  "object_classes": ["halter leve de espuma ou peso mínimo"],
+  "progression": "C01 maior erro e dor encenada; C02 melhora parcial; C03 quase correto com desconforto residual; C04 correto e sem dor.",
   "clips": [
     {
       "clip_id": "007-C01",
-      "label": "referencia_correta",
-      "description": "Cinco flexões controladas com halter muito leve e tronco estável.",
-      "audio": "Fisioterapeuta: Mantenha o cotovelo próximo ao tronco. Flexione lentamente e retorne com controle.",
-      "expected": [
-        "halter detectado",
-        "cotovelo flexiona",
-        "tronco estável"
-      ]
+      "label": "inicio_halter_oculto_com_dor",
+      "description": "Deixar o halter escondido ou fora do enquadramento e simular a flexão sem objeto, com balanço do tronco; sem carga real.",
+      "audio": "Paciente: Aiii, meu cotovelo dói bastante.",
+      "expected": ["halter não detectável", "objeto não utilizado", "balanço do tronco", "fala de dor simulada"]
     },
     {
-      "clip_id": "007-E01",
-      "label": "balanco_tronco",
-      "description": "Usar leve balanço do tronco para simular compensação, sem carga relevante.",
-      "audio": "Fisioterapeuta: Evite balançar o tronco. Faça o movimento com controle.",
-      "expected": [
-        "balanço do tronco sincronizado com a repetição"
-      ]
+      "clip_id": "007-C02",
+      "label": "melhora_halter_parcial_com_desconforto",
+      "description": "Apresentar o halter e iniciar a flexão, ainda afastando um pouco o cotovelo do tronco e retornando de forma incompleta.",
+      "audio": "Paciente: Uuui... melhorou, mas ainda sinto incômodo.",
+      "expected": ["halter detectado", "cotovelo parcialmente afastado", "retorno incompleto", "fala de desconforto simulada"]
     },
     {
-      "clip_id": "007-E02",
-      "label": "retorno_incompleto",
-      "description": "Não retornar até a posição inicial definida na cena.",
-      "audio": "Fisioterapeuta: Retorne à posição inicial antes da próxima repetição.",
-      "expected": [
-        "retorno incompleto",
-        "segmentação de repetição possivelmente afetada"
-      ]
+      "clip_id": "007-C03",
+      "label": "quase_correto_com_desconforto",
+      "description": "Manter o halter visível e o cotovelo próximo ao tronco na maior parte da repetição, com pequena hesitação no retorno.",
+      "audio": "Paciente: Quase não dói, só resta um desconforto.",
+      "expected": ["halter detectado", "cotovelo predominantemente próximo", "retorno quase completo", "fala de desconforto residual"]
+    },
+    {
+      "clip_id": "007-C04",
+      "label": "referencia_correta_sem_dor",
+      "description": "Realizar cinco flexões controladas com halter muito leve, cotovelo próximo ao tronco e retorno completo.",
+      "audio": "Paciente: Está tudo bem, sem dor. Respiração tranquila.",
+      "expected": ["halter detectado", "cotovelo próximo ao tronco", "cinco repetições", "retorno controlado", "fala de ausência de dor"]
     }
   ],
-  "safety_note": "Roteiros fictícios para gravação simulada. Não induzir dor ou lesão; não usar como orientação clínica."
+  "safety_note": "Roteiros fictícios para gravação simulada. Use espuma ou carga mínima; a dor deve ser apenas verbal e encenada."
 }

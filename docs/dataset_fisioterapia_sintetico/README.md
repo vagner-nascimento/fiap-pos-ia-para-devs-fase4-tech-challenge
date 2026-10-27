@@ -23,8 +23,11 @@ Todos os pacientes, idades, cenários clínicos, laudos, prescrições e falas s
 
 ## Recomendações para gravação
 - Grave vídeo e áudio sincronizados, preferencialmente a 30 fps, com câmera fixa.
+- Grave quatro vídeos por case, sempre na mesma configuração: C01 erro mais evidente e maior dor encenada, C02 melhora parcial, C03 quase correto com desconforto residual e C04 movimento correto com fala de ausência de dor.
 - Faça um plano geral e, se possível, uma tomada lateral e outra frontal/oblíqua.
 - Registre falas naturais e também cenários com silêncio ou ruído controlado.
+- No campo `audio`, grave somente sons do paciente: verbalizações de dor ou bem-estar, interjeições como “aiii” e “uuui”, gemidos leves, suspiros ou respiração tranquila; não inclua voz, instruções ou falas do fisioterapeuta.
+- Nos cases com objetos, esconda ou não use o objeto nos primeiros clipes somente como condição de gravação; apresente-o progressivamente até o uso correto no quarto vídeo.
 - Os erros devem ser leves e encenados, sem forçar amplitude ou usar cargas perigosas.
 - O rótulo descreve o que foi encenado, não um diagnóstico médico.
 - Faça revisão de rótulos por profissional qualificado antes de usar o dataset para avaliar desempenho.
