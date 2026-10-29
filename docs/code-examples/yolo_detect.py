@@ -167,6 +167,7 @@ def detect_videos(
     if not videos_dir.is_dir():
         raise FileNotFoundError(f"Videos directory not found: {videos_dir}")
 
+    output_dir.mkdir(parents=True, exist_ok=True)
     video_paths = sorted(
         path
         for path in videos_dir.iterdir()
