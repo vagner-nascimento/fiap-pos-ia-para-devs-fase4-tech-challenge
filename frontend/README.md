@@ -1,6 +1,8 @@
-# Frontend — FIAP POS IA
+# Frontend — Fisio Coach (React 19 & Vite)
 
-Aplicação web de monitoramento construída com React 19 e Vite. A tela atual consulta o health check do backend e exibe o estado da API e do MongoDB, o horário da última consulta, a resposta recebida e o estado de carregamento/erro.
+Interface web do sistema Fisio Coach para envio de vídeos de sessões, acompanhamento do processamento em tempo real, visualização de telemetria biomecânica e painel de alertas do fisioterapeuta.
+
+> Para detalhes sobre a arquitetura integrada do sistema, consulte a [Documentação de Arquitetura](../docs/arquitetura/arquitetura-do-sistema.md).
 
 ## Estrutura e pacotes
 

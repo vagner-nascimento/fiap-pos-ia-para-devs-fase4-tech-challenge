@@ -1,67 +1,97 @@
-# FIAP POS IA — Tech Challenge Fase 4
+# Fisio Coach — FIAP Pós-Tech IA para Devs (Fase 4)
 
-Aplicação web composta por um frontend React servido por Nginx, uma API FastAPI e um banco MongoDB. O frontend consulta a API para exibir o estado do serviço e da conexão com o banco.
+Plataforma multimodal orientada por Inteligência Artificial para auxílio ao fisioterapeuta no monitoramento remoto e avaliação biomecânica de sessões de reabilitação física.
 
-## Componentes
+O sistema analisa gravações de vídeo e áudio de pacientes executando exercícios prescritos, realizando o rastreamento de pontos articulares (landmarks), contagem automática de repetições, detecção de desvios posturais em tempo real, renderização de vídeo anotado com HUD responsivo e geração de relatórios clínicos com snapshots comprobatórios.
 
-| Componente | Tecnologia | Acesso local |
-| --- | --- | --- |
-| Frontend | React 19, Vite (build) e Nginx | http://localhost:8080 |
-| Backend | Python 3.11, FastAPI e Uvicorn | http://localhost:3000 |
-| Banco de dados | MongoDB 7 | `mongodb://localhost:27017` |
+> Para detalhes aprofundados sobre decisões de engenharia, diagramas C4 e modelos matemáticos, consulte a [Documentação de Arquitetura](docs/arquitetura/arquitetura-do-sistema.md) e os [ADRs](docs/arquitetura/adrs/).
 
-O backend monta suas rotas sob `/api`; o endpoint disponível é `GET /api/health`. O frontend chama essa rota e mostra os estados da API e do MongoDB.
+---
 
-## Executar a aplicação com Docker Compose
+## 🚀 Como Executar o Projeto
 
-Requisitos: Docker Engine/Desktop com o plugin `docker compose`.
+### Opção 1: Aplicação Completa via Docker Compose (Recomendado)
 
-Na raiz do repositório:
+Inicia o Frontend (Nginx/React), o Backend (FastAPI + Motor de Pose) e o Banco de Dados (MongoDB 7):
 
 ```sh
+# Usando o script de conveniência:
+sh start_app.sh
+
+# Ou diretamente via Docker Compose:
 docker compose -f docker-compose.yaml up -d --build
 ```
 
-O Compose constrói as imagens do backend e do frontend e inicia também o MongoDB. O backend aguarda o health check do MongoDB; o frontend depende do início do backend. O Nginx do frontend encaminha `/api` para o serviço `backend` pela rede interna do Compose.
+**Portas e Acessos:**
+* **Frontend Web:** [http://localhost:8080](http://localhost:8080)
+* **Backend API (Docs OpenAPI):** [http://localhost:3000/docs](http://localhost:3000/docs)
+* **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
+* **MongoDB:** `mongodb://localhost:27017`
 
-Acesse http://localhost:8080. Para verificar diretamente a API, acesse http://localhost:3000/api/health. Para acompanhar os serviços:
-
+**Comandos Úteis:**
 ```sh
-docker compose -f docker-compose.yaml ps
-docker compose -f docker-compose.yaml logs -f
+sh stop_app.sh     # Para os containers preservando dados
+sh restart_app.sh  # Reinicia e reconstrói as aplicações
 ```
 
-Para parar os containers:
+---
+
+### Opção 2: Processamento de Vídeos via Linha de Comando (CLI)
+
+O motor de visão computacional pode ser executado diretamente pelo terminal (com suporte nativo a CPU e alta performance) para analisar qualquer vídeo da base de dados:
 
 ```sh
-docker compose -f docker-compose.yaml down
+# A partir da raiz do repositório (usando uv com Python 3.11):
+uv run ./backend/src/cli/analyze_video.py \
+  --video /caminho/para/seu/video.mp4 \
+  --case FISIO-001 \
+  --side auto \
+  --target-reps 5 \
+  --run-id sessao_teste_01
 ```
 
-Os dados do MongoDB ficam no volume nomeado `mongodb_data` e persistem ao parar/remover os containers com `down`. Para apagar também os dados persistidos, use `docker compose -f docker-compose.yaml down -v`.
+**Exercícios Suportados no MVP (`--case`):**
+* `FISIO-001`: Extensão de joelho sentado
+* `FISIO-002`: Pêndulo de ombro (Codman)
+* `FISIO-003`: Inclinação pélvica deitado
+* `FISIO-004`: Rotação de joelhos deitado
+* `FISIO-005`: Flexão de ombro com bastão
+* `FISIO-006`: Abdução de ombro com elástico
+* `FISIO-007`: Flexão de cotovelo com halter
 
-### Scripts de conveniência
+---
 
-Na raiz estão os scripts `start_app.sh`, `stop_app.sh` e `restart_app.sh`. Eles executam, respectivamente:
+## 📁 Onde os Resultados são Gravados?
 
-- `start_app.sh`: `docker compose -f docker-compose.yaml up -d --build` — constrói/reconstrói as imagens quando necessário e inicia os serviços em segundo plano.
-- `stop_app.sh`: `docker compose -f docker-compose.yaml down` — para e remove containers e rede do projeto, preservando o volume do MongoDB.
-- `restart_app.sh`: executa primeiro o comando de parada e depois o comando de inicialização/build.
+Todas as saídas geradas ficam centralizadas fora do Git na pasta `data/outputs/{run_id}/pose/`:
 
-Execute-os em um terminal compatível com shell POSIX (Linux, macOS, WSL ou Git Bash), a partir da raiz:
+* **`annotated.mp4`**: Vídeo final com o esqueleto articular e HUD em tempo real (fase, ângulo, contagem e alertas em português);
+* **`analysis.json`**: Relatório executivo estruturado (repetições válidas/inválidas, taxa de conformidade e desvios com timestamps);
+* **`telemetry.json`**: Série temporal frame a frame dos ângulos articulares medidos;
+* **`evidence/*.jpg`**: Snapshots fotográficos congelados no momento exato em que cada desvio ocorreu.
+
+---
+
+## 🧪 Testes Automatizados
+
+Para executar a suíte completa de testes unitários do motor de pose e caminhos de mídia:
 
 ```sh
-sh start_app.sh
-sh stop_app.sh
-sh restart_app.sh
+cd backend
+uv run pytest tests -q
 ```
 
-Os scripts são atalhos para Docker Compose; também é possível executar os comandos equivalentes diretamente, como mostrado acima.
+---
 
-## Executar cada aplicação individualmente
+## 📚 Documentação do Projeto
 
-Para instruções de desenvolvimento, pacotes, rotas, variáveis de ambiente e execução individual de cada serviço, consulte:
-
-- [README do backend](backend/README.md)
-- [README do frontend](frontend/README.md)
-
-Ao executar frontend e backend fora do Compose, deixe o MongoDB acessível ao backend. Se não houver um MongoDB local instalado, pode iniciar apenas o banco pelo Compose com `docker compose -f docker-compose.yaml up -d mongodb`.
+* 🏛️ **[Arquitetura do Sistema](docs/arquitetura/arquitetura-do-sistema.md)** — Diagramas C4 Níveis 1, 2 e 3, diagramas de sequência multimodal e cobertura clínica dos exercícios;
+* 📑 **[Architecture Decision Records (ADRs)](docs/arquitetura/adrs/)** — Registros formais de decisões:
+  * [ADR 0001: Adoção do MediaPipe Pose](docs/arquitetura/adrs/0001-escolha-mediapipe-pose.md)
+  * [ADR 0002: Padrão Strategy para Exercícios](docs/arquitetura/adrs/0002-padrao-strategy-para-analisadores-de-exercicios.md)
+  * [ADR 0003: Detecção Automática do Lado Ativo](docs/arquitetura/adrs/0003-deteccao-automatica-de-lado-ativo.md)
+  * [ADR 0004: Armazenamento Isolado de Mídias](docs/arquitetura/adrs/0004-armazenamento-desacoplado-de-midias.md)
+  * [ADR 0005: HUD Responsivo com Pillow e UTF-8](docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md)
+  * [ADR 0006: Adoção do MongoDB](docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
+* 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
+* 🛠️ **[Walkthrough de Implementação](docs/walkthrough-motor-deteccao-pose.md)** — Guia passo a passo de desenvolvimento e calibração dos analisadores.
