@@ -2,3 +2,8 @@ docs/code-examples/videos
 docs/code-examples/audios
 docs/code-examples/texts
 docs/code-examples/.venv
+
+# Mídias de entrada/saída (dados sensíveis, fora do Git)
+data/inputs/*
+data/outputs/*
+!data/**/.gitkeep
