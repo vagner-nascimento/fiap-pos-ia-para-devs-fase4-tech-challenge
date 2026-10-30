@@ -1,0 +1,42 @@
+/* Fisio Coach — design tokens. Fonte única de verdade para o frontend. */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap");
+
+:root {
+  /* Cores base */
+  --fc-primary: #0B6460;
+  --fc-primary-dark: #0E3B39;
+  --fc-primary-soft: #E0F0EE;
+  --fc-text: #14302F;
+  --fc-text-muted: #4A6362;
+  --fc-bg: #F4F7F6;
+  --fc-surface: #FFFFFF;
+  --fc-border: #D5E0DE;
+  --fc-border-field: #8FA5A3;
+  --fc-sidebar-text: #CFE5E3;
+
+  /* Status clínico (sempre acompanhado de símbolo + texto) */
+  --fc-ok-bg: #E3F3E8;   --fc-ok-fg: #17653A;    /* ● Verde   */
+  --fc-warn-bg: #FFF1D0; --fc-warn-fg: #7A4F00;  /* ▲ Atenção */
+  --fc-crit-bg: #FCE8E6; --fc-crit-fg: #A1201A;  /* ■ Crítico */
+
+  /* Faixas da linha do tempo */
+  --fc-track-bg: #EEF3F2;
+  --fc-track-rep: var(--fc-primary);     /* repetições */
+  --fc-track-desvio: var(--fc-warn-fg);  /* desvios de postura */
+  --fc-track-dor: var(--fc-crit-fg);     /* dor facial */
+  --fc-track-fala: var(--fc-primary-dark); /* fala de dor */
+
+  /* Tipografia */
+  --fc-font: "Plus Jakarta Sans", system-ui, sans-serif;
+  --fc-fs-title: 26px;  --fc-fw-title: 800;
+  --fc-fs-section: 17px; --fc-fw-section: 700;
+  --fc-fs-body: 15px;
+  --fc-fs-small: 13px;
+  --fc-fs-chip: 12px;
+
+  /* Espaço (escala 4/8/12/20/32/40), raios e alvos */
+  --fc-s1: 4px; --fc-s2: 8px; --fc-s3: 12px; --fc-s4: 20px; --fc-s5: 32px; --fc-s6: 40px;
+  --fc-radius-card: 14px; --fc-radius-control: 10px; --fc-radius-pill: 999px;
+  --fc-control-h: 44px;
+  --fc-sidebar-w: 220px;
+}

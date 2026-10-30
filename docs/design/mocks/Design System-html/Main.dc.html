@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Design System</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script></head><body><x-dc><helmet><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"><style>
+body{margin:0}*{box-sizing:border-box}
+.r{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#14302F;background:#F4F7F6;width:100%;display:flex;font-size:15px;line-height:1.45}
+.sb{width:220px;flex:none;background:#0E3B39;color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:6px}
+.sb b{font-size:18px;margin-bottom:20px;padding:0 8px}.sb small{color:#CFE5E3;padding:0 8px;margin-top:auto}
+.sb a{color:#CFE5E3;padding:10px 12px;border-radius:8px;text-decoration:none;font-size:14px}
+.sb a.on{background:#fff;color:#0E3B39;font-weight:700}
+.m{flex:1;padding:32px 40px;display:flex;flex-direction:column;gap:20px}
+h1{font-size:26px;margin:0;font-weight:800}h2{font-size:17px;margin:0 0 12px;font-weight:700}p{margin:0}
+.c{background:#fff;border:1px solid #D5E0DE;border-radius:14px;padding:20px}
+.g{display:grid;gap:20px}.f{display:flex;gap:12px;align-items:center}
+.mu{color:#4A6362;font-size:13px}
+.btn{background:#0B6460;color:#fff;border:0;border-radius:10px;padding:0 20px;height:44px;font-weight:700;font-size:14px;font-family:inherit}
+.btn.s{background:#fff;color:#0B6460;border:1.5px solid #0B6460}
+.in{height:44px;border:1.5px solid #8FA5A3;border-radius:10px;padding:0 12px;font-family:inherit;font-size:14px;width:100%;background:#fff;color:#14302F}
+textarea.in{height:96px;padding:10px 12px}
+.ch{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.ok{background:#E3F3E8;color:#17653A}.wa{background:#FFF1D0;color:#7A4F00}.cr{background:#FCE8E6;color:#A1201A}.ne{background:#E0F0EE;color:#0B6460}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #E4ECEA}
+.trk{height:28px;background:#EEF3F2;border-radius:6px;position:relative;margin-bottom:8px}
+.trk i{position:absolute;top:4px;height:20px;border-radius:4px}
+.st{display:flex;gap:12px;align-items:center;padding:10px 0}.dot{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}</style></helmet>
+<div class="r" style="min-height:900px"><div class="m"><h1>Design System · Fisio Coach</h1><p class="mu">Calmo, clínico, legível. Uma família tipográfica (Plus Jakarta Sans), teal como cor de ação e semáforo reservado ao status clínico. Estado nunca depende só da cor: sempre há ícone/símbolo e texto.</p>
+<div class="g" style="grid-template-columns:1.2fr 1fr"><div class="c"><h2>Cores</h2><div class="g" style="grid-template-columns:repeat(4,1fr);gap:10px">
+<div style="background:#0B6460;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Primária<br>#0B6460</div><div style="background:#0E3B39;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Primária escura<br>#0E3B39</div><div style="background:#E0F0EE;color:#0B6460;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Primária suave<br>#E0F0EE</div><div style="background:#14302F;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Texto<br>#14302F</div>
+<div style="background:#4A6362;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Texto secundário<br>#4A6362</div><div style="background:#F4F7F6;color:#14302F;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Fundo<br>#F4F7F6</div><div style="background:#FFFFFF;color:#14302F;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Superfície<br>#FFFFFF</div><div style="background:#8FA5A3;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Borda de campo<br>#8FA5A3</div>
+<div style="background:#E3F3E8;color:#17653A;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">● Verde<br>#E3F3E8</div><div style="background:#FFF1D0;color:#7A4F00;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">▲ Atenção<br>#FFF1D0</div><div style="background:#FCE8E6;color:#A1201A;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">■ Crítico<br>#FCE8E6</div><div style="background:#17653A;color:#fff;border-radius:10px;padding:14px;height:84px;font-size:12px;font-weight:700">Verde texto<br>#17653A</div></div></div>
+<div class="c"><h2>Tipografia</h2><p style="font-size:26px;font-weight:800">Título 26 / 800</p><p style="font-size:17px;font-weight:700;margin-top:8px">Seção 17 / 700</p><p style="margin-top:8px">Corpo 15 / 400 — texto de formulários e relatórios.</p><p class="mu" style="margin-top:8px">Apoio 13 / 400 — legendas, metadados, tempo.</p>
+<h2 style="margin-top:20px">Espaço e forma</h2><p class="mu">Escala 4 · 8 · 12 · 20 · 32 · 40. Cartões raio 14, controles raio 10, chips pílula. Alvos de toque ≥ 44 px.</p></div></div>
+<div class="g" style="grid-template-columns:1fr 1fr 1fr"><div class="c"><h2>Botões</h2><div class="f"><button class="btn">Ação principal</button><button class="btn s">Secundária</button></div></div>
+<div class="c"><h2>Status</h2><div class="f" style="flex-wrap:wrap"><span class="ch ok">● Verde</span><span class="ch wa">▲ Atenção</span><span class="ch cr">■ Crítico</span><span class="ch ne">Em processamento</span></div></div>
+<div class="c"><h2>Campo</h2><label for="d1">Rótulo</label><input id="d1" class="in" value="Texto digitado"></div></div>
+<div class="g" style="grid-template-columns:1fr 1fr"><div class="c"><h2>Linha do tempo</h2><div class="trk"><i style="left:8%;width:20%;background:#0B6460"></i><i style="left:46%;width:12%;background:#7A4F00"></i></div><p class="mu">Faixas por tipo de evento: repetição (teal), desvio (âmbar), dor (vermelho), fala (azul-petróleo).</p></div>
+<div class="c"><h2>Princípios</h2><p class="mu">1. Evidência junto ao veredito. 2. Linguagem de apoio à decisão, nunca diagnóstico. 3. “Sem dado” é diferente de “sem dor”. 4. Dados fictícios identificados como tal.</p></div></div></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>

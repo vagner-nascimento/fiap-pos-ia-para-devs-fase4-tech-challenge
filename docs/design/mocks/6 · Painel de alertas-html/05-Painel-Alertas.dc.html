@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>6 · Painel de alertas</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script></head><body><x-dc><helmet><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"><style>
+body{margin:0}*{box-sizing:border-box}
+.r{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#14302F;background:#F4F7F6;width:100%;display:flex;font-size:15px;line-height:1.45}
+.sb{width:220px;flex:none;background:#0E3B39;color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:6px}
+.sb b{font-size:18px;margin-bottom:20px;padding:0 8px}.sb small{color:#CFE5E3;padding:0 8px;margin-top:auto}
+.sb a{color:#CFE5E3;padding:10px 12px;border-radius:8px;text-decoration:none;font-size:14px}
+.sb a.on{background:#fff;color:#0E3B39;font-weight:700}
+.m{flex:1;padding:32px 40px;display:flex;flex-direction:column;gap:20px}
+h1{font-size:26px;margin:0;font-weight:800}h2{font-size:17px;margin:0 0 12px;font-weight:700}p{margin:0}
+.c{background:#fff;border:1px solid #D5E0DE;border-radius:14px;padding:20px}
+.g{display:grid;gap:20px}.f{display:flex;gap:12px;align-items:center}
+.mu{color:#4A6362;font-size:13px}
+.btn{background:#0B6460;color:#fff;border:0;border-radius:10px;padding:0 20px;height:44px;font-weight:700;font-size:14px;font-family:inherit}
+.btn.s{background:#fff;color:#0B6460;border:1.5px solid #0B6460}
+.in{height:44px;border:1.5px solid #8FA5A3;border-radius:10px;padding:0 12px;font-family:inherit;font-size:14px;width:100%;background:#fff;color:#14302F}
+textarea.in{height:96px;padding:10px 12px}
+.ch{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.ok{background:#E3F3E8;color:#17653A}.wa{background:#FFF1D0;color:#7A4F00}.cr{background:#FCE8E6;color:#A1201A}.ne{background:#E0F0EE;color:#0B6460}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #E4ECEA}
+.trk{height:28px;background:#EEF3F2;border-radius:6px;position:relative;margin-bottom:8px}
+.trk i{position:absolute;top:4px;height:20px;border-radius:4px}
+.st{display:flex;gap:12px;align-items:center;padding:10px 0}.dot{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}</style></helmet>
+<div class="r" style="min-height:720px"><div class="sb"><b>Fisio Coach</b><a href="#" class="on">Painel de alertas</a><a href="#" class="">Pacientes</a><a href="#" class="">Plano e laudo</a><a href="#" class="">Sessões</a><small>Fisioterapeuta</small></div><div class="m"><div class="f" style="justify-content:space-between"><h1>Painel de alertas</h1><div class="f"><span class="ch cr">■ 1 crítico</span><span class="ch wa">▲ 2 atenção</span><span class="ch ok">● 5 verdes</span></div></div><div class="c"><h2>Novos</h2><div class="row"><div class="f"><span class="ch cr">■ Crítico</span><div><b>Marina T. · dor 8/10 na região da lesão (laudo)</b><p class="mu">Evidência: frame 00:44, fala “8 de 10”, face 7</p></div></div><div class="f"><span class="mu">há 4 min</span><button class="btn s">Abrir</button></div></div><div class="row"><div class="f"><span class="ch wa">▲ Atenção</span><div><b>Marina T. · dor acima do limite em FISIO-006</b><p class="mu">Evidência: pico facial e fala no mesmo trecho</p></div></div><div class="f"><span class="mu">há 1 h</span><button class="btn s">Abrir</button></div></div><div class="row"><div class="f"><span class="ch wa">▲ Atenção</span><div><b>João R. · queda de amplitude vs. sessões anteriores</b><p class="mu">Evidência: gráfico de amplitude, 3 sessões</p></div></div><div class="f"><span class="mu">ontem</span><button class="btn s">Abrir</button></div></div></div><div class="c"><h2>Tratados</h2><div class="row"><div><b>Ana P. · exercício sem equipamento correto</b><p class="mu">Tratado por você</p></div><span class="ch ok">● Tratado</span></div></div></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>
