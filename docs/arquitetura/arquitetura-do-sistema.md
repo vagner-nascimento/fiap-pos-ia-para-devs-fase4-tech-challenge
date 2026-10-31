@@ -25,21 +25,33 @@ O sistema analisa sessões gravadas em vídeo (contendo trilhas visuais e de áu
 O diagrama abaixo ilustra o contexto do sistema, os usuários (fisioterapeuta e paciente) e as fronteiras do sistema Fisio Coach.
 
 ```mermaid
-C4Context
-    title Diagrama de Contexto (C4 Nível 1) - Fisio Coach
+flowchart TB
+    subgraph Atores [" Usuários e Atores "]
+        paciente["👤 <b>Paciente</b><br/><i>[Pessoa]</i><br/>Grava os exercícios prescritos<br/>e relata queixas de dor"]
+        fisio["🩺 <b>Fisioterapeuta</b><br/><i>[Pessoa]</i><br/>Prescreve treinos, analisa relatórios<br/>e monitora alertas clínicos"]
+    end
 
-    Person(paciente, "Paciente", "Grava o vídeo da sessão de exercícios de fisioterapia e relata queixas de dor durante os movimentos.")
-    Person(fisio, "Fisioterapeuta", "Prescreve exercícios, define limites de amplitude e dor, e avalia o relatório detalhado e alertas gerados.")
+    subgraph Fronteira [" Sistema Principal "]
+        fisio_coach["🏥 <b>Fisio Coach System</b><br/><i>[Software System]</i><br/>Plataforma multimodal de IA para análise postural,<br/>detecção de dor e apoio à decisão clínica"]
+    end
 
-    System(fisio_coach, "Fisio Coach System", "Plataforma multimodal de IA para análise postural, estimativa de dor, conformidade terapêutica e apoio à decisão clínica.")
+    subgraph Externos [" Sistemas Externos e Suporte "]
+        dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>[Sistema Externo - Local]</i><br/>25 clipes sintéticos de referência<br/>para calibração e validação"]
+        azure_language["☁️ <b>Azure Text Analytics</b><br/><i>[Serviço Cloud - Opcional]</i><br/>Análise avançada de sentimento<br/>e entidades clínicas de dor"]
+    end
 
-    System_Ext(dataset_repo, "Repositório de Datasets", "Dataset sintético com 7 exercícios de referência e dezenas de variações de execução motora correta e incorreta.")
-    System_Ext(azure_language, "Azure Text Analytics (Opcional)", "Serviço em nuvem de análise de sentimento e extração de entidades clínicas a partir de transcrições.")
+    paciente -->|Envia vídeo e áudio gravados<br/>[HTTPS / Web]| fisio_coach
+    fisio -->|Prescreve planos e consulta alertas<br/>[HTTPS / Web]| fisio_coach
+    fisio_coach -->|Lê clipes de referência<br/>[Volume Docker :ro]| dataset_repo
+    fisio_coach -.->|Extrai termos de dor<br/>[REST / HTTPS]| azure_language
 
-    Rel(paciente, fisio_coach, "Envia vídeo da sessão (vídeo + áudio)", "HTTPS / Web")
-    Rel(fisio, fisio_coach, "Cadastra prescrição/laudo e visualiza alertas e relatórios analíticos", "HTTPS / Web")
-    Rel(fisio_coach, dataset_repo, "Lê clipes sintéticos de referência para validação e testes", "Filesystem / Docker Volume (:ro)")
-    Rel(fisio_coach, azure_language, "Envia transcrições para extração avançada de menções de dor", "REST / HTTPS")
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;
+    classDef external fill:#686868,stroke:#484848,color:#ffffff,stroke-width:2px;
+
+    class paciente,fisio person;
+    class fisio_coach system;
+    class dataset_repo,azure_language external;
 ```
 
 ---
@@ -49,24 +61,32 @@ C4Context
 O sistema é modular e conteinerizado via Docker Compose, permitindo execução integral em ambiente local com suporte a aceleração em CPU:
 
 ```mermaid
-C4Container
-    title Diagrama de Containers (C4 Nível 2) - Fisio Coach
+flowchart TB
+    usuario["👥 <b>Fisioterapeuta / Paciente</b><br/><i>[Pessoa]</i><br/>Acessa a plataforma pelo navegador web"]
 
-    Person(usuario, "Fisioterapeuta / Paciente", "Acessa a plataforma pelo navegador web.")
+    subgraph BoundaryFisioCoach [" Fronteira do Sistema Fisio Coach (Docker Compose) "]
+        frontend["💻 <b>Frontend Web SPA</b><br/><i>[Container: React 19 / Vite / Nginx]</i><br/>Interface web para upload de vídeos,<br/>acompanhamento de progresso e telemetria"]
 
-    Container(frontend, "Frontend SPA", "React 19, Vite, TailwindCSS / Vanilla CSS, Nginx", "Fornece interface para upload de vídeos, visualização de telemetria, player com timeline sincronizada e painel de alertas.")
-    
-    Container(backend, "Backend API & AI Engine", "Python 3.11, FastAPI, Uvicorn, MediaPipe Pose, OpenCV, Pillow, SciPy", "Expõe API RESTful (/api), orquestra o pipeline multimodal, processa pose, segmenta repetições, detecta desvios e renderiza vídeo anotado.")
-    
-    ContainerDb(mongodb, "Banco de Dados", "MongoDB 7.0", "Armazena cadastros de pacientes, planos de tratamento, laudos estruturados, resumos de sessão, eventos e telemetria temporal.")
+        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>[Container: Python 3.11 / FastAPI / MediaPipe]</i><br/>Orquestra visão computacional, pipeline multimodal,<br/>detecta desvios posturais e expõe endpoints REST"]
 
-    ContainerDb(storage, "Armazenamento de Mídias (Volume)", "Sistema de Arquivos Local (./data)", "Armazena vídeos brutos de entrada, vídeos anotados MP4, snapshots JPG de evidências e relatórios JSON.")
+        mongodb[("🗄️ <b>Banco de Dados</b><br/><i>[Container: MongoDB 7.0]</i><br/>Persiste documentos de sessões, eventos<br/>biomecânicos, planos e pacientes")]
 
-    Rel(usuario, frontend, "Interage com a interface", "HTTP/8080")
-    Rel(frontend, backend, "Chama endpoints REST (upload, status, dados da sessão)", "HTTP/3000 (proxy reverso via Nginx)")
-    Rel(backend, mongodb, "Persiste e consulta planos, laudos, sessões e telemetria", "MongoDB Wire Protocol / 27017")
-    Rel(backend, storage, "Lê entradas e salva saídas (vídeos, evidências, telemetria)", "Filesystem I/O (POSIX / MediaStorage)")
-    Rel(frontend, storage, "Carrega stream de vídeos anotados e imagens de evidência", "HTTP GET estático via Nginx/Backend")
+        storage[("💾 <b>Armazenamento de Mídias</b><br/><i>[Volume Docker: ./data]</i><br/>Armazena vídeos originais, vídeos anotados MP4,<br/>snapshots JPG de evidência e telemetria JSON")]
+    end
+
+    usuario -->|Acessa interface web<br/>[HTTP :8080]| frontend
+    frontend -->|Dispara análises e faz polling<br/>[HTTP :3000 /api]| backend
+    backend -->|Persiste e consulta sessões e eventos<br/>[MongoDB Protocol :27017]| mongodb
+    backend -->|Grava e lê arquivos de mídia<br/>[POSIX File I/O / MediaStorage]| storage
+    frontend -->|Carrega stream de vídeos anotados e fotos<br/>[HTTP GET estático :3000/media]| storage
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
+    classDef container fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;
+    classDef database fill:#2b78e4,stroke:#1b5cb8,color:#ffffff,stroke-width:2px;
+
+    class usuario person;
+    class frontend,backend container;
+    class mongodb,storage database;
 ```
 
 ---
@@ -132,6 +152,18 @@ graph TD
     ResultSink <|.. CompSink
     MongoSink --> Repos
     FileSink --> MediaStorage
+
+    classDef controller fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:1.5px;
+    classDef engine fill:#2a75c7,stroke:#1a5aa3,color:#ffffff,stroke-width:1.5px;
+    classDef infra fill:#2b78e4,stroke:#1b5cb8,color:#ffffff,stroke-width:1.5px;
+    classDef sink fill:#438dd5,stroke:#2063a8,color:#ffffff,stroke-width:1.5px;
+    classDef planned fill:#f0f0f0,stroke:#9e9e9e,color:#424242,stroke-dasharray: 4 4;
+
+    class RouterSessions,RouterPlans,RouterReports controller;
+    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer engine;
+    class MediaStorage,DBConnection,Repos infra;
+    class ResultSink,FileSink,MongoSink,CompSink sink;
+    class SpeechEngine,PainTextExtractor,FacePainEngine,MultimodalFusion planned;
 ```
 
 ---
