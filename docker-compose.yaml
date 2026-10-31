@@ -8,6 +8,8 @@ services:
     depends_on:
       backend:
         condition: service_started
+    networks:
+      - fiap-network
 
   backend:
     container_name: fiap-pos-ia-backend
@@ -28,6 +30,8 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    networks:
+      - fiap-network
 
   mongodb:
     image: mongo:7
@@ -41,8 +45,14 @@ services:
       MONGO_INITDB_DATABASE: fiap-pos-ia-db
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - fiap-network
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"]
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet --username "$${MONGO_INITDB_ROOT_USERNAME}" --password "$${MONGO_INITDB_ROOT_PASSWORD}" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok" | grep 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -50,3 +60,7 @@ services:
 
 volumes:
   mongodb_data:
+
+networks:
+  fiap-network:
+    driver: bridge

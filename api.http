@@ -1,0 +1,28 @@
+### Variáveis Globais
+@baseUrl = http://localhost:8000/api
+
+### 1. Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 2. Listar Sessões Persistidas no MongoDB
+GET {{baseUrl}}/sessoes
+Accept: application/json
+
+### 3. Listar Sessões Filtrando por Paciente
+GET {{baseUrl}}/sessoes?paciente_id=PAC-001
+Accept: application/json
+
+### 4. Obter Detalhes de uma Sessão Específica
+# Substitua pelo session_id retornado na listagem ou no CLI
+@sessionId = FISIO-001_1730380000
+GET {{baseUrl}}/sessoes/{{sessionId}}
+Accept: application/json
+
+### 5. Obter Eventos Biomecânicos da Sessão (Repetições e Desvios)
+GET {{baseUrl}}/sessoes/{{sessionId}}/eventos
+Accept: application/json
+
+### 6. Obter Apenas os Desvios Posturais da Sessão
+GET {{baseUrl}}/sessoes/{{sessionId}}/eventos?tipo=desvio
+Accept: application/json
