@@ -1,6 +1,6 @@
 ### Variáveis Globais
-@baseUrl = http://localhost:8000/api
-@host = http://localhost:8000
+@baseUrl = http://localhost:3000/api
+@host = http://localhost:3000
 
 ### ============================================================
 ### 1. Health Check
