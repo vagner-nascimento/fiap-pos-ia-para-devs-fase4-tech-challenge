@@ -1,28 +1,105 @@
 ### Variáveis Globais
 @baseUrl = http://localhost:8000/api
+@host = http://localhost:8000
 
+### ============================================================
 ### 1. Health Check
+### ============================================================
 GET {{baseUrl}}/health
 Accept: application/json
 
-### 2. Listar Sessões Persistidas no MongoDB
+### ============================================================
+### 2. Disparar Análise Biomecânica via JSON (Clipe do Dataset)
+### ============================================================
+# Retorna 202 Accepted imediatamente e processa o MediaPipe em segundo plano
+# @name postSessionRef
+POST {{baseUrl}}/sessoes/referencia
+Content-Type: application/json
+Accept: application/json
+
+{
+  "exercicio_id": "FISIO-001",
+  "paciente_id": "PAC-001",
+  "dataset_clip": "FISIO-001-correto.mp4",
+  "side": "auto",
+  "target_repetitions": 5
+}
+
+### ============================================================
+### 3. Disparar Análise Biomecânica de forma SÍNCRONA (Aguardar Conclusão)
+### ============================================================
+# Adicione ?sync=true para aguardar o fim do vídeo e retornar 201 com tudo calculado
+POST {{baseUrl}}/sessoes/referencia?sync=true
+Content-Type: application/json
+Accept: application/json
+
+{
+  "exercicio_id": "FISIO-001",
+  "paciente_id": "PAC-001",
+  "dataset_clip": "FISIO-001-extensao-parcial.mp4",
+  "side": "auto",
+  "target_repetitions": 5
+}
+
+### ============================================================
+### 4. Disparar Análise via Upload de Arquivo MP4 (multipart/form-data)
+### ============================================================
+# Requer um arquivo de vídeo .mp4 existente no seu computador
+POST {{baseUrl}}/sessoes
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="exercicio_id"
+
+FISIO-001
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="paciente_id"
+
+PAC-002
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="side"
+
+auto
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="dataset_clip"
+
+FISIO-001-correto.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### ============================================================
+### 5. Listar Todas as Sessões do MongoDB
+### ============================================================
 GET {{baseUrl}}/sessoes
 Accept: application/json
 
-### 3. Listar Sessões Filtrando por Paciente
+### ============================================================
+### 6. Listar Sessões Filtrando por Paciente
+### ============================================================
 GET {{baseUrl}}/sessoes?paciente_id=PAC-001
 Accept: application/json
 
-### 4. Obter Detalhes de uma Sessão Específica
-# Substitua pelo session_id retornado na listagem ou no CLI
+### ============================================================
+### 7. Consultar Detalhes da Sessão por ID
+### ============================================================
+# Substitua o session_id pelo ID retornado na criação (ou copie da lista de sessões)
 @sessionId = FISIO-001_1730380000
 GET {{baseUrl}}/sessoes/{{sessionId}}
 Accept: application/json
 
-### 5. Obter Eventos Biomecânicos da Sessão (Repetições e Desvios)
+### ============================================================
+### 8. Obter Linha do Tempo de Eventos da Sessão (Repetições e Desvios)
+### ============================================================
 GET {{baseUrl}}/sessoes/{{sessionId}}/eventos
 Accept: application/json
 
-### 6. Obter Apenas os Desvios Posturais da Sessão
+### ============================================================
+### 9. Obter Apenas os Desvios Posturais da Sessão
+### ============================================================
 GET {{baseUrl}}/sessoes/{{sessionId}}/eventos?tipo=desvio
 Accept: application/json
+
+### ============================================================
+### 10. Acessar Vídeo Anotado ou Snapshot de Evidência Servido para o Frontend
+### ============================================================
+# O backend serve os arquivos estáticos montados sob /media
+# GET {{host}}/media/outputs/{{sessionId}}/pose/annotated.mp4

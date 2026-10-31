@@ -38,14 +38,15 @@ class SessionDocument(BaseModel):
     video_path: Optional[str] = Field(default=None, description="Caminho relativo do vídeo original")
     annotated_video_path: Optional[str] = Field(default=None, description="Caminho relativo do vídeo com HUD")
     analysis_path: Optional[str] = Field(default=None, description="Caminho relativo do analysis.json")
-    telemetry_path: Optional[str] = Field(default=None, description="Caminho relativo do telemetry.json")
-    compliance_score: float = Field(..., description="Score percentual de conformidade (0-100%)")
+    compliance_score: Optional[float] = Field(
+        default=None, description="Score percentual de conformidade (0-100%)"
+    )
     target_repetitions: Optional[int] = Field(default=None, description="Meta de repetições prescritas")
     completed_repetitions: int = Field(default=0, description="Total de repetições completadas")
     valid_repetitions: int = Field(default=0, description="Repetições sem desvios graves")
     invalid_repetitions: int = Field(default=0, description="Repetições com desvios")
     total_deviations: int = Field(default=0, description="Total de desvios posturais detectados")
-    summary: SessionSummary = Field(..., description="Resumo técnico biomecânico da sessão")
+    summary: Optional[SessionSummary] = Field(default=None, description="Resumo técnico biomecânico da sessão")
     justificativas: list[str] = Field(
         default_factory=list, description="Justificativas clínicas explicáveis da classificação"
     )

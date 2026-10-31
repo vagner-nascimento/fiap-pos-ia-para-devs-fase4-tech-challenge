@@ -142,3 +142,85 @@ def test_get_session_events_endpoint(client, mock_mongo):
     dev_only = res_filter.json()
     assert len(dev_only) == 1
     assert dev_only[0]["tipo"] == "desvio"
+
+
+def test_post_session_json_reference(client, mock_mongo, tmp_path):
+    import cv2
+    import numpy as np
+
+    # Cria vídeo sintético
+    video_path = tmp_path / "dummy.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(str(video_path), fourcc, 30.0, (320, 240))
+    for _ in range(30):
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        out.write(frame)
+    out.release()
+
+    # Disparo assíncrono (default, 202 Accepted)
+    res_async = client.post(
+        "/api/sessoes/referencia",
+        json={
+            "exercicio_id": "FISIO-001",
+            "paciente_id": "PAC-JSON-1",
+            "video_path": str(video_path),
+            "side": "auto",
+            "target_repetitions": 5,
+        },
+    )
+    assert res_async.status_code == 202
+    data = res_async.json()
+    assert data["status"] == "processando"
+    assert data["paciente_id"] == "PAC-JSON-1"
+    session_id = data["session_id"]
+
+    # Verifica se a sessão foi registrada no MongoDB
+    db = mock_mongo["fiap-pos-ia-db"]
+    session_repo = SessionRepository(collection=db["sessoes"])
+    saved = session_repo.get_session(session_id)
+    assert saved is not None
+    assert saved.status in (SessionStatus.PROCESSANDO, SessionStatus.CONCLUIDO)
+
+
+def test_post_session_multipart_upload(client, mock_mongo, tmp_path):
+    import cv2
+    import numpy as np
+
+    # Cria vídeo sintético para upload
+    video_path = tmp_path / "upload_test.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(str(video_path), fourcc, 30.0, (320, 240))
+    for _ in range(15):
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        out.write(frame)
+    out.release()
+
+    with open(video_path, "rb") as f:
+        file_bytes = f.read()
+
+    # Upload multipart
+    res = client.post(
+        "/api/sessoes",
+        data={
+            "exercicio_id": "FISIO-001",
+            "paciente_id": "PAC-UPLOAD-1",
+            "side": "direito",
+            "target_repetitions": "5",
+        },
+        files={"file": ("upload_test.mp4", file_bytes, "video/mp4")},
+    )
+    assert res.status_code == 202
+    data = res.json()
+    assert data["status"] == "processando"
+    assert data["paciente_id"] == "PAC-UPLOAD-1"
+
+
+def test_post_session_validation_error(client):
+    # Sem arquivo nem referência
+    res = client.post(
+        "/api/sessoes/referencia",
+        json={"exercicio_id": "FISIO-001"},
+    )
+    assert res.status_code == 400
+    assert "É necessário enviar um arquivo de vídeo" in res.json()["detail"]
+
