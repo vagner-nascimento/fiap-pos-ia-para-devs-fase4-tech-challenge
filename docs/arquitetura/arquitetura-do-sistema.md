@@ -27,23 +27,23 @@ O diagrama abaixo ilustra o contexto do sistema, os usuários (fisioterapeuta e 
 ```mermaid
 flowchart TB
     subgraph Atores [" Usuários e Atores "]
-        paciente["👤 <b>Paciente</b><br/><i>[Pessoa]</i><br/>Grava os exercícios prescritos<br/>e relata queixas de dor"]
-        fisio["🩺 <b>Fisioterapeuta</b><br/><i>[Pessoa]</i><br/>Prescreve treinos, analisa relatórios<br/>e monitora alertas clínicos"]
+        paciente["👤 <b>Paciente</b><br/><i>(Pessoa)</i><br/>Grava os exercícios prescritos<br/>e relata queixas de dor"]
+        fisio["🩺 <b>Fisioterapeuta</b><br/><i>(Pessoa)</i><br/>Prescreve treinos, analisa relatórios<br/>e monitora alertas clínicos"]
     end
 
     subgraph Fronteira [" Sistema Principal "]
-        fisio_coach["🏥 <b>Fisio Coach System</b><br/><i>[Software System]</i><br/>Plataforma multimodal de IA para análise postural,<br/>detecção de dor e apoio à decisão clínica"]
+        fisio_coach["🏥 <b>Fisio Coach System</b><br/><i>(Software System)</i><br/>Plataforma multimodal de IA para análise postural,<br/>detecção de dor e apoio à decisão clínica"]
     end
 
     subgraph Externos [" Sistemas Externos e Suporte "]
-        dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>[Sistema Externo - Local]</i><br/>25 clipes sintéticos de referência<br/>para calibração e validação"]
-        azure_language["☁️ <b>Azure Text Analytics</b><br/><i>[Serviço Cloud - Opcional]</i><br/>Análise avançada de sentimento<br/>e entidades clínicas de dor"]
+        dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>(Sistema Externo - Local)</i><br/>25 clipes sintéticos de referência<br/>para calibração e validação"]
+        azure_language["☁️ <b>Azure Text Analytics</b><br/><i>(Serviço Cloud - Opcional)</i><br/>Análise avançada de sentimento<br/>e entidades clínicas de dor"]
     end
 
-    paciente -->|Envia vídeo e áudio gravados<br/>[HTTPS / Web]| fisio_coach
-    fisio -->|Prescreve planos e consulta alertas<br/>[HTTPS / Web]| fisio_coach
-    fisio_coach -->|Lê clipes de referência<br/>[Volume Docker :ro]| dataset_repo
-    fisio_coach -.->|Extrai termos de dor<br/>[REST / HTTPS]| azure_language
+    paciente -->|Envia vídeo e áudio gravados<br/>HTTPS / Web| fisio_coach
+    fisio -->|Prescreve planos e consulta alertas<br/>HTTPS / Web| fisio_coach
+    fisio_coach -->|Lê clipes de referência<br/>Volume Docker :ro| dataset_repo
+    fisio_coach -.->|Extrai termos de dor<br/>REST / HTTPS| azure_language
 
     classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;
@@ -62,23 +62,23 @@ O sistema é modular e conteinerizado via Docker Compose, permitindo execução 
 
 ```mermaid
 flowchart TB
-    usuario["👥 <b>Fisioterapeuta / Paciente</b><br/><i>[Pessoa]</i><br/>Acessa a plataforma pelo navegador web"]
+    usuario["👥 <b>Fisioterapeuta / Paciente</b><br/><i>(Pessoa)</i><br/>Acessa a plataforma pelo navegador web"]
 
     subgraph BoundaryFisioCoach [" Fronteira do Sistema Fisio Coach (Docker Compose) "]
-        frontend["💻 <b>Frontend Web SPA</b><br/><i>[Container: React 19 / Vite / Nginx]</i><br/>Interface web para upload de vídeos,<br/>acompanhamento de progresso e telemetria"]
+        frontend["💻 <b>Frontend Web SPA</b><br/><i>(Container: React 19 / Vite / Nginx)</i><br/>Interface web para upload de vídeos,<br/>acompanhamento de progresso e telemetria"]
 
-        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>[Container: Python 3.11 / FastAPI / MediaPipe]</i><br/>Orquestra visão computacional, pipeline multimodal,<br/>detecta desvios posturais e expõe endpoints REST"]
+        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>(Container: Python 3.11 / FastAPI / MediaPipe)</i><br/>Orquestra visão computacional, pipeline multimodal,<br/>detecta desvios posturais e expõe endpoints REST"]
 
-        mongodb[("🗄️ <b>Banco de Dados</b><br/><i>[Container: MongoDB 7.0]</i><br/>Persiste documentos de sessões, eventos<br/>biomecânicos, planos e pacientes")]
+        mongodb[("🗄️ <b>Banco de Dados</b><br/><i>(Container: MongoDB 7.0)</i><br/>Persiste documentos de sessões, eventos<br/>biomecânicos, planos e pacientes")]
 
-        storage[("💾 <b>Armazenamento de Mídias</b><br/><i>[Volume Docker: ./data]</i><br/>Armazena vídeos originais, vídeos anotados MP4,<br/>snapshots JPG de evidência e telemetria JSON")]
+        storage[("💾 <b>Armazenamento de Mídias</b><br/><i>(Volume Docker: ./data)</i><br/>Armazena vídeos originais, vídeos anotados MP4,<br/>snapshots JPG de evidência e telemetria JSON")]
     end
 
-    usuario -->|Acessa interface web<br/>[HTTP :8080]| frontend
-    frontend -->|Dispara análises e faz polling<br/>[HTTP :3000 /api]| backend
-    backend -->|Persiste e consulta sessões e eventos<br/>[MongoDB Protocol :27017]| mongodb
-    backend -->|Grava e lê arquivos de mídia<br/>[POSIX File I/O / MediaStorage]| storage
-    frontend -->|Carrega stream de vídeos anotados e fotos<br/>[HTTP GET estático :3000/media]| storage
+    usuario -->|Acessa interface web<br/>HTTP porta 8080| frontend
+    frontend -->|Dispara análises e faz polling<br/>HTTP porta 3000 /api| backend
+    backend -->|Persiste e consulta sessões e eventos<br/>MongoDB Protocol porta 27017| mongodb
+    backend -->|Grava e lê arquivos de mídia<br/>POSIX File I/O / MediaStorage| storage
+    frontend -->|Carrega stream de vídeos anotados e fotos<br/>HTTP GET estático porta 3000/media| storage
 
     classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
     classDef container fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;
@@ -96,7 +96,7 @@ flowchart TB
 Detalhamento da arquitetura interna do container Backend (`backend/src/`):
 
 ```mermaid
-graph TD
+flowchart TB
     subgraph "API Layer (FastAPI Controllers)"
         RouterSessions["Sessions Router<br/>/api/sessoes (POST multipart, POST JSON, GET)"]
         RouterPlans["Plans Router<br/>/api/plans"]
@@ -141,15 +141,15 @@ graph TD
     Processor --> LandmarkExtractor
     Processor --> Registry
     Registry --> Analyzers
-    Analyzers -- herda de --> BaseAnalyzer
+    Analyzers -.->|herda de| BaseAnalyzer
     BaseAnalyzer --> Geometry
     BaseAnalyzer --> RepetitionDetector
     Processor --> HudRenderer
     Processor --> MediaStorage
     Processor --> ResultSink
-    ResultSink <|.. FileSink
-    ResultSink <|.. MongoSink
-    ResultSink <|.. CompSink
+    FileSink -.->|implementa| ResultSink
+    MongoSink -.->|implementa| ResultSink
+    CompSink -.->|implementa| ResultSink
     MongoSink --> Repos
     FileSink --> MediaStorage
 
