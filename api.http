@@ -20,7 +20,7 @@ Accept: application/json
 {
   "exercicio_id": "FISIO-001",
   "paciente_id": "PAC-001",
-  "dataset_clip": "FISIO-001-correto.mp4",
+  "dataset_clip": "FISIO-001-inclinacao-tronco.mp4",
   "side": "auto",
   "target_repetitions": 5
 }
@@ -82,7 +82,7 @@ Accept: application/json
 ### 7. Consultar Detalhes da Sessão por ID
 ### ============================================================
 # Substitua o session_id pelo ID retornado na criação (ou copie da lista de sessões)
-@sessionId = FISIO-001_1730380000
+@sessionId = FISIO-001_1793467940_037a5b
 GET {{baseUrl}}/sessoes/{{sessionId}}
 Accept: application/json
 
