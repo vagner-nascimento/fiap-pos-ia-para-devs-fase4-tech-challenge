@@ -78,14 +78,15 @@ Detalhamento da arquitetura interna do container Backend (`backend/src/`):
 ```mermaid
 graph TD
     subgraph "API Layer (FastAPI Controllers)"
-        RouterSessions["Sessions Router<br/>/api/sessions"]
+        RouterSessions["Sessions Router<br/>/api/sessoes (POST multipart, POST JSON, GET)"]
         RouterPlans["Plans Router<br/>/api/plans"]
         RouterReports["Reports Router<br/>/api/reports"]
     end
 
     subgraph "Config & Infrastructure"
         MediaStorage["MediaStorage<br/>(Resolução segura e isolamento de caminhos)"]
-        DBConnection["MongoDB Client<br/>(Motor / PyMongo)"]
+        DBConnection["MongoDB Client<br/>(PyMongo / Motor)"]
+        Repos["Repositories Layer<br/>SessionRepository & EventRepository"]
     end
 
     subgraph "Pose Engine (Vision & Biomechanics)"
@@ -99,6 +100,13 @@ graph TD
         HudRenderer["HudRenderer<br/>(Pillow + TrueType, Responsivo, UTF-8)"]
     end
 
+    subgraph "Persistence Sinks (Padrão Strategy)"
+        ResultSink["ResultSink (Interface)"]
+        FileSink["FileResultSink<br/>(analysis.json, telemetry.json)"]
+        MongoSink["MongoResultSink<br/>(Classificação de Risco, sessoes, eventos)"]
+        CompSink["CompositeResultSink<br/>(Despacho combinado disco + banco)"]
+    end
+
     subgraph "Multimodal Fusion & Clinical Engine (Passo 2 / Planejado)"
         SpeechEngine["SpeechEngine<br/>(Faster-Whisper local pt-BR)"]
         PainTextExtractor["PainTextExtractor<br/>(Dicionário clínico + Azure Language)"]
@@ -108,6 +116,8 @@ graph TD
 
     RouterSessions --> MediaStorage
     RouterSessions --> Processor
+    RouterSessions --> Repos
+    Repos --> DBConnection
     Processor --> LandmarkExtractor
     Processor --> Registry
     Registry --> Analyzers
@@ -116,7 +126,12 @@ graph TD
     BaseAnalyzer --> RepetitionDetector
     Processor --> HudRenderer
     Processor --> MediaStorage
-    Processor --> DBConnection
+    Processor --> ResultSink
+    ResultSink <|.. FileSink
+    ResultSink <|.. MongoSink
+    ResultSink <|.. CompSink
+    MongoSink --> Repos
+    FileSink --> MediaStorage
 ```
 
 ---
@@ -273,11 +288,14 @@ RAIZ_DO_REPOSITORIO/
 
 ### Coleções do MongoDB (`fiap-pos-ia-db`)
 
-1. **`pacientes`:** Cadastro do paciente, histórico clínico e lesões diagnosticadas.
-2. **`planos`:** Prescrição do fisioterapeuta (exercício, repetições alvo, faixa de ângulo esperada, limite de dor tolerável).
-3. **`laudos`:** Diagnóstico médico ortopédico estruturado com restrições de movimento e amplitudes máximas permitidas.
-4. **`sessoes`:** Registro da execução com timestamps, status do processamento, classificação de risco (`verde`, `atencao`, `critico`), caminhos relativos das mídias em `data/` e métricas consolidadas.
-5. **`telemetria`:** Registro das séries temporais de ângulos articulares para geração dos gráficos de evolução temporal.
+#### Implementadas no Passo 2:
+1. **`sessoes`:** Documento central da sessão (`SessionDocument`). Contém `session_id`, `paciente_id`, `exercicio_id`, `case_id`, `side_evaluated`, `status` (`enviado`, `processando`, `concluido`, `erro`), `etapa`, `compliance_score`, `target_repetitions`, repetições válidas/inválidas, total de desvios, `risk_classification` (`verde`, `atencao`, `critico`), `justificativas` explicáveis em português e referências relativas para os arquivos sob `data/` (`video_path`, `annotated_video_path`, `analysis_path`, `telemetry_path`).
+2. **`eventos`:** Coleção desacoplada de eventos da sessão (`EventDocument`). Armazena cada repetição (`tipo: "repeticao"`, com pico angular, duração e validade) e cada desvio detectado (`tipo: "desvio"`, com severidade, frame inicial/final e caminho do snapshot em `evidence/`).
+
+#### Planejadas para Passos Futuros:
+3. **`pacientes`:** Cadastro do paciente, histórico clínico e lesões diagnosticadas.
+4. **`planos`:** Prescrição do fisioterapeuta (exercício, repetições alvo, faixa de ângulo esperada, limite de dor tolerável).
+5. **`laudos`:** Diagnóstico médico ortopédico estruturado com restrições de movimento e amplitudes máximas permitidas.
 6. **`alertas`:** Notificações direcionadas ao painel do fisioterapeuta sobre desvios críticos ou relatos de dor acima do limiar.
 
 ---
