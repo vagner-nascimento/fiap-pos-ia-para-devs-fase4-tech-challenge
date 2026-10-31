@@ -34,17 +34,35 @@
 - **`registry.py`:** Factory de instâncias por `case_id` ou `exercise_id`.
 - **Testes Unitários:** 76 testes passando com `pytest tests/ -q`.
 
+### Etapa 4: Renderizador, CLI & Gravadores (Concluída)
+- **`hud_renderer.py`:** HUD visual superior dinâmico e responsivo com Pillow UTF-8 e alertas em tempo real.
+- **`video_processor.py`:** Pipeline ponta a ponta gerando `annotated.mp4` e snapshots em `evidence/`.
+- **`analyze_video.py`:** CLI executável para validação local com parâmetros `--case`, `--video`, `--side`, `--target-reps`, `--paciente-id` e `--mongo`.
+
+### Etapa 5: Passo 2 — Integração com MongoDB (Concluída)
+- **Modelos de Banco (`backend/src/models/database/`):**
+  * `SessionDocument` (coleção `sessoes`): status da sessão, classificação de risco (`VERDE`, `ATENCAO`, `CRITICO`), justificativas explicáveis, caminhos de mídia em `data/` e métricas consolidadas.
+  * `EventDocument` (coleção `eventos`): repetições com timestamps e valores biomecânicos; desvios posturais com evidências fotográficas.
+- **Repositórios de Dados (`backend/src/infra/database/repositories/`):**
+  * `SessionRepository`: upsert de sessões, recuperação, listagem filtrada e atualização de etapas.
+  * `EventRepository`: gravação em lote (*batch insert*) e listagem por sessão e tipo.
+- **Padrão Strategy de Persistência (`backend/src/services/pose/sinks.py`):**
+  * `ResultSink`: interface abstrata desacoplando a visão computacional do banco de dados.
+  * `FileResultSink`: persistência em arquivos locais (`analysis.json`, `telemetry.json`).
+  * `MongoResultSink`: classificação automática de risco clínico, extração de justificativas e salvamento no MongoDB.
+  * `CompositeResultSink`: persistência combinada (arquivo + MongoDB) sem duplicação de esforço.
+- **API REST (`backend/src/rest/routers/sessions.py`):**
+  * `GET /api/sessoes`: listagem das sessões mais recentes (com filtro opcional por paciente).
+  * `GET /api/sessoes/{id}`: detalhes consolidados da sessão.
+  * `GET /api/sessoes/{id}/eventos`: eventos de repetições e desvios associados.
+- **Testes Automatizados:** 97 testes unitários passando (`pytest tests/ -v`).
+
 ---
 
 ## 2. Próximos Passos Imediatos
 
-1. Implementar os analisadores restantes da Etapa 3:
-   - **FISIO-002:** `ShoulderPendulumAnalyzer` (exercício pendular de ombro, desvios de elevação ativa, amplitude excessiva e braço rígido).
-   - **FISIO-003:** `PelvicTiltAnalyzer` (inclinação pélvica em decúbito dorsal, elevação da pelve/ponte, movimento abrupto).
-   - **FISIO-004:** `KneeRollsAnalyzer` (rotação de joelhos em decúbito, joelhos separados, ombros elevados, retorno incompleto).
-   - **FISIO-005:** `ShoulderFlexionStickAnalyzer` (flexão de ombros com bastão bilateral, assimetria, pegada alterada).
-   - **FISIO-006:** `ShoulderAbductionBandAnalyzer` (abdução de ombro com faixa elástica, inclinação do tronco, faixa fora de quadro).
-   - **FISIO-007:** `ElbowFlexionDumbbellAnalyzer` (flexão de cotovelo com halter, balanço de tronco, retorno incompleto).
-2. Adicionar os testes unitários de cada exercício em `backend/tests/unit/pose/`.
-3. Etapa 4: Implementar o `VideoPoseProcessor` e `result_writer.py` (renderização de esqueleto no vídeo, HUD visual e salvamento de snapshots de evidência).
-4. Etapa 5: CLI executável (`backend/src/cli/analyze_video.py`).
+1. Módulos complementares de IA do PRD v1.2:
+   - Análise de dor facial (MediaPipe Face Mesh / PSPI).
+   - Análise de fala e dor vocal (faster-whisper + Azure Text Analytics).
+   - Fusão multimodal de scores de dor e desvios na sessão.
+2. Interface frontend para visualização do painel de alertas e reprodução dos vídeos gravados.

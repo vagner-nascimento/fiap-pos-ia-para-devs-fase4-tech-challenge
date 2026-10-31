@@ -60,3 +60,53 @@ def test_video_processor_e2e_synthesizes_files(temp_storage, sample_video):
     with open(analysis_file, "r") as f:
         data = json.load(f)
         assert data["session_summary"]["case_id"] == "FISIO-001"
+
+
+def test_video_processor_with_mongo_sink(temp_storage, sample_video):
+    import mongomock
+    from infra.database.repositories.event_repository import EventRepository
+    from infra.database.repositories.session_repository import SessionRepository
+    from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
+
+    mock_client = mongomock.MongoClient()
+    db = mock_client["test_db"]
+    session_repo = SessionRepository(collection=db["sessoes"])
+    event_repo = EventRepository(collection=db["eventos"])
+
+    composite_sink = CompositeResultSink([
+        FileResultSink(media_storage=temp_storage),
+        MongoResultSink(
+            session_repository=session_repo,
+            event_repository=event_repo,
+            media_storage=temp_storage,
+        ),
+    ])
+
+    processor = VideoPoseProcessor(media_storage=temp_storage, result_sink=composite_sink)
+    run_id = "test_run_mongo_e2e"
+
+    result = processor.process_video(
+        video_path=sample_video,
+        exercise_identifier="FISIO-001",
+        run_id=run_id,
+        side="auto",
+        target_repetitions=5,
+        generate_annotated_video=False,
+        patient_id="PAC-TEST-01",
+    )
+
+    assert result.session_summary.case_id == "FISIO-001"
+
+    # Confere arquivos gerados em disco
+    assert temp_storage.analysis_json(run_id).is_file()
+    assert temp_storage.telemetry_json(run_id).is_file()
+
+    # Confere documentos salvos no MongoDB
+    session_doc = session_repo.get_session(run_id)
+    assert session_doc is not None
+    assert session_doc.session_id == run_id
+    assert session_doc.paciente_id == "PAC-TEST-01"
+    assert session_doc.case_id == "FISIO-001"
+    assert session_doc.exercicio_id == "KNEE_EXTENSION_SEATED"
+    assert session_doc.status.value == "concluido"
+

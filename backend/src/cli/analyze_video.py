@@ -10,6 +10,7 @@ if str(_SRC_DIR) not in sys.path:
 
 from config.media_paths import MediaStorage
 from services.pose.registry import supported_exercises
+from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
 from services.pose.video_processor import VideoPoseProcessor
 
 
@@ -44,6 +45,12 @@ def main():
         help="Número de repetições prescritas / alvo (padrão: 5)",
     )
     parser.add_argument(
+        "--paciente-id",
+        type=str,
+        default=None,
+        help="Identificador sintético do paciente (ex: PAC-001)",
+    )
+    parser.add_argument(
         "--run-id",
         type=str,
         default=None,
@@ -53,6 +60,11 @@ def main():
         "--no-render",
         action="store_true",
         help="Desativa a geração do vídeo MP4 anotado (processamento mais rápido)",
+    )
+    parser.add_argument(
+        "--mongo",
+        action="store_true",
+        help="Persiste os resultados no MongoDB (coleções 'sessoes' e 'eventos')",
     )
 
     args = parser.parse_args()
@@ -76,9 +88,21 @@ def main():
     print(f" Lado:             {args.side}")
     print(f" Repetições alvo:  {args.target_reps}")
     print(f" ID de Execução:   {run_id}")
+    if args.paciente_id:
+        print(f" Paciente:         {args.paciente_id}")
+    if args.mongo:
+        print(f" Persistência:     Arquivos locais + MongoDB (coleções sessoes e eventos)")
     print(f"=======================================================\n")
 
-    processor = VideoPoseProcessor(media_storage=storage)
+    if args.mongo:
+        sink = CompositeResultSink([
+            FileResultSink(media_storage=storage),
+            MongoResultSink(media_storage=storage),
+        ])
+    else:
+        sink = FileResultSink(media_storage=storage)
+
+    processor = VideoPoseProcessor(media_storage=storage, result_sink=sink)
 
     def progress_callback(stage: str, pct: float):
         print(f"[{pct*100:5.1f}%] {stage}...")
@@ -91,6 +115,7 @@ def main():
         side=args.side,
         target_repetitions=args.target_reps,
         generate_annotated_video=not args.no_render,
+        patient_id=args.paciente_id,
         on_progress=progress_callback,
     )
     elapsed = time.time() - t0
@@ -122,6 +147,10 @@ def main():
     print(f"  Telemetria JSON: {storage.telemetry_json(run_id)}")
     if result.annotated_video_path:
         print(f"  Vídeo Anotado:   {storage.annotated_video(run_id)}")
+    if args.mongo:
+        print(f"\n MongoDB:")
+        print(f"  Coleção 'sessoes': Documento da sessão '{run_id}' gravado.")
+        print(f"  Coleção 'eventos': {len(result.repetitions) + len(result.deviations)} eventos gravados (repetições e desvios).")
     print(f"=======================================================\n")
 
 

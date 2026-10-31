@@ -150,13 +150,25 @@ Limiares ficam em configuração por exercício (não espalhados no código) e s
 
 Regras: rosto ou membro fora de quadro vira "sem dado" (nunca "correto"), e a limitação é declarada em `analysis.json`.
 
-## 6. Preparação para o Passo 2 (MongoDB)
+## 6. Integração do Passo 2 (MongoDB) — Concluída
 
-Para a persistência entrar sem retrabalho:
+A integração com o MongoDB foi implementada seguindo a arquitetura planejada de desacoplamento:
 
-- `AnalysisResult` (Pydantic) já espelha os campos de `sessoes` e `eventos` do PRD (seção 6.4).
-- Todos os caminhos no resultado são relativos a `MEDIA_ROOT`.
-- O pipeline recebe um `ResultSink` (interface). No Passo 1 a implementação é `FileResultSink` (grava JSON/mídias). No Passo 2 entra `MongoResultSink` sem alterar o processador.
+- **Contratos e Entidades Documentais:**
+  - `models.database.session.SessionDocument`: espelha a coleção `sessoes` do MongoDB (run_id/session_id, paciente_id, exercício, classificação de risco com explicabilidade, caminhos relativos de mídia, resumo e status).
+  - `models.database.event.EventDocument`: espelha a coleção `eventos` (repetições biomecânicas com pico/duração/valores e desvios posturais com evidências fotográficas).
+- **Repositórios de Dados (`infra/database/repositories`):**
+  - `SessionRepository`: operações de CRUD, listagem e atualização de etapa/status.
+  - `EventRepository`: gravação em lote (*batch insert*) e busca filtrada por sessão e tipo.
+- **Padrão Strategy de Persistência (`services/pose/sinks.py`):**
+  - `ResultSink` (interface abstrata).
+  - `FileResultSink`: grava os artefatos `analysis.json` e `telemetry.json` em disco via `MediaStorage`.
+  - `MongoResultSink`: avalia o risco clínico (`VERDE`, `ATENCAO`, `CRITICO`), elabora justificativas explicáveis e persiste o documento da sessão e todos os eventos no MongoDB.
+  - `CompositeResultSink`: despacha transparentemente para múltiplos sinks (ex: arquivos + MongoDB).
+- **Acoplamento Zero no Processador:**
+  - `VideoPoseProcessor` recebe `result_sink: Optional[ResultSink] = None` com fallback para `FileResultSink`.
+  - CLI `analyze_video.py` suporta `--mongo` e `--paciente-id`.
+  - Endpoints REST em `GET /api/sessoes`, `GET /api/sessoes/{id}` e `GET /api/sessoes/{id}/eventos`.
 
 ## 7. Etapas de implementação
 
