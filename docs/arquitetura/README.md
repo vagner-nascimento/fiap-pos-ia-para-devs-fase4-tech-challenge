@@ -34,6 +34,7 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 | [ADR 0004](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0004-armazenamento-desacoplado-de-midias.md) | **Armazenamento Desacoplado de Mídias via `MediaStorage`** | Aprovado | Armazenamento / LGPD / Segurança |
 | [ADR 0005](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md) | **Renderização de HUD com Pillow e Suporte a UTF-8** | Aprovado | Renderização de Vídeo / UX |
 | [ADR 0006](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md) | **Adoção do MongoDB 7 para Persistência Documental e Telemetria** | Aprovado | Banco de Dados / Persistência |
+| [ADR 0007](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md) | **Padrão Result Sinks, Pipeline Assíncrono e Integração com MongoDB** | Aprovado | Arquitetura / Persistência / REST |
 
 ---
 

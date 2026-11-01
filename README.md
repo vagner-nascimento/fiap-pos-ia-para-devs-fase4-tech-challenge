@@ -38,7 +38,7 @@ sh restart_app.sh  # Reinicia e reconstrói as aplicações
 
 ### Opção 2: Processamento de Vídeos via Linha de Comando (CLI)
 
-O motor de visão computacional pode ser executado diretamente pelo terminal (com suporte nativo a CPU e alta performance) para analisar qualquer vídeo da base de dados:
+O motor de visão computacional pode ser executado diretamente pelo terminal (com suporte nativo a CPU e alta performance), gravando em disco e opcionalmente no MongoDB:
 
 ```sh
 # A partir da raiz do repositório (usando uv com Python 3.11):
@@ -47,6 +47,8 @@ uv run ./backend/src/cli/analyze_video.py \
   --case FISIO-001 \
   --side auto \
   --target-reps 5 \
+  --paciente-id PAC-001 \
+  --mongo \
   --run-id sessao_teste_01
 ```
 
@@ -61,24 +63,44 @@ uv run ./backend/src/cli/analyze_video.py \
 
 ---
 
+### Opção 3: Execução e Consulta via API REST (`api.http`)
+
+Com a stack ativa, você pode disparar análises e consultar sessões/eventos diretamente pelo VS Code usando o arquivo de conveniência [`api.http`](api.http):
+
+* **Disparo assíncrono por clipe do dataset (retorna 202 com BackgroundTasks):**
+  `POST http://localhost:3000/api/sessoes/referencia`
+* **Upload multipart de vídeo gravado pelo paciente:**
+  `POST http://localhost:3000/api/sessoes`
+* **Listagem e detalhes da sessão no MongoDB:**
+  `GET http://localhost:3000/api/sessoes` · `GET http://localhost:3000/api/sessoes/{id}`
+* **Linha do tempo de repetições e desvios:**
+  `GET http://localhost:3000/api/sessoes/{id}/eventos`
+* **Streaming de vídeo anotado e snapshots:**
+  `GET http://localhost:3000/media/outputs/{id}/pose/annotated.mp4`
+
+---
+
 ## 📁 Onde os Resultados são Gravados?
 
-Todas as saídas geradas ficam centralizadas fora do Git na pasta `data/outputs/{run_id}/pose/`:
+1. **No Sistema de Arquivos (`data/outputs/{run_id}/pose/`):**
+   * **`annotated.mp4`**: Vídeo final com o esqueleto articular e HUD em tempo real (fase, ângulo, contagem e alertas em português);
+   * **`analysis.json`**: Relatório executivo estruturado (repetições válidas/inválidas, taxa de conformidade e desvios com timestamps);
+   * **`telemetry.json`**: Série temporal frame a frame dos ângulos articulares medidos;
+   * **`evidence/*.jpg`**: Snapshots fotográficos congelados no momento exato em que cada desvio ocorreu.
 
-* **`annotated.mp4`**: Vídeo final com o esqueleto articular e HUD em tempo real (fase, ângulo, contagem e alertas em português);
-* **`analysis.json`**: Relatório executivo estruturado (repetições válidas/inválidas, taxa de conformidade e desvios com timestamps);
-* **`telemetry.json`**: Série temporal frame a frame dos ângulos articulares medidos;
-* **`evidence/*.jpg`**: Snapshots fotográficos congelados no momento exato em que cada desvio ocorreu.
+2. **No Banco de Dados MongoDB (`fiap-pos-ia-db`):**
+   * **Coleção `sessoes`**: Documento executivo consolidado com status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
+   * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade) e desvios posturais com referências às evidências fotográficas.
 
 ---
 
 ## 🧪 Testes Automatizados
 
-Para executar a suíte completa de testes unitários do motor de pose e caminhos de mídia:
+O backend conta com suíte automatizada de **100 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
-uv run pytest tests -q
+uv run pytest tests -v
 ```
 
 ---
@@ -93,5 +115,6 @@ uv run pytest tests -q
   * [ADR 0004: Armazenamento Isolado de Mídias](docs/arquitetura/adrs/0004-armazenamento-desacoplado-de-midias.md)
   * [ADR 0005: HUD Responsivo com Pillow e UTF-8](docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md)
   * [ADR 0006: Adoção do MongoDB](docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
+  * [ADR 0007: Padrão Result Sinks e Pipeline Assíncrono](docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
 * 🛠️ **[Walkthrough de Implementação](docs/walkthrough-motor-deteccao-pose.md)** — Guia passo a passo de desenvolvimento e calibração dos analisadores.

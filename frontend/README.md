@@ -21,15 +21,21 @@ frontend/
 
 Mantenha as chamadas HTTP em `src/api`, separadas da apresentação. Conforme o frontend crescer, componentes reutilizáveis podem ser extraídos para `src/components`, páginas para `src/pages`, hooks compartilhados para `src/hooks` e recursos estáticos para `src/assets`.
 
-## Integração e rotas
+## Integração e rotas da API
 
-O frontend não declara rotas de navegação próprias. A tela atual acessa o backend por:
+O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 
 | Método | Caminho | Uso |
 | --- | --- | --- |
 | `GET` | `/api/health` | Obtém o status da API e do MongoDB para a tela de monitoramento. |
+| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) e inicia a análise biomecânica (`202 Accepted`). |
+| `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
+| `GET` | `/api/sessoes` | Lista as sessões do paciente com filtros, datas, scores e status. |
+| `GET` | `/api/sessoes/{id}` | Recupera os detalhes da sessão, justificativas e classificação de risco (`verde`, `atencao`, `critico`). |
+| `GET` | `/api/sessoes/{id}/eventos` | Recupera a linha do tempo de repetições e desvios posturais. |
+| `GET` | `/media/...` | Serve os vídeos anotados (`annotated.mp4`) e os snapshots fotográficos comprobatórios (`evidence/*.jpg`). |
 
-Em desenvolvimento, o Vite encaminha `/api` para `http://localhost:3000`. No container, o Nginx encaminha `/api/` para `http://backend:3000` pela rede do Docker Compose; as demais requisições servem o bundle React e usam fallback para `index.html`.
+Em desenvolvimento, o Vite encaminha `/api` para `http://localhost:3000`. No container, o Nginx encaminha `/api/` para `http://backend:3000` pela rede do Docker Compose; as demais requisições servem o bundle React e usam fallback para `index.html`. O backend também possui CORS liberado para comunicação direta no host.
 
 ## Configuração e variáveis de ambiente
 

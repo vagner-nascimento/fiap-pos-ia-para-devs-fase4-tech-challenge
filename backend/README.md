@@ -33,13 +33,20 @@ uv run python -m src.main
 
 * **Swagger / OpenAPI:** [http://localhost:3000/docs](http://localhost:3000/docs)
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
+* **Rotas de Sessões e Biomecânica:**
+  * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`), registra sessão e processa em background (`202 Accepted`);
+  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe do dataset via payload JSON;
+  * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
+  * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score e classificação de risco;
+  * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições e desvios;
+  * `GET /media/...`: Serve os vídeos anotados e snapshots de evidência diretamente para o frontend.
 
-*(Nota: Para iniciar a API localmente, o MongoDB deve estar em execução na porta 27017, ou iniciado via `docker compose up -d mongodb`).*
+> 💡 **Dica de Testes:** O repositório inclui o arquivo [`api.http`](../api.http) na raiz com todas as requisições prontas para execução imediata no VS Code / IDE.
 
 ---
 
 ### 2. Executar a CLI de Análise de Vídeo
-O motor de pose pode ser executado diretamente em vídeos gravados para produzir relatórios, telemetria e o vídeo anotado com HUD:
+O motor de pose pode ser executado diretamente pelo terminal, inclusive gravando nas coleções do MongoDB:
 
 ```sh
 uv run python -m cli.analyze_video \
@@ -47,15 +54,20 @@ uv run python -m cli.analyze_video \
   --case FISIO-001 \
   --side auto \
   --target-reps 5 \
+  --paciente-id PAC-001 \
+  --mongo \
   --run-id teste_01
 ```
 
 **Principais Parâmetros:**
 * `--video`: Caminho absoluto ou relativo para o arquivo `.mp4`;
+* `--dataset-clip`: Nome do clipe dentro de `DATASET_ROOT` (alternativa a `--video`);
 * `--case`: Código do exercício (`FISIO-001` a `FISIO-007`);
 * `--side`: Lado do corpo avaliado (`auto` [padrão], `direito` ou `esquerdo`);
 * `--target-reps`: Quantidade de repetições prescritas (padrão: 5);
-* `--run-id`: Identificador da execução (define o nome da subpasta de saída);
+* `--paciente-id`: Identificador sintético do paciente (ex: `PAC-001`);
+* `--mongo`: Ativa a persistência documental das repetições e desvios no MongoDB;
+* `--run-id`: Identificador da execução (define o nome da subpasta de saída e `session_id`);
 * `--no-render`: Executa apenas a análise matemática e relatórios JSON sem gerar o vídeo `.mp4` anotado (processamento ultrarrápido).
 
 ---
@@ -78,6 +90,12 @@ backend/
 │   │   └── analyze_video.py            # Interface CLI de processamento de vídeos
 │   ├── config/
 │   │   └── media_paths.py              # MediaStorage: isolamento e resolução de caminhos
+│   ├── infra/database/                 # Conexão MongoDB e repositórios
+│   │   ├── mongodb_client.py           # Conector e gerenciador de sessões PyMongo
+│   │   └── repositories/               # SessionRepository e EventRepository
+│   ├── models/                         # Modelos de Domínio e Transporte
+│   │   ├── database/                   # SessionDocument e EventDocument (BSON)
+│   │   └── rest/                       # Payloads e Responses da API (JSON)
 │   ├── services/
 │   │   └── pose/                       # Motor de Visão Computacional
 │   │       ├── analyzers/              # 7 Analisadores especializados (FISIO-001 a 007)
@@ -89,12 +107,13 @@ backend/
 │   │       ├── models.py               # Modelos Pydantic de eventos e telemetria
 │   │       ├── registry.py             # Catálogo de exercícios suportados
 │   │       ├── repetitions.py          # Suavização temporal e detecção de repetições
+│   │       ├── sinks.py                # Strategy de persistência (File, Mongo, Composite)
 │   │       └── video_processor.py      # Orquestrador ponta a ponta do pipeline de vídeo
-│   ├── infra/database/                 # Conexão MongoDB assíncrona
-│   ├── rest/routers/                   # Endpoints da API REST
-│   └── main.py                         # Ponto de entrada do Uvicorn
+│   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/sessoes)
+│   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
+│   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest
+    └── unit/                           # Testes unitários com Pytest (100 testes)
 ```
 
 ---
@@ -114,8 +133,10 @@ Configuradas no arquivo `.env` (ou no `docker-compose.yaml`):
 
 ## 📖 Arquitetura e Decisões de Projeto
 
-Para uma visão detalhada sobre a arquitetura do motor de visão, consulte:
+Para uma visão detalhada sobre a arquitetura do motor de visão e persistência, consulte:
 * 🏛️ [Arquitetura do Sistema](../docs/arquitetura/arquitetura-do-sistema.md)
 * 📑 [ADR 0001: Escolha do MediaPipe Pose](../docs/arquitetura/adrs/0001-escolha-mediapipe-pose.md)
 * 📑 [ADR 0002: Padrão Strategy para Analisadores](../docs/arquitetura/adrs/0002-padrao-strategy-para-analisadores-de-exercicios.md)
 * 📑 [ADR 0005: Renderização de HUD com Pillow e UTF-8](../docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md)
+* 📑 [ADR 0006: Adoção do MongoDB 7](../docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
+* 📑 [ADR 0007: Padrão Result Sinks e Pipeline Assíncrono](../docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md)

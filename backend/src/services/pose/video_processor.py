@@ -17,6 +17,7 @@ from services.pose.models import DeviationSeverity, ExerciseAnalysisResult, Pose
 from services.pose.registry import get_analyzer
 
 from services.pose.hud_renderer import HudRenderer
+from services.pose.sinks import FileResultSink, ResultSink
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,15 @@ COLOR_RED = (50, 50, 235)
 class VideoPoseProcessor:
     """Orquestra a análise de vídeo: extração, detecção de desvios, renderização anotada e salvamento."""
 
-    def __init__(self, media_storage: Optional[MediaStorage] = None, hud_renderer: Optional[HudRenderer] = None):
+    def __init__(
+        self,
+        media_storage: Optional[MediaStorage] = None,
+        hud_renderer: Optional[HudRenderer] = None,
+        result_sink: Optional[ResultSink] = None,
+    ):
         self.storage = media_storage or MediaStorage.from_env()
         self.hud_renderer = hud_renderer or HudRenderer()
+        self.result_sink = result_sink or FileResultSink(self.storage)
 
     def process_video(
         self,
@@ -44,6 +51,7 @@ class VideoPoseProcessor:
         side: BodySide | str | None = BodySide.AUTO,
         target_repetitions: Optional[int] = None,
         generate_annotated_video: bool = True,
+        patient_id: Optional[str] = None,
         on_progress: Optional[Callable[[str, float], None]] = None,
     ) -> ExerciseAnalysisResult:
         """Processa um vídeo de ponta a ponta e grava os artefatos de saída."""
@@ -101,14 +109,13 @@ class VideoPoseProcessor:
             )
             result.annotated_video_path = self.storage.relative(annotated_video_path)
 
-        # 5. Salva analysis.json e telemetry.json
-        analysis_json_path = self.storage.analysis_json(run_id)
-        with open(analysis_json_path, "w", encoding="utf-8") as f:
-            f.write(result.model_dump_json(indent=2))
-
-        telemetry_json_path = self.storage.telemetry_json(run_id)
-        with open(telemetry_json_path, "w", encoding="utf-8") as f:
-            json.dump([pt.model_dump() for pt in result.telemetry], f, indent=2)
+        # 5. Salva os resultados através do ResultSink (arquivos e/ou MongoDB)
+        self.result_sink.save(
+            result=result,
+            run_id=run_id,
+            video_path=str(video_path),
+            paciente_id=patient_id,
+        )
 
         if on_progress:
             on_progress("concluido", 1.0)

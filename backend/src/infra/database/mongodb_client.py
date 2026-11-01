@@ -34,10 +34,29 @@ def connect_to_mongo() -> MongoClient:
 	return _client
 
 
+def get_database(database_name: Optional[str] = None):
+	"""Return the configured or specified MongoDB database."""
+	db_name = database_name or os.getenv("MONGO_DB_NAME", "fiap-pos-ia-db")
+	return connect_to_mongo()[db_name]
+
+
 def get_collection(collection_name: str) -> Collection:
 	"""Return a collection from the configured database."""
-	database_name = os.getenv("MONGO_DB_NAME", "fiap-pos-ia-db")
-	return connect_to_mongo()[database_name][collection_name]
+	return get_database()[collection_name]
+
+
+def set_client(client: Optional[MongoClient]) -> None:
+	"""Set the global client instance (useful for testing and dependency injection)."""
+	global _client
+	_client = client
+
+
+def close_connection() -> None:
+	"""Close the shared MongoDB client connection if open."""
+	global _client
+	if _client is not None:
+		_client.close()
+		_client = None
 
 
 def test_connection() -> bool:

@@ -1,0 +1,276 @@
+"""Sinks de resultado de análise de pose (File, MongoDB e Composto).
+
+Permite que o pipeline processe a visão computacional de forma desacoplada
+e grave os resultados em arquivos locais e/ou no MongoDB conforme o contrato do PRD.
+"""
+
+from abc import ABC, abstractmethod
+import json
+import logging
+from pathlib import Path
+from typing import Any, Optional
+
+from config.media_paths import MediaStorage
+from infra.database.repositories.event_repository import EventRepository
+from infra.database.repositories.session_repository import SessionRepository
+from models.database.event import EventDocument, EventType
+from models.database.session import RiskClassification, SessionDocument, SessionStatus
+from services.pose.models import DeviationSeverity, ExerciseAnalysisResult
+
+logger = logging.getLogger(__name__)
+
+
+def classify_session_risk(result: ExerciseAnalysisResult) -> tuple[RiskClassification, list[str]]:
+    """Calcula a classificação de risco clínico e gera justificativas explicáveis."""
+    justifications: list[str] = []
+    has_grave = any(d.severity == DeviationSeverity.GRAVE for d in result.deviations)
+    has_moderada = any(d.severity == DeviationSeverity.MODERADA for d in result.deviations)
+    has_leve = any(d.severity == DeviationSeverity.LEVE for d in result.deviations)
+    score = result.session_summary.compliance_score
+
+    # Avaliação por desvios posturais
+    if has_grave:
+        risk = RiskClassification.CRITICO
+        justifications.append("Detectado desvio postural de severidade grave durante o exercício.")
+    elif score < 50.0:
+        risk = RiskClassification.CRITICO
+        justifications.append(f"Score de conformidade crítico ({score:.1f}% abaixo do limite mínimo de 50%).")
+    elif has_moderada or has_leve or score < 80.0:
+        risk = RiskClassification.ATENCAO
+        if has_moderada or has_leve:
+            types = sorted({d.deviation_type for d in result.deviations})
+            justifications.append(f"Detectados desvios posturais ({', '.join(types)}) que exigem atenção.")
+        if score < 80.0:
+            justifications.append(f"Score de conformidade em nível de atenção ({score:.1f}%).")
+    else:
+        risk = RiskClassification.VERDE
+        justifications.append(f"Exercício executado com alta conformidade biomecânica ({score:.1f}%).")
+
+    # Informações complementares de contexto
+    s = result.session_summary
+    target = s.target_repetitions or 0
+    if target > 0:
+        if s.completed_repetitions >= target:
+            justifications.append(f"Meta de repetições atingida ({s.completed_repetitions}/{target}).")
+        else:
+            justifications.append(f"Meta de repetições incompleta ({s.completed_repetitions}/{target}).")
+
+    if s.frames_without_pose > 0:
+        justifications.append(
+            f"Presença de {s.frames_without_pose} frames sem rastreamento de pose identificado."
+        )
+
+    return risk, justifications
+
+
+class ResultSink(ABC):
+    """Contrato base para sinks de persistência de análise."""
+
+    @abstractmethod
+    def save(
+        self,
+        result: ExerciseAnalysisResult,
+        run_id: str,
+        video_path: Optional[str] = None,
+        paciente_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Salva os resultados da análise."""
+        pass
+
+
+class FileResultSink(ResultSink):
+    """Grava os resultados em arquivos locais (analysis.json e telemetry.json)."""
+
+    def __init__(self, media_storage: Optional[MediaStorage] = None):
+        self.storage = media_storage or MediaStorage.from_env()
+
+    def save(
+        self,
+        result: ExerciseAnalysisResult,
+        run_id: str,
+        video_path: Optional[str] = None,
+        paciente_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        analysis_json_path = self.storage.analysis_json(run_id)
+        with open(analysis_json_path, "w", encoding="utf-8") as f:
+            f.write(result.model_dump_json(indent=2))
+
+        telemetry_json_path = self.storage.telemetry_json(run_id)
+        with open(telemetry_json_path, "w", encoding="utf-8") as f:
+            json.dump([pt.model_dump() for pt in result.telemetry], f, indent=2)
+
+        logger.info("Artefatos JSON gravados em disco para run_id=%s.", run_id)
+        return {
+            "analysis_json_path": str(analysis_json_path),
+            "telemetry_json_path": str(telemetry_json_path),
+            "analysis_relative_path": self.storage.relative(analysis_json_path),
+            "telemetry_relative_path": self.storage.relative(telemetry_json_path),
+        }
+
+
+class MongoResultSink(ResultSink):
+    """Persiste o resumo da sessão e eventos biomecânicos no MongoDB (coleções 'sessoes' e 'eventos')."""
+
+    def __init__(
+        self,
+        session_repository: Optional[SessionRepository] = None,
+        event_repository: Optional[EventRepository] = None,
+        media_storage: Optional[MediaStorage] = None,
+    ):
+        self.session_repo = session_repository or SessionRepository()
+        self.event_repo = event_repository or EventRepository()
+        self.storage = media_storage or MediaStorage.from_env()
+
+    def save(
+        self,
+        result: ExerciseAnalysisResult,
+        run_id: str,
+        video_path: Optional[str] = None,
+        paciente_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        risk, justifications = classify_session_risk(result)
+
+        # Resolução de caminhos relativos
+        relative_video_path = None
+        if video_path:
+            try:
+                relative_video_path = self.storage.relative(Path(video_path))
+            except Exception:
+                relative_video_path = str(video_path)
+
+        analysis_rel = None
+        telemetry_rel = None
+        try:
+            analysis_p = self.storage.analysis_json(run_id)
+            if analysis_p.exists():
+                analysis_rel = self.storage.relative(analysis_p)
+            telemetry_p = self.storage.telemetry_json(run_id)
+            if telemetry_p.exists():
+                telemetry_rel = self.storage.relative(telemetry_p)
+        except Exception:
+            pass
+
+        # Criação do documento da sessão
+        session_doc = SessionDocument(
+            session_id=run_id,
+            paciente_id=paciente_id,
+            exercicio_id=result.session_summary.exercise_id,
+            case_id=result.session_summary.case_id,
+            side_evaluated=result.session_summary.side_evaluated,
+            status=SessionStatus.CONCLUIDO,
+            etapa="pose_concluida",
+            risk_classification=risk,
+            video_path=relative_video_path,
+            annotated_video_path=result.annotated_video_path,
+            analysis_path=analysis_rel,
+            telemetry_path=telemetry_rel,
+            compliance_score=result.session_summary.compliance_score,
+            target_repetitions=result.session_summary.target_repetitions,
+            completed_repetitions=result.session_summary.completed_repetitions,
+            valid_repetitions=result.session_summary.valid_repetitions,
+            invalid_repetitions=result.session_summary.invalid_repetitions,
+            total_deviations=len(result.deviations),
+            summary=result.session_summary,
+            justificativas=justifications,
+            extra=result.extra,
+        )
+
+        # Mapeamento dos eventos de repetição
+        events: list[EventDocument] = []
+        for rep in result.repetitions:
+            events.append(
+                EventDocument(
+                    session_id=run_id,
+                    tipo=EventType.REPETICAO,
+                    instante_inicio=rep.start_time,
+                    instante_fim=rep.end_time,
+                    instante_pico=rep.peak_time,
+                    duracao=rep.duration,
+                    valores={
+                        "repetition_index": rep.index,
+                        "peak_angle": rep.peak_angle,
+                        "peak_progress": rep.peak_progress,
+                        "completed": rep.completed,
+                        "is_valid": rep.is_valid,
+                        "deviations": rep.deviations,
+                    },
+                    evidencia={},
+                    descricao=f"Repetição {rep.index} ({'válida' if rep.is_valid else 'com desvios'})",
+                )
+            )
+
+        # Mapeamento dos eventos de desvio
+        for dev in result.deviations:
+            events.append(
+                EventDocument(
+                    session_id=run_id,
+                    tipo=EventType.DESVIO,
+                    instante_inicio=dev.start_time,
+                    instante_fim=dev.end_time,
+                    duracao=max(0.0, dev.end_time - dev.start_time),
+                    valores={
+                        "deviation_type": dev.deviation_type,
+                        "repetition_index": dev.repetition_index,
+                        "start_frame": dev.start_frame,
+                        "end_frame": dev.end_frame,
+                        "evidence_frame": dev.evidence_frame,
+                    },
+                    evidencia={
+                        "evidence_frame_path": dev.evidence_frame_path,
+                        "evidence_frame": dev.evidence_frame,
+                    },
+                    descricao=dev.description,
+                    severidade=dev.severity.value,
+                )
+            )
+
+        # Persistência via repositórios
+        saved_session_id = self.session_repo.save_session(session_doc)
+        inserted_events = self.event_repo.save_events(events)
+
+        logger.info(
+            "MongoDB: Sessão %s persistida com classificação %s e %d eventos associados.",
+            saved_session_id,
+            risk.value,
+            inserted_events,
+        )
+
+        return {
+            "session_id": saved_session_id,
+            "risk_classification": risk.value,
+            "events_saved": inserted_events,
+            "justificativas": justifications,
+        }
+
+
+class CompositeResultSink(ResultSink):
+    """Executa múltiplos ResultSinks em cadeia sequencial."""
+
+    def __init__(self, sinks: list[ResultSink]):
+        if not sinks:
+            raise ValueError("CompositeResultSink requer pelo menos um ResultSink.")
+        self.sinks = sinks
+
+    def save(
+        self,
+        result: ExerciseAnalysisResult,
+        run_id: str,
+        video_path: Optional[str] = None,
+        paciente_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        combined_output: dict[str, Any] = {}
+        for sink in self.sinks:
+            output = sink.save(
+                result=result,
+                run_id=run_id,
+                video_path=video_path,
+                paciente_id=paciente_id,
+                **kwargs,
+            )
+            if isinstance(output, dict):
+                combined_output.update(output)
+        return combined_output
