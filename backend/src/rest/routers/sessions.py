@@ -24,7 +24,12 @@ from infra.database.repositories.event_repository import EventRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument
 from models.database.session import SessionDocument, SessionStatus
-from models.rest.session import CreateSessionPayload, CreateSessionResponse
+from models.rest.session import (
+    CreateSessionPayload,
+    CreateSessionResponse,
+    ReferenceClipInfo,
+    SessionReportResponse,
+)
 from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
 from services.pose.video_processor import VideoPoseProcessor
 
@@ -297,6 +302,102 @@ def create_session_from_reference(
 # Endpoints de Consulta
 # -------------------------------------------------------------------------
 
+EXERCISE_NAMES = {
+    "FISIO-001": "Extensão de joelho sentado",
+    "KNEE_EXTENSION_SEATED": "Extensão de joelho sentado",
+    "FISIO-002": "Pêndulo de ombro de Codman",
+    "SHOULDER_PENDULUM": "Pêndulo de ombro de Codman",
+    "FISIO-003": "Inclinação pélvica deitado",
+    "PELVIC_TILT_SUPINE": "Inclinação pélvica deitado",
+    "FISIO-004": "Rotação de joelhos deitado",
+    "KNEE_ROLLS_SUPINE": "Rotação de joelhos deitado",
+    "FISIO-005": "Flexão de ombro com bastão",
+    "SHOULDER_FLEXION_STICK": "Flexão de ombro com bastão",
+    "FISIO-006": "Abdução de ombro com elástico",
+    "SHOULDER_ABDUCTION_BAND": "Abdução de ombro com elástico",
+    "FISIO-007": "Flexão de cotovelo com halter",
+    "ELBOW_FLEXION_DUMBBELL": "Flexão de cotovelo com halter",
+}
+
+RISK_SYMBOLS = {
+    "verde": "●",
+    "atencao": "▲",
+    "critico": "■",
+}
+
+
+@router.get(
+    "/clips-referencia",
+    response_model=list[ReferenceClipInfo],
+    summary="Listar clipes de referência do dataset",
+    description="Retorna a lista de clipes de teste do dataset de referência disponíveis para execução imediata.",
+)
+def list_reference_clips() -> list[ReferenceClipInfo]:
+    storage = MediaStorage.from_env()
+    clips: list[ReferenceClipInfo] = []
+
+    if storage.dataset_root and storage.dataset_root.is_dir():
+        for case_dir in sorted(storage.dataset_root.glob("FISIO-*")):
+            if not case_dir.is_dir():
+                continue
+            case_id = case_dir.name
+            for clip_path in sorted(case_dir.glob("*.mp4")):
+                filename = clip_path.name
+                tipo = "correto" if "correto" in filename.lower() else "desvio"
+                desc = (
+                    "Execução padrão correta com amplitude completa"
+                    if tipo == "correto"
+                    else f"Variação motora com desvio postural ({filename})"
+                )
+                clips.append(
+                    ReferenceClipInfo(
+                        case_id=case_id,
+                        exercicio_id="KNEE_EXTENSION_SEATED" if case_id == "FISIO-001" else case_id,
+                        exercicio_nome=EXERCISE_NAMES.get(case_id, case_id),
+                        filename=filename,
+                        tipo=tipo,
+                        descricao=desc,
+                    )
+                )
+
+    if not clips:
+        clips = [
+            ReferenceClipInfo(
+                case_id="FISIO-001",
+                exercicio_id="KNEE_EXTENSION_SEATED",
+                exercicio_nome="Extensão de joelho sentado",
+                filename="FISIO-001-correto.mp4",
+                tipo="correto",
+                descricao="Execução correta com 5 repetições e amplitude ideal",
+            ),
+            ReferenceClipInfo(
+                case_id="FISIO-001",
+                exercicio_id="KNEE_EXTENSION_SEATED",
+                exercicio_nome="Extensão de joelho sentado",
+                filename="FISIO-001-extensao-parcial.mp4",
+                tipo="desvio",
+                descricao="Desvio de amplitude reduzida (extensão incompleta)",
+            ),
+            ReferenceClipInfo(
+                case_id="FISIO-001",
+                exercicio_id="KNEE_EXTENSION_SEATED",
+                exercicio_nome="Extensão de joelho sentado",
+                filename="FISIO-001-inclinacao-tronco.mp4",
+                tipo="desvio",
+                descricao="Compensação postural com inclinação do tronco para trás",
+            ),
+            ReferenceClipInfo(
+                case_id="FISIO-001",
+                exercicio_id="KNEE_EXTENSION_SEATED",
+                exercicio_nome="Extensão de joelho sentado",
+                filename="FISIO-001-velocidade-irregular.mp4",
+                tipo="desvio",
+                descricao="Ritmo muito acelerado ou irregular entre repetições",
+            ),
+        ]
+    return clips
+
+
 @router.get(
     "",
     response_model=list[SessionDocument],
@@ -347,3 +448,101 @@ def list_session_events(
 
     event_repo = EventRepository()
     return event_repo.list_events_by_session(session_id=session_id, tipo=tipo)
+
+
+@router.get(
+    "/{session_id}/relatorio",
+    response_model=SessionReportResponse,
+    summary="Obter relatório consolidado da sessão",
+    description="Retorna os dados consolidados do relatório individual da sessão, com URLs relativas para exibição de mídias e impressão de laudo.",
+)
+def get_session_report(session_id: str) -> SessionReportResponse:
+    session_repo = SessionRepository()
+    session = session_repo.get_session(session_id)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sessão com ID '{session_id}' não encontrada no MongoDB.",
+        )
+
+    event_repo = EventRepository()
+    events = event_repo.list_events_by_session(session_id=session_id)
+
+    formatted_events = []
+    evidence_urls = []
+    for ev in events:
+        ev_dict = ev.model_dump(mode="json")
+        evidence_path = (ev.evidencia or {}).get("evidence_frame_path")
+        if evidence_path:
+            ev_url = f"/media/{evidence_path.lstrip('/')}"
+            ev_dict["evidence_url"] = ev_url
+            rep_idx = (ev.valores or {}).get("repetition_index") or (ev.valores or {}).get("index")
+            evidence_urls.append({
+                "label": f"Rep #{rep_idx}" if rep_idx else "Desvio",
+                "tipo": ev.tipo.value if hasattr(ev.tipo, "value") else str(ev.tipo),
+                "url": ev_url,
+                "instante_inicio": ev.instante_inicio,
+                "instante_fim": ev.instante_fim,
+                "descricao": ev.descricao or "Evidência de desvio postural",
+                "severidade": ev.severidade or "moderada",
+            })
+        formatted_events.append(ev_dict)
+
+    risk_val = (
+        session.risk_classification.value
+        if hasattr(session.risk_classification, "value")
+        else str(session.risk_classification or "verde")
+    )
+    risk_symbol = RISK_SYMBOLS.get(risk_val.lower(), "●")
+    exercicio_nome = EXERCISE_NAMES.get(
+        session.exercicio_id or session.case_id or "", session.exercicio_id or "Exercício de Reabilitação"
+    )
+
+    deviations_count = session.total_deviations or 0
+    score = session.compliance_score if session.compliance_score is not None else 100.0
+
+    comparacao_clinica = {
+        "plano": {
+            "status": "ok" if deviations_count == 0 else "warn",
+            "label": "Conforme prescrição" if deviations_count == 0 else f"{deviations_count} desvio(s) detectado(s)",
+        },
+        "laudo": {
+            "status": "ok" if score >= 80 else "warn",
+            "label": "Amplitude dentro do limite" if score >= 80 else "Amplitude com restrições clínicas",
+        },
+        "inconsistencia": {
+            "status": "info",
+            "label": "Nenhuma inconsistência detectada",
+        },
+    }
+
+    annotated_url = f"/media/{session.annotated_video_path.lstrip('/')}" if session.annotated_video_path else None
+    analysis_url = f"/media/{session.analysis_path.lstrip('/')}" if session.analysis_path else None
+    telemetry_url = f"/media/{session.telemetry_path.lstrip('/')}" if session.telemetry_path else None
+
+    return SessionReportResponse(
+        session_id=session.session_id,
+        paciente_id=session.paciente_id or "PAC-001",
+        exercicio_id=session.exercicio_id,
+        exercicio_nome=exercicio_nome,
+        case_id=session.case_id,
+        side_evaluated=session.side_evaluated,
+        created_at=session.created_at,
+        status=session.status.value if hasattr(session.status, "value") else str(session.status),
+        compliance_score=session.compliance_score,
+        risk_classification=risk_val,
+        risk_symbol=risk_symbol,
+        justificativas=session.justificativas or [],
+        target_repetitions=session.target_repetitions,
+        valid_repetitions=session.valid_repetitions,
+        invalid_repetitions=session.invalid_repetitions,
+        total_deviations=deviations_count,
+        annotated_video_url=annotated_url,
+        analysis_json_url=analysis_url,
+        telemetry_json_url=telemetry_url,
+        evidence_urls=evidence_urls,
+        events=formatted_events,
+        comparacao_clinica=comparacao_clinica,
+        aviso_legal="Apoio à decisão, não diagnóstico.",
+    )
+

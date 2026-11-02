@@ -103,3 +103,15 @@ Accept: application/json
 ### ============================================================
 # O backend serve os arquivos estáticos montados sob /media
 # GET {{host}}/media/outputs/{{sessionId}}/pose/annotated.mp4
+
+### ============================================================
+### 11. Listar Clipes de Referência Disponíveis do Dataset Sintético
+### ============================================================
+GET {{baseUrl}}/sessoes/clips-referencia
+Accept: application/json
+
+### ============================================================
+### 12. Obter Relatório Estruturado Consolidado da Sessão (Laudo Clínico)
+### ============================================================
+GET {{baseUrl}}/sessoes/{{sessionId}}/relatorio
+Accept: application/json

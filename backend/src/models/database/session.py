@@ -38,6 +38,7 @@ class SessionDocument(BaseModel):
     video_path: Optional[str] = Field(default=None, description="Caminho relativo do vídeo original")
     annotated_video_path: Optional[str] = Field(default=None, description="Caminho relativo do vídeo com HUD")
     analysis_path: Optional[str] = Field(default=None, description="Caminho relativo do analysis.json")
+    telemetry_path: Optional[str] = Field(default=None, description="Caminho relativo do telemetry.json")
     compliance_score: Optional[float] = Field(
         default=None, description="Score percentual de conformidade (0-100%)"
     )

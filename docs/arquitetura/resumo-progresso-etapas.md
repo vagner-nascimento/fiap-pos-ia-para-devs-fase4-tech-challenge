@@ -57,6 +57,20 @@
   * `GET /api/sessoes/{id}/eventos`: eventos de repetições e desvios associados.
 - **Testes Automatizados:** 97 testes unitários passando (`pytest tests/ -v`).
 
+### Etapa 6: Passo 3 — Frontend & Relatório Individual do Vídeo (Issue #6 - Concluída)
+- **Design System Oficial (`docs/design/`):**
+  * `frontend/src/tokens.css` criado e importado com todos os tokens formais (`--fc-*`), tipografia *Plus Jakarta Sans*, espaçamentos e raios.
+  * Componentes do Design System (`frontend/src/components/ds/`): `Button`, `Card`, `StatusChip` (●/▲/■), `StepList` (etapas com ✓, … e numerais), `Timeline` (faixas de 28px) e `VideoPlayer` sincronizado.
+- **Telas da Jornada Implementadas:**
+  * **Tela 4 (Processamento - `ProcessingView.jsx`):** Feedback visual em tempo real com `StepList`, barra de progresso e polling automático.
+  * **Tela 5 (Relatório da Sessão - `SessionReportView.jsx`):** Player HTML5 do vídeo anotado com HUD (`/media/outputs/.../annotated.mp4`), timeline multicamadas sincronizada, galeria de snapshots de evidência com modal lightbox, conformidade biomecânica e botão "Baixar PDF / Imprimir" com CSS `@media print`.
+  * **Histórico & Nova Análise (`SessionsListView.jsx`):** Tabela de sessões registradas no MongoDB, filtros e modal com tabs para upload de MP4 ou seleção de clipe do dataset sintético.
+  * **AppShell (`App.jsx`):** Sidebar fixa de 220px (`--fc-primary-dark`), navegação fluida entre telas e aba de monitoramento API Health mantida.
+- **Backend & Infraestrutura:**
+  * `frontend/nginx.conf` e `frontend/vite.config.js`: Proxies configurados para servir `/media/` a partir do backend.
+  * Endpoints REST adicionados: `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`.
+  * Testes automatizados: 102 testes passando no backend e build de produção do frontend validado via Docker (`npm run build`).
+
 ---
 
 ## 2. Próximos Passos Imediatos
@@ -65,4 +79,6 @@
    - Análise de dor facial (MediaPipe Face Mesh / PSPI).
    - Análise de fala e dor vocal (faster-whisper + Azure Text Analytics).
    - Fusão multimodal de scores de dor e desvios na sessão.
-2. Interface frontend para visualização do painel de alertas e reprodução dos vídeos gravados.
+2. Expansão dos analisadores de exercícios para FISIO-002 a FISIO-007.
+3. Telas complementares de cadastro de pacientes, planos de exercícios e laudos médicos (Issues #3, #4 e #5).
+
