@@ -71,7 +71,7 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
       if (modalTab === 'reference') {
         const clipInfo = referenceClips.find((c) => c.filename === selectedClip);
         const payload = {
-          exercicio_id: clipInfo?.exercicio_id || 'KNEE_EXTENSION_SEATED',
+          exercicio_id: clipInfo?.case_id || clipInfo?.exercicio_id || 'FISIO-001',
           paciente_id: pacienteId || 'PAC-001',
           dataset_clip: selectedClip,
           target_repetitions: Number(targetReps) || 5,

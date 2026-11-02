@@ -2,7 +2,10 @@
 
 import json
 import logging
+import os
 from pathlib import Path
+import shutil
+import subprocess
 from typing import Callable, Optional
 
 import cv2
@@ -210,6 +213,42 @@ class VideoPoseProcessor:
         finally:
             cap.release()
             writer.release()
+
+        # Converte o vídeo de 'mp4v' para 'H.264' (avc1) via ffmpeg para suporte em browsers
+        self._transcode_to_h264_if_available(output_video_path)
+
+    def _transcode_to_h264_if_available(self, video_path: Path) -> None:
+        """Transcodifica para H.264 / AAC se o ffmpeg estiver disponível no ambiente."""
+        if not shutil.which("ffmpeg"):
+            return
+        temp_h264 = video_path.with_suffix(".h264.mp4")
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            "-an",
+            str(temp_h264),
+        ]
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+            if res.returncode == 0 and temp_h264.exists() and temp_h264.stat().st_size > 0:
+                temp_h264.replace(video_path)
+                logger.info("Vídeo transcodificado com sucesso para H.264: %s", video_path)
+            else:
+                logger.warning("Falha na transcodificação ffmpeg (rc=%s): %s", res.returncode, res.stderr.decode()[:200])
+                if temp_h264.exists():
+                    temp_h264.unlink()
+        except Exception as exc:
+            logger.warning("Exceção ao transcodificar vídeo via ffmpeg: %s", exc)
+            if temp_h264.exists():
+                temp_h264.unlink()
 
     def _draw_skeleton(self, frame: np.ndarray, pose_frame: PoseFrame, color: tuple[int, int, int]) -> None:
         """Desenha pontos e conexões do esqueleto."""

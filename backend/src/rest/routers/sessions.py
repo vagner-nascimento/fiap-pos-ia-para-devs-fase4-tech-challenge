@@ -89,13 +89,36 @@ def _resolve_and_prepare_video(
         return input_path
 
     if dataset_clip:
-        clip_path = storage.dataset_clip(exercicio_id, dataset_clip)
-        if not clip_path.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Clipe '{dataset_clip}' não encontrado em DATASET_ROOT/{exercicio_id}.",
-            )
-        return clip_path
+        # Tenta 1: via exercicio_id fornecido
+        try:
+            candidate = storage.dataset_clip(exercicio_id, dataset_clip)
+            if candidate.exists():
+                return candidate
+        except Exception:
+            pass
+
+        # Tenta 2: se o nome do clipe começar com FISIO-XXX (ex: FISIO-001-correto.mp4)
+        if dataset_clip.startswith("FISIO-"):
+            parts = dataset_clip.split("-")
+            if len(parts) >= 2:
+                inferred_case = f"{parts[0]}-{parts[1]}"
+                try:
+                    candidate = storage.dataset_clip(inferred_case, dataset_clip)
+                    if candidate.exists():
+                        return candidate
+                except Exception:
+                    pass
+
+        # Tenta 3: busca recursiva no dataset_root pelo nome exato do arquivo
+        if storage.dataset_root and storage.dataset_root.is_dir():
+            matches = list(storage.dataset_root.glob(f"**/{dataset_clip}"))
+            if matches and matches[0].is_file():
+                return matches[0]
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Clipe '{dataset_clip}' não encontrado em DATASET_ROOT (exercício '{exercicio_id}').",
+        )
 
     if video_path:
         local_path = Path(video_path).resolve()
