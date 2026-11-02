@@ -39,6 +39,7 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 ---
 
 ### 3. Documentos Complementares
-- [Plano Detalhado do Motor de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-motor-deteccao-pose-mediapipe.md): Especificação inicial aprovada para o motor de visão;
+- [Plano do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-passo-3-frontend-relatorio-individual.md): Especificação arquitetural e de interface para o relatório individual do vídeo (Issue #6), alinhado ao Design System;
+- [Plano Detalhado do Motor de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-motor-deteccao-pose-mediapipe.md): Especificação inicial aprovada para o motor de visão (Passos 1 e 2);
 - [Resumo de Progresso das Etapas](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/resumo-progresso-etapas.md): Acompanhamento e status de implementação das etapas;
 - [Walkthrough do Motor de Detecção de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-motor-deteccao-pose.md): Guia de validação prática e testes via CLI.
