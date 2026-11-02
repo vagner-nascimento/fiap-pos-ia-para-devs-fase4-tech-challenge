@@ -1,5 +1,4 @@
-"""Modelos REST para requisições e respostas de sessões."""
-
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -28,4 +27,44 @@ class CreateSessionPayload(BaseModel):
     side: Optional[str] = Field("auto", description="Lado do exercício: 'auto', 'direito', 'esquerdo', 'ambos'")
     target_repetitions: Optional[int] = Field(5, description="Número de repetições prescritas (alvo)")
     run_id: Optional[str] = Field(None, description="ID customizado opcional para a sessão")
+
+
+class ReferenceClipInfo(BaseModel):
+    """Metadados de clipe de teste do dataset de referência."""
+
+    case_id: str
+    exercicio_id: str
+    exercicio_nome: str
+    filename: str
+    tipo: str
+    descricao: str
+
+
+class SessionReportResponse(BaseModel):
+    """Relatório individual da sessão estruturado para a interface e impressão de laudo."""
+
+    session_id: str
+    paciente_id: Optional[str] = None
+    exercicio_id: str
+    exercicio_nome: str
+    case_id: Optional[str] = None
+    side_evaluated: Optional[str] = None
+    created_at: Optional[str | datetime] = None
+    status: str
+    compliance_score: Optional[float] = None
+    risk_classification: Optional[str] = None
+    risk_symbol: Optional[str] = None
+    justificativas: list[str] = Field(default_factory=list)
+    target_repetitions: Optional[int] = None
+    valid_repetitions: int = 0
+    invalid_repetitions: int = 0
+    total_deviations: int = 0
+    annotated_video_url: Optional[str] = None
+    analysis_json_url: Optional[str] = None
+    telemetry_json_url: Optional[str] = None
+    evidence_urls: list[dict] = Field(default_factory=list)
+    events: list[dict] = Field(default_factory=list)
+    comparacao_clinica: dict = Field(default_factory=dict)
+    aviso_legal: str = "Apoio à decisão, não diagnóstico."
+
 

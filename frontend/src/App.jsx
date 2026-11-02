@@ -1,29 +1,67 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Activity, CheckCircle2, CircleAlert, Clock3, Database, LoaderCircle, RefreshCw } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import {
+  Activity,
+  CheckCircle2,
+  CircleAlert,
+  Clock3,
+  Database,
+  Film,
+  FileText,
+  LoaderCircle,
+  RefreshCw,
+  HeartPulse,
+} from 'lucide-react';
 import { fetchHealth } from './api/health';
+import { SessionsListView } from './components/SessionsListView';
+import { ProcessingView } from './components/ProcessingView';
+import { SessionReportView } from './components/SessionReportView';
+import { Card } from './components/ds/Card';
+import { Button } from './components/ds/Button';
 
-function App() {
+export default function App() {
+  const [currentView, setCurrentView] = useState('sessions'); // 'sessions' | 'processing' | 'report' | 'health'
+  const [activeSessionId, setActiveSessionId] = useState(null);
+
+  // Estado da tela de Health Check
   const [health, setHealth] = useState(null);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [healthError, setHealthError] = useState('');
+  const [isHealthLoading, setIsHealthLoading] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState(null);
 
   const checkHealth = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
+    setIsHealthLoading(true);
+    setHealthError('');
     try {
       const result = await fetchHealth();
       setHealth(result);
       setLastCheckedAt(new Date());
     } catch (requestError) {
       setHealth(null);
-      setError(requestError.message || 'Não foi possível conectar à API.');
+      setHealthError(requestError.message || 'Não foi possível conectar à API.');
     } finally {
-      setIsLoading(false);
+      setIsHealthLoading(false);
     }
   }, []);
 
-  useEffect(() => { checkHealth(); }, [checkHealth]);
+  useEffect(() => {
+    if (currentView === 'health') {
+      checkHealth();
+    }
+  }, [currentView, checkHealth]);
+
+  const handleOpenReport = (sessionId) => {
+    setActiveSessionId(sessionId);
+    setCurrentView('report');
+  };
+
+  const handleOpenProcessing = (sessionId) => {
+    setActiveSessionId(sessionId);
+    setCurrentView('processing');
+  };
+
+  const handleBackToSessions = () => {
+    setCurrentView('sessions');
+  };
 
   const isHealthy = health?.status === 'healthy' && health?.database === 'healthy';
   const formattedCheckTime = lastCheckedAt
@@ -31,69 +69,159 @@ function App() {
     : '--:--:--';
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-mark" aria-hidden="true">F</div>
-        <div className="brand-copy"><strong>FIAP POS IA</strong><span>Operations</span></div>
-        <nav className="main-nav" aria-label="Menu principal">
-          <span className="nav-label">Monitoramento</span>
-          <a className="nav-item active" href="#api-health" aria-current="page">
-            <Activity size={18} strokeWidth={2.2} /><span>API Health</span>
-          </a>
+    <div className="r app-container">
+      {/* Sidebar Fixa 220px (Design System: --fc-primary-dark) */}
+      <aside className="sb no-print" aria-label="Menu Principal">
+        <b>Fisio Coach</b>
+        <nav className="sidebar-nav">
+          <button
+            type="button"
+            className={`sidebar-nav-item ${currentView === 'sessions' ? 'on' : ''}`}
+            onClick={() => setCurrentView('sessions')}
+          >
+            <Film size={16} /> <span>Sessões</span>
+          </button>
+
+          {activeSessionId && (
+            <button
+              type="button"
+              className={`sidebar-nav-item ${currentView === 'report' || currentView === 'processing' ? 'on' : ''}`}
+              onClick={() => setCurrentView('report')}
+            >
+              <FileText size={16} /> <span>Relatório Atual</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className={`sidebar-nav-item ${currentView === 'health' ? 'on' : ''}`}
+            onClick={() => setCurrentView('health')}
+          >
+            <HeartPulse size={16} /> <span>API Health</span>
+          </button>
         </nav>
-        <div className="sidebar-footer">
-          <span className={`status-dot ${isHealthy ? '' : 'offline'}`} aria-hidden="true" /><span>Ambiente local</span>
-        </div>
+        <small>Fisioterapeuta</small>
       </aside>
 
-      <main className="content" id="api-health">
-        <header className="page-header">
-          <div>
-            <p className="eyebrow">Monitoramento / Serviço</p>
-            <h1>API Health</h1>
-            <p className="page-description">Acompanhe a disponibilidade da API.</p>
-          </div>
-          <button className="refresh-button" type="button" onClick={checkHealth} disabled={isLoading}>
-            <RefreshCw size={17} className={isLoading ? 'spin' : ''} /><span>{isLoading ? 'Consultando' : 'Atualizar'}</span>
-          </button>
-        </header>
+      {/* Área de Conteúdo Principal */}
+      <main className="m">
+        {currentView === 'sessions' && (
+          <SessionsListView
+            onSelectSession={handleOpenReport}
+            onSelectProcessing={handleOpenProcessing}
+          />
+        )}
 
-        <section className={`health-banner ${isLoading ? 'pending' : isHealthy ? 'healthy' : 'unhealthy'}`} aria-live="polite">
-          <div className="banner-icon">
-            {isLoading ? <LoaderCircle className="spin" size={25} /> : isHealthy ? <CheckCircle2 size={25} /> : <CircleAlert size={25} />}
-          </div>
-          <div>
-            <p className="banner-kicker">Status da aplicação</p>
-            <h2>{isLoading ? 'Verificando conexão...' : isHealthy ? 'API operacional' : 'API indisponível'}</h2>
-            <p>{isLoading ? 'Aguardando resposta do backend.' : error || 'A API e o banco de dados responderam corretamente.'}</p>
-          </div>
-        </section>
+        {currentView === 'processing' && activeSessionId && (
+          <ProcessingView
+            sessionId={activeSessionId}
+            onViewReport={handleOpenReport}
+            onBackToSessions={handleBackToSessions}
+          />
+        )}
 
-        <section className="metrics-grid" aria-label="Detalhes do health check">
-          <article className="metric-card">
-            <div className="metric-heading"><span>Status da API</span><Activity size={17} /></div>
-            <strong>{health?.status || (error ? 'Erro' : '--')}</strong><small>GET /api/health</small>
-          </article>
-          <article className="metric-card">
-            <div className="metric-heading"><span>Última consulta</span><Clock3 size={17} /></div>
-            <strong>{formattedCheckTime}</strong><small>Horário local</small>
-          </article>
-          <article className="metric-card">
-            <div className="metric-heading"><span>Banco de dados</span><Database size={17} /></div>
-            <strong>{health?.database || (error ? 'Indisponível' : '--')}</strong><small>Conexão MongoDB</small>
-          </article>
-        </section>
+        {currentView === 'report' && activeSessionId && (
+          <SessionReportView
+            sessionId={activeSessionId}
+            onBackToSessions={handleBackToSessions}
+          />
+        )}
 
-        <section className="response-panel" aria-label="Resposta da API">
-          <div className="panel-heading">
-            <div><p className="eyebrow">Resposta recebida</p><h2>Health check</h2></div>
-            <span className="method-badge">GET</span>
+        {currentView === 'health' && (
+          <div className="health-view">
+            <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <p className="eyebrow mu">Monitoramento / Infraestrutura</p>
+                <h1>API Health & Status</h1>
+                <p className="page-description mu">Disponibilidade do backend FastAPI e do banco MongoDB</p>
+              </div>
+              <Button onClick={checkHealth} disabled={isHealthLoading}>
+                <RefreshCw size={16} className={isHealthLoading ? 'spin' : ''} />
+                <span>{isHealthLoading ? 'Consultando' : 'Atualizar'}</span>
+              </Button>
+            </header>
+
+            <section
+              className={`health-banner ${isHealthLoading ? 'pending' : isHealthy ? 'healthy' : 'unhealthy'}`}
+              style={{
+                background: isHealthy ? 'var(--fc-ok-bg)' : 'var(--fc-crit-bg)',
+                color: isHealthy ? 'var(--fc-ok-fg)' : 'var(--fc-crit-fg)',
+                padding: '20px',
+                borderRadius: 'var(--fc-radius-card)',
+                marginBottom: '20px',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                {isHealthLoading ? (
+                  <LoaderCircle className="spin" size={28} />
+                ) : isHealthy ? (
+                  <CheckCircle2 size={28} />
+                ) : (
+                  <CircleAlert size={28} />
+                )}
+              </div>
+              <div>
+                <strong style={{ fontSize: '18px', display: 'block' }}>
+                  {isHealthLoading ? 'Verificando conexão...' : isHealthy ? 'API operacional' : 'API indisponível'}
+                </strong>
+                <p style={{ margin: 0, opacity: 0.9 }}>
+                  {isHealthLoading
+                    ? 'Aguardando resposta do container de backend.'
+                    : healthError || 'O backend FastAPI e o banco de dados MongoDB responderam com sucesso.'}
+                </p>
+              </div>
+            </section>
+
+            <div className="g" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+              <Card>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="mu">Status da API</span>
+                  <Activity size={17} />
+                </div>
+                <strong style={{ fontSize: '20px', display: 'block', marginTop: '8px' }}>
+                  {health?.status || (healthError ? 'Erro' : '--')}
+                </strong>
+                <small className="mu">GET /api/health</small>
+              </Card>
+
+              <Card>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="mu">Última consulta</span>
+                  <Clock3 size={17} />
+                </div>
+                <strong style={{ fontSize: '20px', display: 'block', marginTop: '8px' }}>
+                  {formattedCheckTime}
+                </strong>
+                <small className="mu">Horário local</small>
+              </Card>
+
+              <Card>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="mu">Banco de dados</span>
+                  <Database size={17} />
+                </div>
+                <strong style={{ fontSize: '20px', display: 'block', marginTop: '8px' }}>
+                  {health?.database || (healthError ? 'Indisponível' : '--')}
+                </strong>
+                <small className="mu">Conexão MongoDB 7</small>
+              </Card>
+            </div>
+
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <h2>Resposta do Endpoint</h2>
+                <span className="ch ne">GET /api/health</span>
+              </div>
+              <pre style={{ margin: 0, background: 'var(--fc-bg)', padding: '16px', borderRadius: '8px', fontSize: '13px', overflowX: 'auto' }}>
+                {health ? JSON.stringify(health, null, 2) : healthError ? JSON.stringify({ error: healthError }, null, 2) : '{ }'}
+              </pre>
+            </Card>
           </div>
-          <pre>{health ? JSON.stringify(health, null, 2) : error ? JSON.stringify({ error }, null, 2) : '{ }'}</pre>
-        </section>
+        )}
       </main>
     </div>
   );
 }
-
-export default App;
