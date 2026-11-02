@@ -96,7 +96,7 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **100 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **102 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -116,5 +116,7 @@ uv run pytest tests -v
   * [ADR 0005: HUD Responsivo com Pillow e UTF-8](docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md)
   * [ADR 0006: Adoção do MongoDB](docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
   * [ADR 0007: Padrão Result Sinks e Pipeline Assíncrono](docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md)
+  * [ADR 0008: Transcodificação H.264 para Streaming Web](docs/arquitetura/adrs/0008-transcodificacao-h264-para-streaming-web.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
-* 🛠️ **[Walkthrough de Implementação](docs/walkthrough-motor-deteccao-pose.md)** — Guia passo a passo de desenvolvimento e calibração dos analisadores.
+* 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
+* 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).

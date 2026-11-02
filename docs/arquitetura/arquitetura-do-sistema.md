@@ -118,6 +118,7 @@ flowchart TB
         Geometry["Geometry Utilities<br/>(Ângulos 2D, Distâncias, Inclinações)"]
         RepetitionDetector["RepetitionDetector<br/>(Histerese, Interpolação, Suavização)"]
         HudRenderer["HudRenderer<br/>(Pillow + TrueType, Responsivo, UTF-8)"]
+        FFmpegTranscoder["FFmpeg Transcoder<br/>(H.264 / yuv420p / +faststart para Web)"]
     end
 
     subgraph "Persistence Sinks (Padrão Strategy)"
@@ -145,6 +146,7 @@ flowchart TB
     BaseAnalyzer --> Geometry
     BaseAnalyzer --> RepetitionDetector
     Processor --> HudRenderer
+    Processor --> FFmpegTranscoder
     Processor --> MediaStorage
     Processor --> ResultSink
     FileSink -.->|implementa| ResultSink
@@ -160,7 +162,7 @@ flowchart TB
     classDef planned fill:#f0f0f0,stroke:#9e9e9e,color:#424242,stroke-dasharray: 4 4;
 
     class RouterSessions,RouterPlans,RouterReports controller;
-    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer engine;
+    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,FFmpegTranscoder engine;
     class MediaStorage,DBConnection,Repos infra;
     class ResultSink,FileSink,MongoSink,CompSink sink;
     class SpeechEngine,PainTextExtractor,FacePainEngine,MultimodalFusion planned;
@@ -339,5 +341,6 @@ RAIZ_DO_REPOSITORIO/
 | **Execução em CPU (sem GPU)** | Adoção do MediaPipe Pose com modelo BlazePose leve | Permite rodar o pipeline completo em qualquer computador convencional ou container Docker sem custos de instâncias com GPU na nuvem. |
 | **Integridade de Caracteres no Vídeo** | Renderização do HUD via Pillow (`ImageDraw` com fonte TrueType UTF-8) | Exibe acentuação correta em português (`ã`, `á`, `ç`) e notações científicas (`°`, `≥`), eliminando interrogações (`?`) típicas do OpenCV Hershey. |
 | **HUD Responsivo e Dinâmico** | Cálculo proporcional baseado na largura e altura do frame | Garante que vídeos verticais (típicos de gravações de smartphone) e horizontais exibam caixas de alerta perfeitamente enquadradas sem cortes de texto. |
+| **Streaming e Compatibilidade Web** | Transcodificação pós-renderização via FFmpeg em H.264 (`yuv420p` + `+faststart`) e Nginx com 250MB | Permite playback nativo instantâneo no frontend React via tag `<video>` em qualquer browser moderno sem erros de codec, suportando vídeos de alta resolução. |
 | **Segurança e Privacidade (LGPD)** | Dados em `data/` isolados no `.gitignore` e caminhos validados por regex | Mídias sensíveis de pacientes não sobem ao Git; sanitização impede ataques de *Path Traversal* (`../`). |
 | **Portabilidade Host/Container** | `MediaStorage` com fallback dinâmico absoluto | O sistema resolve o caminho correto tanto executado localmente via CLI quanto encapsulado no container Docker com volume mapeado. |

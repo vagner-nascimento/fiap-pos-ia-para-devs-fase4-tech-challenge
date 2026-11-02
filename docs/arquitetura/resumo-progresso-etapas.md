@@ -67,8 +67,9 @@
   * **Histórico & Nova Análise (`SessionsListView.jsx`):** Tabela de sessões registradas no MongoDB, filtros e modal com tabs para upload de MP4 ou seleção de clipe do dataset sintético.
   * **AppShell (`App.jsx`):** Sidebar fixa de 220px (`--fc-primary-dark`), navegação fluida entre telas e aba de monitoramento API Health mantida.
 - **Backend & Infraestrutura:**
-  * `frontend/nginx.conf` e `frontend/vite.config.js`: Proxies configurados para servir `/media/` a partir do backend.
-  * Endpoints REST adicionados: `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`.
+  * `frontend/nginx.conf` e `frontend/vite.config.js`: Proxies configurados para servir `/media/` a partir do backend, com `client_max_body_size 250M;` e timeouts estendidos de 600s para uploads grandes.
+  * `services/pose/video_processor.py`: Transcodificação automática pós-renderização para **H.264 (`yuv420p` + `+faststart`)** via FFmpeg, garantindo playback nativo em navegadores modernos sem erros de decodificação.
+  * Endpoints REST adicionados: `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`, além de resolução flexível de clipes de dataset em `POST /api/sessoes/referencia`.
   * Testes automatizados: 102 testes passando no backend e build de produção do frontend validado via Docker (`npm run build`).
 
 ---

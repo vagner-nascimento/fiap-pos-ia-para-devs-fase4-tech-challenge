@@ -35,11 +35,13 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 | [ADR 0005](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md) | **Renderização de HUD com Pillow e Suporte a UTF-8** | Aprovado | Renderização de Vídeo / UX |
 | [ADR 0006](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md) | **Adoção do MongoDB 7 para Persistência Documental e Telemetria** | Aprovado | Banco de Dados / Persistência |
 | [ADR 0007](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md) | **Padrão Result Sinks, Pipeline Assíncrono e Integração com MongoDB** | Aprovado | Arquitetura / Persistência / REST |
+| [ADR 0008](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0008-transcodificacao-h264-para-streaming-web.md) | **Transcodificação H.264 para Streaming Web e Compatibilidade com Navegadores** | Aprovado | Vídeo / Streaming / Docker / Web |
 
 ---
 
 ### 3. Documentos Complementares
 - [Plano do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-passo-3-frontend-relatorio-individual.md): Especificação arquitetural e de interface para o relatório individual do vídeo (Issue #6), alinhado ao Design System;
+- [Walkthrough do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-passo-3-relatorio-individual.md): Roteiro de validação do Passo 3 (Issue #6) com execução dos testes e uso da UI;
 - [Plano Detalhado do Motor de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-motor-deteccao-pose-mediapipe.md): Especificação inicial aprovada para o motor de visão (Passos 1 e 2);
 - [Resumo de Progresso das Etapas](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/resumo-progresso-etapas.md): Acompanhamento e status de implementação das etapas;
-- [Walkthrough do Motor de Detecção de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-motor-deteccao-pose.md): Guia de validação prática e testes via CLI.
+- [Walkthrough do Motor de Detecção de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-motor-deteccao-pose.md): Guia de validação prática e testes via CLI (Passo 1).

@@ -8,18 +8,22 @@ Interface web do sistema Fisio Coach para envio de vídeos de sessões, acompanh
 
 ```text
 frontend/
-├── index.html                 # documento e elemento #root
-├── vite.config.js             # plugin React e proxy local /api
-├── nginx.conf                 # arquivos estáticos e proxy /api em Docker
-├── Dockerfile                 # build Vite e imagem final Nginx
+├── index.html                 # Documento HTML5 e elemento #root
+├── vite.config.js             # Configuração do Vite com proxy /api e /media
+├── nginx.conf                 # Nginx de produção (proxy /api, /media e upload até 250MB)
+├── Dockerfile                 # Build multi-stage (Node 20 + Nginx Alpine)
 └── src/
-    ├── api/health.js          # requisição HTTP do health check
-    ├── App.jsx                # interface e estado da tela
-    ├── main.jsx               # inicialização React e CSS global
-    └── styles.css             # estilos globais
+    ├── tokens.css             # Design Tokens oficiais (--fc-* e Plus Jakarta Sans)
+    ├── api/                   # Clientes REST desacoplados (sessions.js, health.js)
+    ├── components/            # Telas da jornada e componentes do Design System
+    │   ├── ds/                # Componentes base: Button, Card, StatusChip, StepList, Timeline, VideoPlayer
+    │   ├── SessionsListView.jsx   # Listagem de sessões e modal de nova análise
+    │   ├── ProcessingView.jsx     # Tela 4: Acompanhamento de processamento com polling
+    │   └── SessionReportView.jsx  # Tela 5: Relatório analítico individual (vídeo, timeline, laudo)
+    ├── App.jsx                # Shell da aplicação com sidebar de 220px
+    ├── main.jsx               # Bootstrap React com importação de tokens
+    └── styles.css             # Estilos utilitários globais
 ```
-
-Mantenha as chamadas HTTP em `src/api`, separadas da apresentação. Conforme o frontend crescer, componentes reutilizáveis podem ser extraídos para `src/components`, páginas para `src/pages`, hooks compartilhados para `src/hooks` e recursos estáticos para `src/assets`.
 
 ## Integração e rotas da API
 
@@ -28,12 +32,15 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | Método | Caminho | Uso |
 | --- | --- | --- |
 | `GET` | `/api/health` | Obtém o status da API e do MongoDB para a tela de monitoramento. |
-| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) e inicia a análise biomecânica (`202 Accepted`). |
+| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) de até 250MB e inicia a análise (`202 Accepted`). |
 | `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
+| `GET` | `/api/sessoes/clips-referencia` | Retorna catálogo de clipes sintéticos disponíveis para teste rápido. |
 | `GET` | `/api/sessoes` | Lista as sessões do paciente com filtros, datas, scores e status. |
 | `GET` | `/api/sessoes/{id}` | Recupera os detalhes da sessão, justificativas e classificação de risco (`verde`, `atencao`, `critico`). |
 | `GET` | `/api/sessoes/{id}/eventos` | Recupera a linha do tempo de repetições e desvios posturais. |
-| `GET` | `/media/...` | Serve os vídeos anotados (`annotated.mp4`) e os snapshots fotográficos comprobatórios (`evidence/*.jpg`). |
+| `GET` | `/api/sessoes/{id}/relatorio` | Payload estruturado para a tela de relatório individual e impressão médica. |
+| `GET` | `/media/...` | Streaming de vídeos anotados H.264 (`annotated.mp4`) e snapshots fotográficos (`evidence/*.jpg`). |
+
 
 Em desenvolvimento, o Vite encaminha `/api` para `http://localhost:3000`. No container, o Nginx encaminha `/api/` para `http://backend:3000` pela rede do Docker Compose; as demais requisições servem o bundle React e usam fallback para `index.html`. O backend também possui CORS liberado para comunicação direta no host.
 

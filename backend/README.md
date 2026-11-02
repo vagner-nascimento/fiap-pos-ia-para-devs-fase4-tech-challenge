@@ -36,10 +36,12 @@ uv run python -m src.main
 * **Rotas de Sessões e Biomecânica:**
   * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`), registra sessão e processa em background (`202 Accepted`);
   * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe do dataset via payload JSON;
+  * `GET /api/sessoes/clips-referencia`: Lista o catálogo de clipes sintéticos de referência para teste;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score e classificação de risco;
   * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições e desvios;
-  * `GET /media/...`: Serve os vídeos anotados e snapshots de evidência diretamente para o frontend.
+  * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico;
+  * `GET /media/...`: Serve os vídeos anotados transcodificados em H.264 e snapshots de evidência em JPG.
 
 > 💡 **Dica de Testes:** O repositório inclui o arquivo [`api.http`](../api.http) na raiz com todas as requisições prontas para execução imediata no VS Code / IDE.
 
