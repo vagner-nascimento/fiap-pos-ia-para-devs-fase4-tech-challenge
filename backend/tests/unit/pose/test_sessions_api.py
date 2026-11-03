@@ -242,6 +242,29 @@ def test_list_reference_clips(client):
     assert "tipo" in first
 
 
+def test_list_exercises_for_manual_upload(client):
+    res = client.get("/api/sessoes/exercicios")
+    assert res.status_code == 200
+    data = res.json()
+    assert [exercise["case_id"] for exercise in data] == [
+        "FISIO-001",
+        "FISIO-002",
+        "FISIO-006",
+        "FISIO-007",
+    ]
+    assert all(exercise["exercise_id"] for exercise in data)
+    assert all(exercise["nome"] for exercise in data)
+
+
+def test_create_session_rejects_unknown_exercise_before_video_resolution(client):
+    res = client.post(
+        "/api/sessoes",
+        data={"exercicio_id": "FISIO-999"},
+    )
+    assert res.status_code == 422
+    assert "Exercício não suportado" in res.json()["detail"]
+
+
 def test_get_session_report(client, mock_mongo):
     from datetime import datetime, timezone
 
@@ -315,5 +338,4 @@ def test_get_session_report(client, mock_mongo):
     assert report["evidence_urls"][0]["url"] == "/media/outputs/REP-TEST-001/pose/evidence/rep01_pico.jpg"
     assert report["aviso_legal"] == "Apoio à decisão, não diagnóstico."
     assert "comparacao_clinica" in report
-
 

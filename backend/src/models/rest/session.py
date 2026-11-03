@@ -40,6 +40,16 @@ class ReferenceClipInfo(BaseModel):
     descricao: str
 
 
+class ExerciseOption(BaseModel):
+    """Exercício disponível para seleção antes do processamento do vídeo."""
+
+    case_id: str
+    exercise_id: str
+    nome: str
+    lado_padrao: str
+    requisitos: list[str] = Field(default_factory=list)
+
+
 class SessionReportResponse(BaseModel):
     """Relatório individual da sessão estruturado para a interface e impressão de laudo."""
 
@@ -66,5 +76,4 @@ class SessionReportResponse(BaseModel):
     events: list[dict] = Field(default_factory=list)
     comparacao_clinica: dict = Field(default_factory=dict)
     aviso_legal: str = "Apoio à decisão, não diagnóstico."
-
 

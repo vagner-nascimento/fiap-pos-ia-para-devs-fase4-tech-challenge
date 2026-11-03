@@ -7,6 +7,7 @@ import {
   createSessionReference,
   createSessionUpload,
   listReferenceClips,
+  listExercises,
 } from '../api/sessions';
 import { Plus, RefreshCw, PlayCircle, FileText, Upload, Film, X } from 'lucide-react';
 
@@ -23,6 +24,8 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('reference'); // 'reference' | 'upload'
   const [referenceClips, setReferenceClips] = useState([]);
+  const [exerciseOptions, setExerciseOptions] = useState([]);
+  const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [selectedClip, setSelectedClip] = useState('');
   const [pacienteId, setPacienteId] = useState('PAC-001');
   const [targetReps, setTargetReps] = useState(5);
@@ -52,13 +55,17 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
     setIsModalOpen(true);
     setSubmitError(null);
     try {
-      const clips = await listReferenceClips();
+      const [exercises, clips] = await Promise.all([listExercises(), listReferenceClips()]);
+      setExerciseOptions(exercises);
       setReferenceClips(clips);
+      if (exercises.length > 0 && !selectedExerciseId) {
+        setSelectedExerciseId(exercises[0].case_id);
+      }
       if (clips.length > 0 && !selectedClip) {
         setSelectedClip(clips[0].filename);
       }
-    } catch {
-      // Fallback em caso de erro na listagem de clipes
+    } catch (err) {
+      setSubmitError(err.message || 'Falha ao carregar os exercícios disponíveis.');
     }
   };
 
@@ -71,7 +78,7 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
       if (modalTab === 'reference') {
         const clipInfo = referenceClips.find((c) => c.filename === selectedClip);
         const payload = {
-          exercicio_id: clipInfo?.case_id || clipInfo?.exercicio_id || 'FISIO-001',
+          exercicio_id: clipInfo?.case_id || selectedExerciseId,
           paciente_id: pacienteId || 'PAC-001',
           dataset_clip: selectedClip,
           target_repetitions: Number(targetReps) || 5,
@@ -86,7 +93,7 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
         }
         const formData = new FormData();
         formData.append('file', selectedFile);
-        formData.append('exercicio_id', 'FISIO-001');
+        formData.append('exercicio_id', selectedExerciseId);
         formData.append('paciente_id', pacienteId || 'PAC-001');
         formData.append('side', 'auto');
         formData.append('target_repetitions', String(targetReps || 5));
@@ -323,7 +330,14 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
                     id="select-clip"
                     className="in"
                     value={selectedClip}
-                    onChange={(e) => setSelectedClip(e.target.value)}
+                    onChange={(e) => {
+                      const filename = e.target.value;
+                      setSelectedClip(filename);
+                      const clipInfo = referenceClips.find((clip) => clip.filename === filename);
+                      if (clipInfo?.case_id) {
+                        setSelectedExerciseId(clipInfo.case_id);
+                      }
+                    }}
                     required
                   >
                     {referenceClips.map((clip) => (
@@ -347,6 +361,25 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
                   />
                 </div>
               )}
+
+              <div style={{ marginTop: '16px' }}>
+                <label htmlFor="exercise-id">Exercício:</label>
+                <select
+                  id="exercise-id"
+                  className="in"
+                  value={selectedExerciseId}
+                  onChange={(e) => setSelectedExerciseId(e.target.value)}
+                  disabled={modalTab === 'reference'}
+                  required
+                >
+                  <option value="" disabled>Selecione um exercício</option>
+                  {exerciseOptions.map((exercise) => (
+                    <option key={exercise.case_id} value={exercise.case_id}>
+                      {exercise.case_id} — {exercise.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="g" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
                 <div>

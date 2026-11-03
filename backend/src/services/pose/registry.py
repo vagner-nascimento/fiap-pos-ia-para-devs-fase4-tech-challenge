@@ -32,6 +32,16 @@ def supported_exercises() -> list[str]:
     return sorted({cls.case_id for cls in _ANALYZERS})
 
 
+def canonical_case_id(identifier: str) -> str:
+    """Retorna o código FISIO canônico para um código ou alias suportado."""
+    cls = _BY_ID.get(identifier.strip().upper())
+    if cls is None:
+        raise KeyError(
+            f"Exercício não suportado: {identifier!r}. Disponíveis: {', '.join(supported_exercises())}"
+        )
+    return cls.case_id
+
+
 def get_analyzer(
     identifier: str,
     side: BodySide | str | None = BodySide.AUTO,
