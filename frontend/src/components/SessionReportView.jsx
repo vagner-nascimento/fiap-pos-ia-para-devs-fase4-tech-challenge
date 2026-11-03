@@ -271,6 +271,36 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
             </p>
           </Card>
 
+          {/* Card: Detecção do equipamento necessário */}
+          <Card>
+            <h2>Equipamento</h2>
+            {!report.equipamento?.possui_equipamento ? (
+              <p className="mu">Nenhum</p>
+            ) : (
+              <>
+                <div className="equipment-name">{report.equipamento.nome}</div>
+                <div className="equipment-total">
+                  <span>Presença total no vídeo</span>
+                  <strong>{(report.equipamento.percentual_total ?? 0).toFixed(1)}%</strong>
+                </div>
+                <div className="equipment-breakdown">
+                  <div>
+                    <span>Não detectado</span>
+                    <strong>{(report.equipamento.percentual_nao_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                  <div>
+                    <span>Detectado parcialmente</span>
+                    <strong>{(report.equipamento.percentual_parcialmente_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                  <div>
+                    <span>Detectado totalmente</span>
+                    <strong>{(report.equipamento.percentual_totalmente_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
+
           {/* Card: Comparação Clínica */}
           <Card>
             <h2>Comparação clínica</h2>

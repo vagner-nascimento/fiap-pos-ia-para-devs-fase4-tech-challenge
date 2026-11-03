@@ -22,6 +22,14 @@ from services.pose.base_analyzer import BaseExerciseAnalyzer
 from services.pose.joint_mapper import BodySide, JointMapper
 from services.pose.landmark_extractor import extract_pose_frames
 from services.pose.models import DeviationSeverity, ExerciseAnalysisResult, PoseFrame
+from services.pose.object_detector import (
+    ObjectDetection,
+    ObjectDetector,
+    detection_config,
+    frame_detection_category,
+    frame_detection_status,
+    detection_summary,
+)
 from services.pose.registry import get_analyzer
 
 from services.pose.hud_renderer import HudRenderer
@@ -181,6 +189,37 @@ class VideoPoseProcessor:
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(str(output_video_path), fourcc, fps, (width, height))
+        object_config = detection_config(result.session_summary.case_id)
+        object_detector = ObjectDetector(object_config) if object_config else None
+        object_detections: dict[int, list[ObjectDetection]] = {}
+        detected_frames = 0
+        detection_categories = {
+            "not_detected": 0,
+            "partially_detected": 0,
+            "fully_detected": 0,
+        }
+
+        if object_detector:
+            for pose_frame in extracted_frames:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, pose_frame.index)
+                ok, source_frame = cap.read()
+                if not ok:
+                    break
+                detections = object_detector.detect(source_frame)
+                object_detections[pose_frame.index] = detections
+                if detections:
+                    detected_frames += 1
+                detection_categories[frame_detection_category(detections)] += 1
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            result.extra["object_detection"] = detection_summary(
+                config=object_config,
+                total_frames=len(extracted_frames),
+                detected_frames=detected_frames,
+                confidence=object_detector.confidence,
+                not_detected_frames=detection_categories["not_detected"],
+                partially_detected_frames=detection_categories["partially_detected"],
+                fully_detected_frames=detection_categories["fully_detected"],
+            )
 
         # Mapa de desvios ativos por frame original
         frame_deviations: dict[int, list] = {}
@@ -225,6 +264,32 @@ class VideoPoseProcessor:
 
                 # Desenha painel HUD
                 self._draw_hud(frame, pose_frame, result, devs_now, width, height)
+                if object_detector and object_config:
+                    for detection in object_detections.get(pose_frame.index, []):
+                        cv2.rectangle(
+                            frame,
+                            (detection.x1, detection.y1),
+                            (detection.x2, detection.y2),
+                            (0, 200, 0),
+                            2,
+                        )
+                        cv2.putText(
+                            frame,
+                            f"{object_config.display_name} {detection.confidence:.2f}",
+                            (detection.x1, max(detection.y1 - 8, 20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 200, 0),
+                            2,
+                            cv2.LINE_AA,
+                        )
+                    status, status_color = frame_detection_status(
+                        object_config,
+                        object_detections.get(pose_frame.index, []),
+                    )
+                    self.hud_renderer.draw_object_detection_status(
+                        frame, status, width, height, status_color
+                    )
 
                 writer.write(frame)
 

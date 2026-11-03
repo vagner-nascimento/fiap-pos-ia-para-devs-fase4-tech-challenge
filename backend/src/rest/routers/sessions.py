@@ -34,6 +34,7 @@ from models.rest.session import (
     SessionReportResponse,
 )
 from services.pose.registry import canonical_case_id
+from services.pose.object_detector import detection_config
 from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
 from services.pose.video_processor import VideoPoseProcessor
 
@@ -476,6 +477,7 @@ EXERCISE_OPTIONS = [
         nome="Abdução de ombro com faixa elástica",
         lado_padrao="direito",
         requisitos=["faixa elástica leve"],
+        objeto_deteccao="faixa elástica",
     ),
     ExerciseOption(
         case_id="FISIO-007",
@@ -483,6 +485,7 @@ EXERCISE_OPTIONS = [
         nome="Flexão de cotovelo com halter leve",
         lado_padrao="direito",
         requisitos=["halter leve"],
+        objeto_deteccao="halter",
     ),
 ]
 
@@ -671,6 +674,23 @@ def get_session_report(session_id: str) -> SessionReportResponse:
     deviations_count = session.total_deviations or 0
     score = session.compliance_score if session.compliance_score is not None else 100.0
     analise_dor = _build_pain_analysis(session, events)
+    equipment_config = detection_config(session.case_id or "")
+    object_detection = (session.extra or {}).get("object_detection")
+    equipamento = {
+        "possui_equipamento": equipment_config is not None,
+        "nome": equipment_config.display_name if equipment_config else "Nenhum",
+    }
+    if equipment_config:
+        equipamento.update(
+            percentual_total=(object_detection or {}).get("detection_percentage", 0.0),
+            percentual_nao_detectado=(object_detection or {}).get("not_detected_percentage", 0.0),
+            percentual_parcialmente_detectado=(object_detection or {}).get(
+                "partially_detected_percentage", 0.0
+            ),
+            percentual_totalmente_detectado=(object_detection or {}).get(
+                "fully_detected_percentage", 0.0
+            ),
+        )
 
     comparacao_clinica = {
         "plano": {
@@ -714,6 +734,7 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         evidence_urls=evidence_urls,
         events=formatted_events,
         analise_dor=analise_dor,
+        equipamento=equipamento,
         comparacao_clinica=comparacao_clinica,
         aviso_legal="Apoio à decisão, não diagnóstico.",
     )

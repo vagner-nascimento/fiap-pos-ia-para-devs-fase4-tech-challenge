@@ -148,3 +148,32 @@ class HudRenderer:
 
         # Retorna o ROI processado com PIL para o frame OpenCV BGR
         frame[:hud_total_h, :] = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+
+    def draw_object_detection_status(
+        self,
+        frame: np.ndarray,
+        text: str,
+        width: int,
+        height: int,
+        color: tuple[int, int, int],
+    ) -> None:
+        """Desenha o status do objeto no canto esquerdo inferior do frame."""
+        font_size = max(14, int(width * 0.028))
+        font = self.get_font(font_size)
+        padding = max(8, int(width * 0.015))
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(frame_rgb)
+        draw = ImageDraw.Draw(image)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        left = padding
+        bottom = height - padding
+        top = bottom - text_height - 2 * padding
+        draw.text(
+            (left + padding, top + padding - bbox[1]),
+            text,
+            font=font,
+            fill=color,
+        )
+        frame[:, :] = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)

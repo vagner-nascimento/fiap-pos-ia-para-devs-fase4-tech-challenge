@@ -298,6 +298,41 @@ label {
   font-size: 13px;
 }
 
+.equipment-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.equipment-total,
+.equipment-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--fc-border);
+}
+
+.equipment-total strong {
+  color: var(--fc-primary);
+}
+
+.equipment-breakdown {
+  font-size: var(--fc-fs-small);
+}
+
+.equipment-breakdown > div:nth-child(1) strong {
+  color: var(--fc-crit-fg);
+}
+
+.equipment-breakdown > div:nth-child(2) strong {
+  color: #b77900;
+}
+
+.equipment-breakdown > div:nth-child(3) strong {
+  color: var(--fc-ok-fg);
+}
+
 .pain-analysis-note {
   margin-top: 12px;
   font-size: 11px;

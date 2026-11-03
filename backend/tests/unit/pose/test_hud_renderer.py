@@ -80,3 +80,19 @@ def test_hud_draws_without_deviations():
 
     renderer.draw_hud(frame, pose_frame, res, [], w, h)
     assert np.any(frame[:70, :] > 0)
+
+
+def test_hud_draws_object_status_in_requested_color():
+    w, h = 640, 480
+    frame = np.zeros((h, w, 3), dtype=np.uint8)
+    renderer = HudRenderer()
+
+    renderer.draw_object_detection_status(
+        frame,
+        "faixa elástica parcialmente detectada",
+        w,
+        h,
+        (220, 150, 0),
+    )
+
+    assert np.any(frame[h - 100 :, : w // 2] > 0)

@@ -48,6 +48,10 @@ class ExerciseOption(BaseModel):
     nome: str
     lado_padrao: str
     requisitos: list[str] = Field(default_factory=list)
+    objeto_deteccao: Optional[str] = Field(
+        default=None,
+        description="Objeto YOLO obrigatório, quando aplicável ao exercício",
+    )
 
 
 class PainLevelSummary(BaseModel):
@@ -68,6 +72,17 @@ class PainAnalysisSummary(BaseModel):
     percentual_sem_dor: float = 100.0
     por_nivel: dict[str, PainLevelSummary] = Field(default_factory=dict)
     indeterminado_incluido_como_sem_dor: bool = True
+
+
+class EquipmentAnalysisSummary(BaseModel):
+    """Resumo da detecção do equipamento exigido pelo exercício."""
+
+    possui_equipamento: bool = False
+    nome: str = "Nenhum"
+    percentual_total: Optional[float] = None
+    percentual_nao_detectado: Optional[float] = None
+    percentual_parcialmente_detectado: Optional[float] = None
+    percentual_totalmente_detectado: Optional[float] = None
 
 
 class SessionReportResponse(BaseModel):
@@ -95,5 +110,6 @@ class SessionReportResponse(BaseModel):
     evidence_urls: list[dict] = Field(default_factory=list)
     events: list[dict] = Field(default_factory=list)
     analise_dor: PainAnalysisSummary = Field(default_factory=PainAnalysisSummary)
+    equipamento: EquipmentAnalysisSummary = Field(default_factory=EquipmentAnalysisSummary)
     comparacao_clinica: dict = Field(default_factory=dict)
     aviso_legal: str = "Apoio à decisão, não diagnóstico."
