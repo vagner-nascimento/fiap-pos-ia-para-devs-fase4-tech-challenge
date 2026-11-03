@@ -1,6 +1,6 @@
 # Backend — Fisio Coach (FastAPI & Pose Engine)
 
-Serviço de backend responsável pela orquestração do pipeline multimodal de Inteligência Artificial, API RESTful e motor de visão computacional para análise biomecânica com **MediaPipe Pose**.
+Serviço de backend responsável pela orquestração do pipeline multimodal de Inteligência Artificial, API RESTful e motor de visão computacional para análise biomecânica com **MediaPipe Pose** e detecção de equipamentos com **YOLO**.
 
 ---
 
@@ -9,6 +9,7 @@ Serviço de backend responsável pela orquestração do pipeline multimodal de I
 * **Python:** 3.11 (versão estável compatível com MediaPipe e OpenCV)
 * **Gerenciador de Pacotes:** [`uv`](https://docs.astral.sh/uv/) (Astral)
 * **Dependências de Sistema (Linux):** `libgl1` e `libglib2.0-0` (já embutidas no Dockerfile)
+* **Execução de IA:** CPU-only por padrão; PyTorch e Torchvision são instalados pelos índices CPU do PyTorch, sem CUDA/NVIDIA.
 
 A partir do diretório `backend`:
 
@@ -39,8 +40,9 @@ uv run python -m src.main
   * `GET /api/sessoes/clips-referencia`: Lista o catálogo de clipes sintéticos de referência para teste;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score e classificação de risco;
-  * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições e desvios;
+  * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições, desvios e falas de dor;
   * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico;
+  * `GET /api/sessoes/exercicios`: Catálogo de exercícios com os equipamentos obrigatórios;
   * `GET /media/...`: Serve os vídeos anotados transcodificados em H.264 e snapshots de evidência em JPG.
 
 > 💡 **Dica de Testes:** O repositório inclui o arquivo [`api.http`](../api.http) na raiz com todas as requisições prontas para execução imediata no VS Code / IDE.
@@ -72,6 +74,11 @@ uv run python -m cli.analyze_video \
 * `--run-id`: Identificador da execução (define o nome da subpasta de saída e `session_id`);
 * `--no-render`: Executa apenas a análise matemática e relatórios JSON sem gerar o vídeo `.mp4` anotado (processamento ultrarrápido).
 
+Nos exercícios FISIO-006 e FISIO-007, o pipeline também executa o modelo
+pré-treinado em `src/yolo/best.pt`. O modelo não é treinado durante a execução:
+o resultado inclui percentuais de frames sem detecção, parcialmente detectados
+e totalmente detectados. Os demais exercícios não carregam o detector.
+
 ---
 
 ### 3. Executar os Testes Automatizados
@@ -99,11 +106,13 @@ backend/
 │   │   ├── database/                   # SessionDocument e EventDocument (BSON)
 │   │   └── rest/                       # Payloads e Responses da API (JSON)
 │   ├── services/
+│   │   ├── audio_transcription.py      # Áudio, Faster-Whisper local e classificação de fala de dor
 │   │   └── pose/                       # Motor de Visão Computacional
 │   │       ├── analyzers/              # 7 Analisadores especializados (FISIO-001 a 007)
 │   │       ├── base_analyzer.py        # Base com Template Method, histerese e auto-lado
 │   │       ├── geometry.py             # Fórmulas trigonométricas e ângulos 2D
 │   │       ├── hud_renderer.py         # HUD responsivo com Pillow e UTF-8
+│       ├── object_detector.py      # YOLO CPU-only para faixa elástica e halter
 │   │       ├── joint_mapper.py         # Mapeamento de landmarks e lados corporais
 │   │       ├── landmark_extractor.py   # Extração via MediaPipe Pose com sampling a 30 FPS
 │   │       ├── models.py               # Modelos Pydantic de eventos e telemetria
@@ -111,11 +120,13 @@ backend/
 │   │       ├── repetitions.py          # Suavização temporal e detecção de repetições
 │   │       ├── sinks.py                # Strategy de persistência (File, Mongo, Composite)
 │   │       └── video_processor.py      # Orquestrador ponta a ponta do pipeline de vídeo
+│   ├── yolo/
+│   │   └── best.pt                 # Melhor checkpoint pré-treinado; não há treino na API
 │   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/sessoes)
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (100 testes)
+    └── unit/                           # Testes unitários com Pytest (119 testes)
 ```
 
 ---
@@ -130,6 +141,14 @@ Configuradas no arquivo `.env` (ou no `docker-compose.yaml`):
 | `DATASET_ROOT` | Caminho do repositório de clipes sintéticos | `../../fiap-pos-ia-...-datasets` | `/app/datasets` |
 | `MONGO_DB_SERVER` | URI de conexão do MongoDB | `mongodb://localhost:27017` | `mongodb://mongodb:27017` |
 | `MONGO_DB_NAME` | Nome do banco no MongoDB | `fiap-pos-ia-db` | `fiap-pos-ia-db` |
+| `WHISPER_MODEL_SIZE` | Tamanho do modelo `faster-whisper` | `medium` | `medium` |
+| `WHISPER_DEVICE` | Dispositivo de inferência do Whisper | `cpu` | `cpu` |
+| `WHISPER_COMPUTE_TYPE` | Tipo de computação do Whisper | `int8` | `int8` |
+
+O Whisper é executado localmente com `faster-whisper`, em CPU, usando áudio
+convertido para mono/16 kHz, redução de ruído, normalização e parâmetros
+orientados a português brasileiro e fisioterapia. Não há dependência de
+serviços de cloud para transcrição ou classificação de dor.
 
 ---
 
@@ -142,3 +161,6 @@ Para uma visão detalhada sobre a arquitetura do motor de visão e persistência
 * 📑 [ADR 0005: Renderização de HUD com Pillow e UTF-8](../docs/arquitetura/adrs/0005-renderizacao-de-hud-com-pillow-utf8.md)
 * 📑 [ADR 0006: Adoção do MongoDB 7](../docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
 * 📑 [ADR 0007: Padrão Result Sinks e Pipeline Assíncrono](../docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md)
+* 📑 [ADR 0009: Detecção de Equipamentos com YOLO](../docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md)
+* 📑 [ADR 0010: Transcrição Local com Faster-Whisper](../docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
+* 📑 [ADR 0011: Detecção de Dor por Transcrição](../docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)

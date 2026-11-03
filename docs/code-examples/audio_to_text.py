@@ -1,39 +1,112 @@
-import moviepy.editor as mp
-import speech_recognition as sr
 import os
+
+import moviepy.editor as mp
+import noisereduce as nr
+import numpy as np
+import soundfile as sf
+from faster_whisper import WhisperModel
+from scipy.signal import resample_poly
+
+TARGET_SAMPLE_RATE = 16_000
+WHISPER_MODEL_SIZE = "medium"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CHANGED_AUDIO_DIR = os.path.join(SCRIPT_DIR, "audios", "changed")
+TRANSCRIPTION_PROMPT = (
+    "Português brasileiro. Contexto de fisioterapia e dor. "
+    "Termos possíveis: ombro, cotovelo, dor, dói, incômodo, "
+    "melhorou, bastante."
+)
+_whisper_model = None
+
+
+def prepare_audio_for_transcription(audio_path, prepared_audio_path):
+    audio, sample_rate = sf.read(audio_path, always_2d=False)
+
+    if audio.ndim > 1:
+        audio = np.mean(audio, axis=1)
+
+    audio = audio.astype(np.float32, copy=False)
+    if sample_rate != TARGET_SAMPLE_RATE:
+        audio = resample_poly(audio, TARGET_SAMPLE_RATE, sample_rate)
+
+    audio = nr.reduce_noise(
+        y=audio,
+        sr=TARGET_SAMPLE_RATE,
+        stationary=True,
+    )
+
+    peak = np.max(np.abs(audio))
+    if peak > 0:
+        audio = audio / peak
+
+    sf.write(
+        prepared_audio_path,
+        audio,
+        TARGET_SAMPLE_RATE,
+        subtype="PCM_16",
+        format="WAV",
+    )
 
 def extract_audio_from_video(video_path, audio_path):
     video = mp.VideoFileClip(video_path)
     video.audio.write_audiofile(audio_path, verbose=False, logger=None)
 
+
+def get_whisper_model():
+    global _whisper_model
+
+    if _whisper_model is None:
+        _whisper_model = WhisperModel(
+            WHISPER_MODEL_SIZE,
+            device="cpu",
+            compute_type="int8",
+        )
+
+    return _whisper_model
+
+
 def transcribe_audio_to_text(audio_path, text_output_path):
     '''
-    IMPORTANTE: Somente a API da Google não pede credenciais de API, a demais pedem.
-    Para mais informações, consulte a documentação oficial do SpeechRecognition.
     NOTA: Copiei os videos desejados do repositorio de datasets para a pasta videos 
         e altere os nomes dos arquivos de vídeo e áudio para que o código funcione corretamente.
     '''
-    recognizer = sr.Recognizer()
-    
-    with sr.AudioFile(audio_path) as source:
-        audio = recognizer.record(source)  # lê todo o áudio do arquivo
-        try:
-            # Usa o serviço de reconhecimento de fala do Google
-            print(f"Tentando o Google Speech Recognition para {os.path.basename(audio_path)}")
-            text = recognizer.recognize_google(audio, language="pt-BR")  # Use "en-US" para inglês
-            print("Transcrição: " + text)
-            
-            # Salva a transcrição em um arquivo de texto
-            with open(text_output_path, 'w', encoding='utf-8') as file:
-                file.write(text)
-                
-        except sr.UnknownValueError:
-            print("Google Speech Recognition não conseguiu entender o áudio")
-        except sr.RequestError as e:
-            print("Erro ao solicitar resultados do serviço de reconhecimento de fala do Google; {0}".format(e))
+    model = get_whisper_model()
+    os.makedirs(CHANGED_AUDIO_DIR, exist_ok=True)
+    prepared_audio_path = os.path.join(
+        CHANGED_AUDIO_DIR,
+        os.path.basename(audio_path),
+    )
+    prepare_audio_for_transcription(audio_path, prepared_audio_path)
+
+    decode_options = {
+        "language": "pt",
+        "initial_prompt": TRANSCRIPTION_PROMPT,
+        "temperature": 0.0,
+        "beam_size": 5,
+        "vad_filter": True,
+        "vad_parameters": {
+            "min_silence_duration_ms": 500,
+            "speech_pad_ms": 400,
+            "min_speech_duration_ms": 100,
+        },
+        "condition_on_previous_text": False,
+    }
+    segments, _ = model.transcribe(prepared_audio_path, **decode_options)
+    segments = list(segments)
+    text = " ".join(segment.text.strip() for segment in segments).strip()
+
+    if text.lower().startswith("contexto de fisioterapia"):
+        decode_options["vad_filter"] = False
+        segments, _ = model.transcribe(prepared_audio_path, **decode_options)
+        text = " ".join(segment.text.strip() for segment in segments).strip()
+
+    print(f"Transcrição de {os.path.basename(audio_path)}: {text}")
+
+    with open(text_output_path, "w", encoding="utf-8") as file:
+        file.write(text)
 
 # Definindo os caminhos dos arquivos de vídeo, áudio e texto
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = SCRIPT_DIR
 PATH_VIDEOS = os.path.join(script_dir, "videos/")
 PATH_AUDIOS = os.path.join(script_dir, "audios/")
 PATH_TEXT = os.path.join(script_dir, "texts/")

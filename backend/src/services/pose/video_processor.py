@@ -13,10 +13,23 @@ import mediapipe as mp
 import numpy as np
 
 from config.media_paths import MediaStorage
+from services.audio_transcription import (
+    SpeechSegment,
+    relevant_speech_segments,
+    transcribe_video,
+)
 from services.pose.base_analyzer import BaseExerciseAnalyzer
 from services.pose.joint_mapper import BodySide, JointMapper
 from services.pose.landmark_extractor import extract_pose_frames
 from services.pose.models import DeviationSeverity, ExerciseAnalysisResult, PoseFrame
+from services.pose.object_detector import (
+    ObjectDetection,
+    ObjectDetector,
+    detection_config,
+    frame_detection_category,
+    frame_detection_status,
+    detection_summary,
+)
 from services.pose.registry import get_analyzer
 
 from services.pose.hud_renderer import HudRenderer
@@ -88,10 +101,32 @@ class VideoPoseProcessor:
         result = analyzer.analyze(extracted.frames, extracted.effective_fps)
 
         if on_progress:
+            on_progress("transcrevendo_audio", 0.65)
+
+        speech_segments: list[SpeechSegment] = []
+        out_dir = self.storage.pose_output_dir(run_id)
+        audio_path = out_dir / "session-audio.wav"
+        try:
+            all_speech_segments = transcribe_video(video_path, audio_path)
+            result.extra["speech_transcription"] = [
+                segment.as_dict() for segment in all_speech_segments
+            ]
+            speech_segments = relevant_speech_segments(all_speech_segments)
+            result.extra["speech_transcription_status"] = "concluido"
+        except (ImportError, OSError, RuntimeError, ValueError) as exc:
+            result.extra["speech_transcription_status"] = "indisponivel"
+            logger.warning(
+                "Transcrição de áudio indisponível para run_id=%s: %s",
+                run_id,
+                exc,
+            )
+        finally:
+            audio_path.unlink(missing_ok=True)
+
+        if on_progress:
             on_progress("gerando_artefatos", 0.70)
 
         # 3. Preparação das pastas de saída
-        out_dir = self.storage.pose_output_dir(run_id)
         evidence_dir = self.storage.evidence_dir(run_id)
 
         # 4. Renderização do vídeo anotado e snapshots de evidência
@@ -118,6 +153,7 @@ class VideoPoseProcessor:
             run_id=run_id,
             video_path=str(video_path),
             paciente_id=patient_id,
+            speech_segments=speech_segments,
         )
 
         if on_progress:
@@ -153,6 +189,37 @@ class VideoPoseProcessor:
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(str(output_video_path), fourcc, fps, (width, height))
+        object_config = detection_config(result.session_summary.case_id)
+        object_detector = ObjectDetector(object_config) if object_config else None
+        object_detections: dict[int, list[ObjectDetection]] = {}
+        detected_frames = 0
+        detection_categories = {
+            "not_detected": 0,
+            "partially_detected": 0,
+            "fully_detected": 0,
+        }
+
+        if object_detector:
+            for pose_frame in extracted_frames:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, pose_frame.index)
+                ok, source_frame = cap.read()
+                if not ok:
+                    break
+                detections = object_detector.detect(source_frame)
+                object_detections[pose_frame.index] = detections
+                if detections:
+                    detected_frames += 1
+                detection_categories[frame_detection_category(detections)] += 1
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            result.extra["object_detection"] = detection_summary(
+                config=object_config,
+                total_frames=len(extracted_frames),
+                detected_frames=detected_frames,
+                confidence=object_detector.confidence,
+                not_detected_frames=detection_categories["not_detected"],
+                partially_detected_frames=detection_categories["partially_detected"],
+                fully_detected_frames=detection_categories["fully_detected"],
+            )
 
         # Mapa de desvios ativos por frame original
         frame_deviations: dict[int, list] = {}
@@ -197,6 +264,32 @@ class VideoPoseProcessor:
 
                 # Desenha painel HUD
                 self._draw_hud(frame, pose_frame, result, devs_now, width, height)
+                if object_detector and object_config:
+                    for detection in object_detections.get(pose_frame.index, []):
+                        cv2.rectangle(
+                            frame,
+                            (detection.x1, detection.y1),
+                            (detection.x2, detection.y2),
+                            (0, 200, 0),
+                            2,
+                        )
+                        cv2.putText(
+                            frame,
+                            f"{object_config.display_name} {detection.confidence:.2f}",
+                            (detection.x1, max(detection.y1 - 8, 20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 200, 0),
+                            2,
+                            cv2.LINE_AA,
+                        )
+                    status, status_color = frame_detection_status(
+                        object_config,
+                        object_detections.get(pose_frame.index, []),
+                    )
+                    self.hud_renderer.draw_object_detection_status(
+                        frame, status, width, height, status_color
+                    )
 
                 writer.write(frame)
 
@@ -215,10 +308,17 @@ class VideoPoseProcessor:
             writer.release()
 
         # Converte o vídeo de 'mp4v' para 'H.264' (avc1) via ffmpeg para suporte em browsers
-        self._transcode_to_h264_if_available(output_video_path)
+        self._transcode_to_h264_if_available(
+            output_video_path,
+            audio_source_path=video_path,
+        )
 
-    def _transcode_to_h264_if_available(self, video_path: Path) -> None:
-        """Transcodifica para H.264 / AAC se o ffmpeg estiver disponível no ambiente."""
+    def _transcode_to_h264_if_available(
+        self,
+        video_path: Path,
+        audio_source_path: Optional[Path] = None,
+    ) -> None:
+        """Transcodifica o vídeo e muxa o áudio original quando disponível."""
         if not shutil.which("ffmpeg"):
             return
         temp_h264 = video_path.with_suffix(".h264.mp4")
@@ -227,24 +327,77 @@ class VideoPoseProcessor:
             "-y",
             "-i",
             str(video_path),
+        ]
+        if audio_source_path is not None:
+            cmd.extend([
+                "-i",
+                str(audio_source_path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-shortest",
+            ])
+        else:
+            cmd.extend(["-map", "0:v:0"])
+        cmd.extend([
             "-c:v",
             "libx264",
             "-pix_fmt",
             "yuv420p",
             "-movflags",
             "+faststart",
-            "-an",
             str(temp_h264),
-        ]
+        ])
         try:
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
             if res.returncode == 0 and temp_h264.exists() and temp_h264.stat().st_size > 0:
                 temp_h264.replace(video_path)
-                logger.info("Vídeo transcodificado com sucesso para H.264: %s", video_path)
+                logger.info(
+                    "Vídeo transcodificado para H.264%s: %s",
+                    " com áudio original" if audio_source_path is not None else "",
+                    video_path,
+                )
             else:
-                logger.warning("Falha na transcodificação ffmpeg (rc=%s): %s", res.returncode, res.stderr.decode()[:200])
-                if temp_h264.exists():
-                    temp_h264.unlink()
+                if audio_source_path is not None:
+                    fallback_cmd = [
+                        "ffmpeg",
+                        "-y",
+                        "-i",
+                        str(video_path),
+                        "-map",
+                        "0:v:0",
+                        "-c:v",
+                        "libx264",
+                        "-pix_fmt",
+                        "yuv420p",
+                        "-movflags",
+                        "+faststart",
+                        str(temp_h264),
+                    ]
+                    res = subprocess.run(
+                        fallback_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=120,
+                    )
+                if res.returncode == 0 and temp_h264.exists() and temp_h264.stat().st_size > 0:
+                    temp_h264.replace(video_path)
+                    logger.warning(
+                        "Vídeo transcodificado sem áudio: a fonte não possui trilha compatível."
+                    )
+                else:
+                    logger.warning(
+                        "Falha na transcodificação ffmpeg (rc=%s): %s",
+                        res.returncode,
+                        res.stderr.decode()[:200],
+                    )
+                    if temp_h264.exists():
+                        temp_h264.unlink()
         except Exception as exc:
             logger.warning("Exceção ao transcodificar vídeo via ffmpeg: %s", exc)
             if temp_h264.exists():
@@ -279,4 +432,3 @@ class VideoPoseProcessor:
     ) -> None:
         """Desenha barra translúcida superior responsiva com métricas e alertas."""
         self.hud_renderer.draw_hud(frame, pose_frame, result, devs_now, width, height)
-

@@ -81,3 +81,11 @@ export async function listReferenceClips() {
   const response = await fetch(`${apiBaseUrl}/sessoes/clips-referencia`);
   return handleResponse(response, 'Falha ao listar os clipes de referência.');
 }
+
+/**
+ * Retorna os exercícios que podem ser selecionados antes do upload.
+ */
+export async function listExercises() {
+  const response = await fetch(`${apiBaseUrl}/sessoes/exercicios`);
+  return handleResponse(response, 'Falha ao listar os exercícios disponíveis.');
+}

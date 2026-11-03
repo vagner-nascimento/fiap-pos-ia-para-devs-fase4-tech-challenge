@@ -40,6 +40,51 @@ class ReferenceClipInfo(BaseModel):
     descricao: str
 
 
+class ExerciseOption(BaseModel):
+    """Exercício disponível para seleção antes do processamento do vídeo."""
+
+    case_id: str
+    exercise_id: str
+    nome: str
+    lado_padrao: str
+    requisitos: list[str] = Field(default_factory=list)
+    objeto_deteccao: Optional[str] = Field(
+        default=None,
+        description="Objeto YOLO obrigatório, quando aplicável ao exercício",
+    )
+
+
+class PainLevelSummary(BaseModel):
+    """Resumo da ocorrência de um nível de dor durante o vídeo."""
+
+    duracao_segundos: float = 0.0
+    percentual_video: float = 0.0
+    ocorrencias: int = 0
+
+
+class PainAnalysisSummary(BaseModel):
+    """Resumo temporal da dor e da ausência de dor na sessão."""
+
+    duracao_video_segundos: float = 0.0
+    duracao_com_dor_segundos: float = 0.0
+    percentual_com_dor: float = 0.0
+    duracao_sem_dor_segundos: float = 0.0
+    percentual_sem_dor: float = 100.0
+    por_nivel: dict[str, PainLevelSummary] = Field(default_factory=dict)
+    indeterminado_incluido_como_sem_dor: bool = True
+
+
+class EquipmentAnalysisSummary(BaseModel):
+    """Resumo da detecção do equipamento exigido pelo exercício."""
+
+    possui_equipamento: bool = False
+    nome: str = "Nenhum"
+    percentual_total: Optional[float] = None
+    percentual_nao_detectado: Optional[float] = None
+    percentual_parcialmente_detectado: Optional[float] = None
+    percentual_totalmente_detectado: Optional[float] = None
+
+
 class SessionReportResponse(BaseModel):
     """Relatório individual da sessão estruturado para a interface e impressão de laudo."""
 
@@ -64,7 +109,7 @@ class SessionReportResponse(BaseModel):
     telemetry_json_url: Optional[str] = None
     evidence_urls: list[dict] = Field(default_factory=list)
     events: list[dict] = Field(default_factory=list)
+    analise_dor: PainAnalysisSummary = Field(default_factory=PainAnalysisSummary)
+    equipamento: EquipmentAnalysisSummary = Field(default_factory=EquipmentAnalysisSummary)
     comparacao_clinica: dict = Field(default_factory=dict)
     aviso_legal: str = "Apoio à decisão, não diagnóstico."
-
-

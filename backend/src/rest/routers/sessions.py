@@ -27,9 +27,14 @@ from models.database.session import SessionDocument, SessionStatus
 from models.rest.session import (
     CreateSessionPayload,
     CreateSessionResponse,
+    ExerciseOption,
+    PainAnalysisSummary,
+    PainLevelSummary,
     ReferenceClipInfo,
     SessionReportResponse,
 )
+from services.pose.registry import canonical_case_id
+from services.pose.object_detector import detection_config
 from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
 from services.pose.video_processor import VideoPoseProcessor
 
@@ -89,6 +94,19 @@ def _resolve_and_prepare_video(
         return input_path
 
     if dataset_clip:
+        if dataset_clip.startswith("FISIO-"):
+            parts = dataset_clip.split("-")
+            if len(parts) >= 2:
+                inferred_case = f"{parts[0]}-{parts[1]}"
+                if inferred_case != exercicio_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=(
+                            f"O clipe '{dataset_clip}' pertence ao exercício '{inferred_case}', "
+                            f"mas foi selecionado '{exercicio_id}'."
+                        ),
+                    )
+
         # Tenta 1: via exercicio_id fornecido
         try:
             candidate = storage.dataset_clip(exercicio_id, dataset_clip)
@@ -133,6 +151,16 @@ def _resolve_and_prepare_video(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="É necessário enviar um arquivo de vídeo via 'file' ou indicar 'dataset_clip' / 'video_path'.",
     )
+
+
+def _normalize_exercise_id(exercicio_id: str) -> str:
+    try:
+        return canonical_case_id(exercicio_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 def _init_session_record(
@@ -198,6 +226,7 @@ def create_session(
     run_id: Optional[str] = Form(None, description="ID customizado da sessão (se omitido, será gerado)"),
     sync: bool = Query(False, description="Se True, executa síncrono e retorna 201 com o documento completo"),
 ):
+    exercicio_id = _normalize_exercise_id(exercicio_id)
     session_id = run_id or f"{exercicio_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
     video_target = _resolve_and_prepare_video(
         session_id=session_id,
@@ -268,6 +297,7 @@ def create_session_from_reference(
     background_tasks: BackgroundTasks,
     sync: bool = Query(False, description="Se True, executa síncrono e retorna 201 com o documento completo"),
 ):
+    payload.exercicio_id = _normalize_exercise_id(payload.exercicio_id)
     session_id = payload.run_id or f"{payload.exercicio_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
     video_target = _resolve_and_prepare_video(
         session_id=session_id,
@@ -339,7 +369,14 @@ EXERCISE_NAMES = {
     "FISIO-006": "Abdução de ombro com elástico",
     "SHOULDER_ABDUCTION_BAND": "Abdução de ombro com elástico",
     "FISIO-007": "Flexão de cotovelo com halter",
-    "ELBOW_FLEXION_DUMBBELL": "Flexão de cotovelo com halter",
+    "ELBOW_FLEXION_LIGHT_DUMBBELL": "Flexão de cotovelo com halter",
+}
+
+CASE_TO_EXERCISE_ID = {
+    "FISIO-001": "KNEE_EXTENSION_SEATED",
+    "FISIO-002": "SHOULDER_PENDULUM",
+    "FISIO-006": "SHOULDER_ABDUCTION_BAND",
+    "FISIO-007": "ELBOW_FLEXION_LIGHT_DUMBBELL",
 }
 
 RISK_SYMBOLS = {
@@ -347,6 +384,119 @@ RISK_SYMBOLS = {
     "atencao": "▲",
     "critico": "■",
 }
+
+_PAIN_LEVELS = ("muita_dor", "dor", "desconforto")
+
+
+def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Une intervalos sobrepostos para que uma fala não seja contada duas vezes."""
+    valid_intervals = sorted(
+        (max(0.0, start), max(0.0, end))
+        for start, end in intervals
+        if end > start
+    )
+    merged: list[tuple[float, float]] = []
+    for start, end in valid_intervals:
+        if not merged or start > merged[-1][1]:
+            merged.append((start, end))
+        else:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+    return merged
+
+
+def _interval_duration(intervals: list[tuple[float, float]]) -> float:
+    return sum(end - start for start, end in _merge_intervals(intervals))
+
+
+def _build_pain_analysis(session: SessionDocument, events: list[EventDocument]) -> PainAnalysisSummary:
+    """Calcula a proporção temporal de dor, tratando silêncio e indeterminado como sem dor."""
+    video_duration = max(float(session.summary.duration_seconds), 0.0) if session.summary else 0.0
+    pain_events = [
+        event for event in events
+        if event.tipo.value == "fala_dor"
+        and (event.valores or {}).get("nivel") in _PAIN_LEVELS
+    ]
+    if video_duration <= 0:
+        video_duration = max((event.instante_fim for event in events), default=0.0)
+    video_duration = max(video_duration, 0.0)
+
+    pain_intervals = [
+        (event.instante_inicio, min(event.instante_fim, video_duration))
+        for event in pain_events
+    ]
+    pain_duration = min(_interval_duration(pain_intervals), video_duration)
+    no_pain_duration = max(video_duration - pain_duration, 0.0)
+
+    by_level: dict[str, PainLevelSummary] = {}
+    for level in _PAIN_LEVELS:
+        level_events = [
+            event for event in pain_events
+            if (event.valores or {}).get("nivel") == level
+        ]
+        level_duration = min(
+            _interval_duration([
+                (event.instante_inicio, min(event.instante_fim, video_duration))
+                for event in level_events
+            ]),
+            video_duration,
+        )
+        by_level[level] = PainLevelSummary(
+            duracao_segundos=round(level_duration, 2),
+            percentual_video=round(level_duration / video_duration * 100, 1) if video_duration else 0.0,
+            ocorrencias=len(level_events),
+        )
+
+    return PainAnalysisSummary(
+        duracao_video_segundos=round(video_duration, 2),
+        duracao_com_dor_segundos=round(pain_duration, 2),
+        percentual_com_dor=round(pain_duration / video_duration * 100, 1) if video_duration else 0.0,
+        duracao_sem_dor_segundos=round(no_pain_duration, 2),
+        percentual_sem_dor=round(no_pain_duration / video_duration * 100, 1) if video_duration else 100.0,
+        por_nivel=by_level,
+    )
+
+
+EXERCISE_OPTIONS = [
+    ExerciseOption(
+        case_id="FISIO-001",
+        exercise_id="KNEE_EXTENSION_SEATED",
+        nome="Extensão de joelho sentado",
+        lado_padrao="direito",
+        requisitos=[],
+    ),
+    ExerciseOption(
+        case_id="FISIO-002",
+        exercise_id="SHOULDER_PENDULUM",
+        nome="Pêndulo de ombro de Codman",
+        lado_padrao="esquerdo",
+        requisitos=["apoio estável"],
+    ),
+    ExerciseOption(
+        case_id="FISIO-006",
+        exercise_id="SHOULDER_ABDUCTION_BAND",
+        nome="Abdução de ombro com faixa elástica",
+        lado_padrao="direito",
+        requisitos=["faixa elástica leve"],
+        objeto_deteccao="faixa elástica",
+    ),
+    ExerciseOption(
+        case_id="FISIO-007",
+        exercise_id="ELBOW_FLEXION_LIGHT_DUMBBELL",
+        nome="Flexão de cotovelo com halter leve",
+        lado_padrao="direito",
+        requisitos=["halter leve"],
+        objeto_deteccao="halter",
+    ),
+]
+
+
+@router.get(
+    "/exercicios",
+    response_model=list[ExerciseOption],
+    summary="Listar exercícios disponíveis para análise",
+)
+def list_exercises() -> list[ExerciseOption]:
+    return EXERCISE_OPTIONS
 
 
 @router.get(
@@ -375,7 +525,7 @@ def list_reference_clips() -> list[ReferenceClipInfo]:
                 clips.append(
                     ReferenceClipInfo(
                         case_id=case_id,
-                        exercicio_id="KNEE_EXTENSION_SEATED" if case_id == "FISIO-001" else case_id,
+                        exercicio_id=CASE_TO_EXERCISE_ID.get(case_id, case_id),
                         exercicio_nome=EXERCISE_NAMES.get(case_id, case_id),
                         filename=filename,
                         tipo=tipo,
@@ -523,6 +673,24 @@ def get_session_report(session_id: str) -> SessionReportResponse:
 
     deviations_count = session.total_deviations or 0
     score = session.compliance_score if session.compliance_score is not None else 100.0
+    analise_dor = _build_pain_analysis(session, events)
+    equipment_config = detection_config(session.case_id or "")
+    object_detection = (session.extra or {}).get("object_detection")
+    equipamento = {
+        "possui_equipamento": equipment_config is not None,
+        "nome": equipment_config.display_name if equipment_config else "Nenhum",
+    }
+    if equipment_config:
+        equipamento.update(
+            percentual_total=(object_detection or {}).get("detection_percentage", 0.0),
+            percentual_nao_detectado=(object_detection or {}).get("not_detected_percentage", 0.0),
+            percentual_parcialmente_detectado=(object_detection or {}).get(
+                "partially_detected_percentage", 0.0
+            ),
+            percentual_totalmente_detectado=(object_detection or {}).get(
+                "fully_detected_percentage", 0.0
+            ),
+        )
 
     comparacao_clinica = {
         "plano": {
@@ -565,7 +733,8 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         telemetry_json_url=telemetry_url,
         evidence_urls=evidence_urls,
         events=formatted_events,
+        analise_dor=analise_dor,
+        equipamento=equipamento,
         comparacao_clinica=comparacao_clinica,
         aviso_legal="Apoio à decisão, não diagnóstico.",
     )
-

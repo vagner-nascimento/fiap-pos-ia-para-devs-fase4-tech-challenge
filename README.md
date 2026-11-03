@@ -2,7 +2,7 @@
 
 Plataforma multimodal orientada por Inteligência Artificial para auxílio ao fisioterapeuta no monitoramento remoto e avaliação biomecânica de sessões de reabilitação física.
 
-O sistema analisa gravações de vídeo e áudio de pacientes executando exercícios prescritos, realizando o rastreamento de pontos articulares (landmarks), contagem automática de repetições, detecção de desvios posturais em tempo real, renderização de vídeo anotado com HUD responsivo e geração de relatórios clínicos com snapshots comprobatórios.
+O sistema analisa gravações de vídeo e áudio de pacientes executando exercícios prescritos, realizando o rastreamento de pontos articulares (landmarks), contagem automática de repetições, detecção de desvios posturais, identificação de equipamentos com YOLO, transcrição local da fala relacionada à dor, renderização de vídeo anotado com HUD responsivo e geração de relatórios clínicos com snapshots comprobatórios.
 
 > Para detalhes aprofundados sobre decisões de engenharia, diagramas C4 e modelos matemáticos, consulte a [Documentação de Arquitetura](docs/arquitetura/arquitetura-do-sistema.md) e os [ADRs](docs/arquitetura/adrs/).
 
@@ -27,6 +27,9 @@ docker compose -f docker-compose.yaml up -d --build
 * **Backend API (Docs OpenAPI):** [http://localhost:3000/docs](http://localhost:3000/docs)
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
 * **MongoDB:** `mongodb://localhost:27017`
+
+> A demonstração roda em CPU. O PyTorch usado pelo detector YOLO é resolvido
+> pelos wheels CPU-only; não é necessário instalar CUDA ou uma GPU NVIDIA.
 
 **Comandos Úteis:**
 ```sh
@@ -83,8 +86,8 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 ## 📁 Onde os Resultados são Gravados?
 
 1. **No Sistema de Arquivos (`data/outputs/{run_id}/pose/`):**
-   * **`annotated.mp4`**: Vídeo final com o esqueleto articular e HUD em tempo real (fase, ângulo, contagem e alertas em português);
-   * **`analysis.json`**: Relatório executivo estruturado (repetições válidas/inválidas, taxa de conformidade e desvios com timestamps);
+   * **`annotated.mp4`**: Vídeo final com landmarks/esqueleto, HUD, alertas biomecânicos e, nos exercícios FISIO-006 e FISIO-007, caixas e status do equipamento;
+   * **`analysis.json`**: Relatório executivo estruturado com repetições, desvios, transcrição/classificação de dor e resumo percentual do equipamento;
    * **`telemetry.json`**: Série temporal frame a frame dos ângulos articulares medidos;
    * **`evidence/*.jpg`**: Snapshots fotográficos congelados no momento exato em que cada desvio ocorreu.
 
@@ -96,7 +99,7 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **102 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **119 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -117,6 +120,9 @@ uv run pytest tests -v
   * [ADR 0006: Adoção do MongoDB](docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md)
   * [ADR 0007: Padrão Result Sinks e Pipeline Assíncrono](docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md)
   * [ADR 0008: Transcodificação H.264 para Streaming Web](docs/arquitetura/adrs/0008-transcodificacao-h264-para-streaming-web.md)
+  * [ADR 0009: Detecção de Equipamentos com YOLO](docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md)
+  * [ADR 0010: Transcrição Local com Faster-Whisper](docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
+  * [ADR 0011: Detecção de Dor por Transcrição](docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
 * 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
 * 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).

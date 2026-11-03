@@ -251,6 +251,93 @@ label {
   letter-spacing: -0.02em;
 }
 
+.pain-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.pain-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: var(--fc-radius-control);
+  background: var(--fc-bg);
+}
+
+.pain-summary-label {
+  font-size: 12px;
+  color: var(--fc-text-muted);
+}
+
+.pain-summary-value {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.pain-value {
+  color: var(--fc-crit-fg);
+}
+
+.no-pain-value {
+  color: var(--fc-ok-fg);
+}
+
+.pain-level-list {
+  border-top: 1px solid var(--fc-border);
+}
+
+.pain-level-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fc-border);
+  font-size: 13px;
+}
+
+.equipment-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.equipment-total,
+.equipment-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--fc-border);
+}
+
+.equipment-total strong {
+  color: var(--fc-primary);
+}
+
+.equipment-breakdown {
+  font-size: var(--fc-fs-small);
+}
+
+.equipment-breakdown > div:nth-child(1) strong {
+  color: var(--fc-crit-fg);
+}
+
+.equipment-breakdown > div:nth-child(2) strong {
+  color: #b77900;
+}
+
+.equipment-breakdown > div:nth-child(3) strong {
+  color: var(--fc-ok-fg);
+}
+
+.pain-analysis-note {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
 .legal-disclaimer {
   font-style: italic;
   font-size: 12px;

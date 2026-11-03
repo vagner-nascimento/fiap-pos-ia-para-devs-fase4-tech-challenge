@@ -12,9 +12,10 @@ O **Fisio Coach** é uma plataforma multimodal orientada por Inteligência Artif
 
 O sistema analisa sessões gravadas em vídeo (contendo trilhas visuais e de áudio) para:
 1. **Rastrear postura e biomecânica:** Extrair landmarks corporais, calcular ângulos articulares em tempo real, segmentar repetições válidas/inválidas e identificar desvios posturais específicos do exercício prescrito;
-2. **Estimar dor e fadiga:** Capturar queixas verbais de dor (transcrição de áudio em pt-BR e PLN clínico) e analisar microexpressões faciais de desconforto;
-3. **Fusão Multimodal e Alinhamento Clínico:** Correlacionar repetições, desvios e picos de dor em uma linha do tempo unificada, confrontando o desempenho do paciente com o laudo da lesão e a prescrição do fisioterapeuta;
-4. **Geração de Evidências e Laudos:** Renderizar vídeos anotados com Head-Up Display (HUD) responsivo e gerar relatórios executivos com snapshots comprobatórios dos desvios.
+2. **Analisar fala relacionada à dor:** Extrair o áudio, transcrever localmente em pt-BR com Faster-Whisper e classificar segmentos por regras determinísticas de domínio;
+3. **Verificar equipamentos:** Nos exercícios FISIO-006 e FISIO-007, detectar faixa elástica e halter com YOLO e apresentar o resultado no vídeo e no relatório;
+4. **Fusão Multimodal e Alinhamento Clínico:** Correlacionar repetições, desvios e segmentos de fala classificados em uma linha do tempo unificada, confrontando o desempenho do paciente com a prescrição;
+5. **Geração de Evidências e Laudos:** Renderizar vídeos anotados com Head-Up Display (HUD) responsivo e gerar relatórios executivos com snapshots comprobatórios dos desvios.
 
 ---
 
@@ -37,13 +38,11 @@ flowchart TB
 
     subgraph Externos [" Sistemas Externos e Suporte "]
         dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>(Sistema Externo - Local)</i><br/>25 clipes sintéticos de referência<br/>para calibração e validação"]
-        azure_language["☁️ <b>Azure Text Analytics</b><br/><i>(Serviço Cloud - Opcional)</i><br/>Análise avançada de sentimento<br/>e entidades clínicas de dor"]
     end
 
     paciente -->|Envia vídeo e áudio gravados<br/>HTTPS / Web| fisio_coach
     fisio -->|Prescreve planos e consulta alertas<br/>HTTPS / Web| fisio_coach
     fisio_coach -->|Lê clipes de referência<br/>Volume Docker :ro| dataset_repo
-    fisio_coach -.->|Extrai termos de dor<br/>REST / HTTPS| azure_language
 
     classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;
@@ -67,7 +66,7 @@ flowchart TB
     subgraph BoundaryFisioCoach [" Fronteira do Sistema Fisio Coach (Docker Compose) "]
         frontend["💻 <b>Frontend Web SPA</b><br/><i>(Container: React 19 / Vite / Nginx)</i><br/>Interface web para upload de vídeos,<br/>acompanhamento de progresso e telemetria"]
 
-        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>(Container: Python 3.11 / FastAPI / MediaPipe)</i><br/>Orquestra visão computacional, pipeline multimodal,<br/>detecta desvios posturais e expõe endpoints REST"]
+        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>(Container: Python 3.11 / FastAPI / MediaPipe + YOLO + Whisper)</i><br/>Orquestra visão computacional, áudio local,<br/>detecção de equipamentos e endpoints REST"]
 
         mongodb[("🗄️ <b>Banco de Dados</b><br/><i>(Container: MongoDB 7.0)</i><br/>Persiste documentos de sessões, eventos<br/>biomecânicos, planos e pacientes")]
 
@@ -118,6 +117,8 @@ flowchart TB
         Geometry["Geometry Utilities<br/>(Ângulos 2D, Distâncias, Inclinações)"]
         RepetitionDetector["RepetitionDetector<br/>(Histerese, Interpolação, Suavização)"]
         HudRenderer["HudRenderer<br/>(Pillow + TrueType, Responsivo, UTF-8)"]
+        ObjectDetector["ObjectDetector<br/>(YOLO CPU-only, FISIO-006/007)"]
+        AudioTranscription["AudioTranscription<br/>(Faster-Whisper local, pt-BR)"]
         FFmpegTranscoder["FFmpeg Transcoder<br/>(H.264 / yuv420p / +faststart para Web)"]
     end
 
@@ -128,11 +129,9 @@ flowchart TB
         CompSink["CompositeResultSink<br/>(Despacho combinado disco + banco)"]
     end
 
-    subgraph "Multimodal Fusion & Clinical Engine (Passo 2 / Planejado)"
-        SpeechEngine["SpeechEngine<br/>(Faster-Whisper local pt-BR)"]
-        PainTextExtractor["PainTextExtractor<br/>(Dicionário clínico + Azure Language)"]
-        FacePainEngine["FacePainEngine<br/>(Action Units Faciais / PSPI)"]
-        MultimodalFusion["MultimodalFusionService<br/>(Alinhamento temporal, Matriz de Risco)"]
+    subgraph "Clinical Audio Engine"
+        PainTextExtractor["PainTextExtractor<br/>(Normalização + regras clínicas)"]
+        MultimodalFusion["PainTimeline<br/>(Segmentos de fala e eventos)"]
     end
 
     RouterSessions --> MediaStorage
@@ -146,6 +145,10 @@ flowchart TB
     BaseAnalyzer --> Geometry
     BaseAnalyzer --> RepetitionDetector
     Processor --> HudRenderer
+    Processor --> ObjectDetector
+    Processor --> AudioTranscription
+    AudioTranscription --> PainTextExtractor
+    PainTextExtractor --> MultimodalFusion
     Processor --> FFmpegTranscoder
     Processor --> MediaStorage
     Processor --> ResultSink
@@ -162,10 +165,9 @@ flowchart TB
     classDef planned fill:#f0f0f0,stroke:#9e9e9e,color:#424242,stroke-dasharray: 4 4;
 
     class RouterSessions,RouterPlans,RouterReports controller;
-    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,FFmpegTranscoder engine;
+    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,ObjectDetector,AudioTranscription,PainTextExtractor,MultimodalFusion,FFmpegTranscoder engine;
     class MediaStorage,DBConnection,Repos infra;
     class ResultSink,FileSink,MongoSink,CompSink sink;
-    class SpeechEngine,PainTextExtractor,FacePainEngine,MultimodalFusion planned;
 ```
 
 ---
@@ -182,8 +184,9 @@ sequenceDiagram
     participant API as FastAPI Backend
     participant FS as MediaStorage (Disco)
     participant PE as Motor de Pose (MediaPipe)
+    participant OD as Detector de Equipamento (YOLO)
     participant SE as Motor de Áudio (Whisper)
-    participant MF as Fusor Multimodal & Clínico
+    participant MF as Classificador de Dor e Timeline
     participant DB as MongoDB
 
     P->>FE: Realiza upload do vídeo da sessão (.mp4)
@@ -198,17 +201,19 @@ sequenceDiagram
         PE->>PE: Determina lado ativo (auto-detecção de amplitude)
         PE->>PE: Rastreia ângulos articulares e detecta fases e repetições
         PE->>PE: Identifica desvios posturais específicos do exercício
+        PE->>OD: Detecta equipamento somente em FISIO-006/007
+        OD->>PE: Retorna caixas e status por frame
         PE->>FS: Grava frames de evidência (.jpg) em outputs/{run_id}/pose/evidence/
-        PE->>PE: Renderiza HUD responsivo (Pillow UTF-8) e gera annotated.mp4
+        PE->>PE: Renderiza landmarks, alertas, equipamento e HUD
+        PE->>PE: Gera annotated.mp4 com vídeo H.264
         PE->>FS: Grava annotated.mp4, analysis.json e telemetry.json
     and Processamento de Áudio e Voz
-        API->>SE: Extrai trilha sonora e transcreve fala (Whisper pt-BR)
-        SE->>SE: Detecta marcadores de dor e região anatômica ("dor no joelho", "fisgada")
+        API->>SE: Extrai trilha sonora, prepara áudio e transcreve (Whisper pt-BR)
+        SE->>MF: Classifica segmentos por regras de dor e preserva timestamps
     end
 
-    API->>MF: Realiza fusão temporal de Pose + Fala + Prescrição + Laudo
-    MF->>MF: Classifica sessão na Matriz de Risco (Verde / Atenção / Crítico)
-    MF->>DB: Atualiza sessão com resultados, scores, telemetria e status="concluido"
+    API->>MF: Consolida pose, equipamentos, fala e prescrição
+    MF->>DB: Atualiza sessão com resultados, timeline e status="concluido"
     
     FE->>API: Consulta status/resultado da sessão (Polling/SSE)
     API-->>FE: Retorna resumo da sessão, telemetria e links dos vídeos e evidências
@@ -313,7 +318,7 @@ RAIZ_DO_REPOSITORIO/
 │       └── {run_id}/
 │           └── pose/
 │               ├── annotated.mp4        # Vídeo renderizado com esqueleto e HUD
-│               ├── analysis.json        # Resumo analítico, repetições e desvios
+│               ├── analysis.json        # Pose, desvios, dor e equipamento
 │               ├── telemetry.json       # Série temporal frame a frame dos ângulos
 │               └── evidence/
 │                   ├── rep01_pico.jpg   # Snapshot da repetição
@@ -338,7 +343,9 @@ RAIZ_DO_REPOSITORIO/
 
 | Requisito | Solução Arquitetural | Impacto / Benefício |
 |---|---|---|
-| **Execução em CPU (sem GPU)** | Adoção do MediaPipe Pose com modelo BlazePose leve | Permite rodar o pipeline completo em qualquer computador convencional ou container Docker sem custos de instâncias com GPU na nuvem. |
+| **Execução em CPU (sem GPU)** | MediaPipe Pose, YOLO e Faster-Whisper configurados para CPU; PyTorch/Torchvision CPU-only | Permite rodar o pipeline completo em computador convencional ou container Docker sem CUDA, GPU dedicada ou custos de instâncias de GPU na nuvem. |
+| **Detecção de equipamentos** | YOLO especializado para `faixa_elastica` e `halter`, ativado apenas nos exercícios que exigem esses objetos | Mantém a análise de pose e fornece status por frame e percentuais no relatório sem custo nos demais exercícios. |
+| **Transcrição e dor verbal** | Faster-Whisper local, preparação de áudio, prompt pt-BR e regras determinísticas de domínio | Evita custo e dependência de cloud e mantém segmentos temporais explicáveis para a timeline. |
 | **Integridade de Caracteres no Vídeo** | Renderização do HUD via Pillow (`ImageDraw` com fonte TrueType UTF-8) | Exibe acentuação correta em português (`ã`, `á`, `ç`) e notações científicas (`°`, `≥`), eliminando interrogações (`?`) típicas do OpenCV Hershey. |
 | **HUD Responsivo e Dinâmico** | Cálculo proporcional baseado na largura e altura do frame | Garante que vídeos verticais (típicos de gravações de smartphone) e horizontais exibam caixas de alerta perfeitamente enquadradas sem cortes de texto. |
 | **Streaming e Compatibilidade Web** | Transcodificação pós-renderização via FFmpeg em H.264 (`yuv420p` + `+faststart`) e Nginx com 250MB | Permite playback nativo instantâneo no frontend React via tag `<video>` em qualquer browser moderno sem erros de codec, suportando vídeos de alta resolução. |

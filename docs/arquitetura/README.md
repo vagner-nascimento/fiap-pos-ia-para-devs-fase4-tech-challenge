@@ -15,10 +15,10 @@ Documento mestre contendo a visão integral do projeto:
   - **C4 Nível 1:** Contexto do Sistema (Atores e Sistemas Externos);
   - **C4 Nível 2:** Containers (Frontend React, Backend FastAPI, MongoDB, Storage de Mídias);
   - **C4 Nível 3:** Componentes do Backend (Rotas da API, Pose Engine, Fusão Multimodal, Infraestrutura);
-- **Pipeline de Processamento Multimodal:** Diagrama de sequência ponta a ponta (vídeo, áudio, pose, laudo);
+- **Pipeline de Processamento Multimodal:** Diagrama de sequência ponta a ponta (vídeo, áudio, pose, equipamento, dor e laudo);
 - **Arquitetura do Motor de Visão:** Padrão Strategy para os 7 exercícios clínicos, histerese e interpolação;
 - **Arquitetura de Armazenamento:** Estrutura de pastas de mídias (`MEDIA_ROOT`), isolamento e coleções do MongoDB;
-- **Requisitos Não-Funcionais:** Decisões de performance em CPU, segurança de dados (LGPD) e renderização responsiva.
+- **Requisitos Não-Funcionais:** Decisões de performance em CPU-only, segurança de dados (LGPD) e renderização responsiva.
 
 ---
 
@@ -36,6 +36,9 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 | [ADR 0006](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0006-adocao-do-mongodb-para-persistencia.md) | **Adoção do MongoDB 7 para Persistência Documental e Telemetria** | Aprovado | Banco de Dados / Persistência |
 | [ADR 0007](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0007-padrao-result-sinks-e-pipeline-assincrono-mongodb.md) | **Padrão Result Sinks, Pipeline Assíncrono e Integração com MongoDB** | Aprovado | Arquitetura / Persistência / REST |
 | [ADR 0008](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0008-transcodificacao-h264-para-streaming-web.md) | **Transcodificação H.264 para Streaming Web e Compatibilidade com Navegadores** | Aprovado | Vídeo / Streaming / Docker / Web |
+| [ADR 0009](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md) | **Detecção de Equipamentos com YOLO em CPU** | Aprovado | Visão Computacional / Objetos / CPU |
+| [ADR 0010](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md) | **Transcrição Local com Faster-Whisper** | Aprovado | Áudio / Custos / Privacidade |
+| [ADR 0011](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md) | **Detecção de Dor por Transcrição de Áudio** | Aprovado | PLN / Áudio / Apoio Clínico |
 
 ---
 

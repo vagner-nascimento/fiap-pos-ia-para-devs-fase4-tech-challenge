@@ -2,10 +2,14 @@
 name = "code-examples"
 version = "0.1.0"
 description = "Exemplos de código do Tech Challenge"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
+	"av>=14.0.0,<19.0.0",
+	"faster-whisper>=1.1.0",
 	"moviepy>=1.0.3,<2.0.0",
-	"SpeechRecognition>=3.10.0",
+	"noisereduce>=3.0.3",
+	"scipy>=1.13.0",
+	"soundfile>=0.12.1",
 	"ultralytics>=8.3.0",
 	"opencv-python>=4.10.0",
 	"Pillow>=10.0.0",

@@ -93,6 +93,12 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
     : 'Verde';
 
   const complianceFormatted = (report.compliance_score ?? 100).toFixed(1);
+  const painAnalysis = report.analise_dor || {};
+  const painLevels = [
+    ['muita_dor', 'Dor forte'],
+    ['dor', 'Dor média'],
+    ['desconforto', 'Desconforto'],
+  ];
 
   return (
     <div className="report-view-container">
@@ -222,6 +228,77 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
                 }
               />
             </div>
+          </Card>
+
+          {/* Card: Análise temporal da dor */}
+          <Card>
+            <h2>Análise da dor</h2>
+            <div className="pain-summary-grid">
+              <div>
+                <span className="pain-summary-label">Com dor</span>
+                <strong className="pain-summary-value pain-value">
+                  {(painAnalysis.percentual_com_dor ?? 0).toFixed(1)}%
+                </strong>
+                <span className="mu">
+                  {(painAnalysis.duracao_com_dor_segundos ?? 0).toFixed(1)} s do vídeo
+                </span>
+              </div>
+              <div>
+                <span className="pain-summary-label">Sem dor</span>
+                <strong className="pain-summary-value no-pain-value">
+                  {(painAnalysis.percentual_sem_dor ?? 100).toFixed(1)}%
+                </strong>
+                <span className="mu">
+                  {(painAnalysis.duracao_sem_dor_segundos ?? 0).toFixed(1)} s do vídeo
+                </span>
+              </div>
+            </div>
+            <div className="pain-level-list">
+              {painLevels.map(([level, label]) => {
+                const summary = painAnalysis.por_nivel?.[level] || {};
+                return (
+                  <div className="pain-level-row" key={level}>
+                    <span>{label}</span>
+                    <span className="mu">
+                      {(summary.percentual_video ?? 0).toFixed(1)}% · {summary.ocorrencias || 0} ocorrência(s)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mu pain-analysis-note">
+              Sem fala e indeterminado são considerados sem dor.
+            </p>
+          </Card>
+
+          {/* Card: Detecção do equipamento necessário */}
+          <Card>
+            <h2>Equipamento</h2>
+            {!report.equipamento?.possui_equipamento ? (
+              <p className="mu">Nenhum</p>
+            ) : (
+              <>
+                <div className="equipment-name">{report.equipamento.nome}</div>
+                <div className="equipment-total">
+                  <span>Presença total no vídeo</span>
+                  <strong>{(report.equipamento.percentual_total ?? 0).toFixed(1)}%</strong>
+                </div>
+                <div className="equipment-breakdown">
+                  <div>
+                    <span>Não detectado</span>
+                    <strong>{(report.equipamento.percentual_nao_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                  <div>
+                    <span>Detectado parcialmente</span>
+                    <strong>{(report.equipamento.percentual_parcialmente_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                  <div>
+                    <span>Detectado totalmente</span>
+                    <strong>{(report.equipamento.percentual_totalmente_detectado ?? 0).toFixed(1)}%</strong>
+                  </div>
+                </div>
+              </>
+            )}
           </Card>
 
           {/* Card: Comparação Clínica */}

@@ -15,6 +15,7 @@ from infra.database.repositories.event_repository import EventRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument, EventType
 from models.database.session import RiskClassification, SessionDocument, SessionStatus
+from services.audio_transcription import SpeechSegment
 from services.pose.models import DeviationSeverity, ExerciseAnalysisResult
 
 logger = logging.getLogger(__name__)
@@ -226,6 +227,29 @@ class MongoResultSink(ResultSink):
                     severidade=dev.severity.value,
                 )
             )
+
+        speech_segments = kwargs.get("speech_segments", [])
+        for segment in speech_segments:
+            if not isinstance(segment, SpeechSegment):
+                raise TypeError("speech_segments deve conter objetos SpeechSegment.")
+            events.append(
+                EventDocument(
+                    session_id=run_id,
+                    tipo=EventType.FALA_DOR,
+                    instante_inicio=segment.start_seconds,
+                    instante_fim=segment.end_seconds,
+                    duracao=max(0.0, segment.end_seconds - segment.start_seconds),
+                    valores={
+                        "nivel": segment.nivel,
+                        "score": segment.score,
+                        "timestamp": segment.timestamp,
+                    },
+                    evidencia={"transcricao": segment.texto},
+                    descricao=segment.texto,
+                )
+            )
+
+        events.sort(key=lambda event: event.instante_inicio)
 
         # Persistência via repositórios
         saved_session_id = self.session_repo.save_session(session_doc)
