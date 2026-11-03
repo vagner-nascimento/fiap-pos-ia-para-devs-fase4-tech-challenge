@@ -93,6 +93,12 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
     : 'Verde';
 
   const complianceFormatted = (report.compliance_score ?? 100).toFixed(1);
+  const painAnalysis = report.analise_dor || {};
+  const painLevels = [
+    ['muita_dor', 'Dor forte'],
+    ['dor', 'Dor média'],
+    ['desconforto', 'Desconforto'],
+  ];
 
   return (
     <div className="report-view-container">
@@ -222,6 +228,47 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
                 }
               />
             </div>
+          </Card>
+
+          {/* Card: Análise temporal da dor */}
+          <Card>
+            <h2>Análise da dor</h2>
+            <div className="pain-summary-grid">
+              <div>
+                <span className="pain-summary-label">Com dor</span>
+                <strong className="pain-summary-value pain-value">
+                  {(painAnalysis.percentual_com_dor ?? 0).toFixed(1)}%
+                </strong>
+                <span className="mu">
+                  {(painAnalysis.duracao_com_dor_segundos ?? 0).toFixed(1)} s do vídeo
+                </span>
+              </div>
+              <div>
+                <span className="pain-summary-label">Sem dor</span>
+                <strong className="pain-summary-value no-pain-value">
+                  {(painAnalysis.percentual_sem_dor ?? 100).toFixed(1)}%
+                </strong>
+                <span className="mu">
+                  {(painAnalysis.duracao_sem_dor_segundos ?? 0).toFixed(1)} s do vídeo
+                </span>
+              </div>
+            </div>
+            <div className="pain-level-list">
+              {painLevels.map(([level, label]) => {
+                const summary = painAnalysis.por_nivel?.[level] || {};
+                return (
+                  <div className="pain-level-row" key={level}>
+                    <span>{label}</span>
+                    <span className="mu">
+                      {(summary.percentual_video ?? 0).toFixed(1)}% · {summary.ocorrencias || 0} ocorrência(s)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mu pain-analysis-note">
+              Sem fala e indeterminado são considerados sem dor.
+            </p>
           </Card>
 
           {/* Card: Comparação Clínica */}

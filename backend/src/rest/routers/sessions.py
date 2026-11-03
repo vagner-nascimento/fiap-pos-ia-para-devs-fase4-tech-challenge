@@ -28,6 +28,8 @@ from models.rest.session import (
     CreateSessionPayload,
     CreateSessionResponse,
     ExerciseOption,
+    PainAnalysisSummary,
+    PainLevelSummary,
     ReferenceClipInfo,
     SessionReportResponse,
 )
@@ -382,6 +384,76 @@ RISK_SYMBOLS = {
     "critico": "■",
 }
 
+_PAIN_LEVELS = ("muita_dor", "dor", "desconforto")
+
+
+def _merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Une intervalos sobrepostos para que uma fala não seja contada duas vezes."""
+    valid_intervals = sorted(
+        (max(0.0, start), max(0.0, end))
+        for start, end in intervals
+        if end > start
+    )
+    merged: list[tuple[float, float]] = []
+    for start, end in valid_intervals:
+        if not merged or start > merged[-1][1]:
+            merged.append((start, end))
+        else:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+    return merged
+
+
+def _interval_duration(intervals: list[tuple[float, float]]) -> float:
+    return sum(end - start for start, end in _merge_intervals(intervals))
+
+
+def _build_pain_analysis(session: SessionDocument, events: list[EventDocument]) -> PainAnalysisSummary:
+    """Calcula a proporção temporal de dor, tratando silêncio e indeterminado como sem dor."""
+    video_duration = max(float(session.summary.duration_seconds), 0.0) if session.summary else 0.0
+    pain_events = [
+        event for event in events
+        if event.tipo.value == "fala_dor"
+        and (event.valores or {}).get("nivel") in _PAIN_LEVELS
+    ]
+    if video_duration <= 0:
+        video_duration = max((event.instante_fim for event in events), default=0.0)
+    video_duration = max(video_duration, 0.0)
+
+    pain_intervals = [
+        (event.instante_inicio, min(event.instante_fim, video_duration))
+        for event in pain_events
+    ]
+    pain_duration = min(_interval_duration(pain_intervals), video_duration)
+    no_pain_duration = max(video_duration - pain_duration, 0.0)
+
+    by_level: dict[str, PainLevelSummary] = {}
+    for level in _PAIN_LEVELS:
+        level_events = [
+            event for event in pain_events
+            if (event.valores or {}).get("nivel") == level
+        ]
+        level_duration = min(
+            _interval_duration([
+                (event.instante_inicio, min(event.instante_fim, video_duration))
+                for event in level_events
+            ]),
+            video_duration,
+        )
+        by_level[level] = PainLevelSummary(
+            duracao_segundos=round(level_duration, 2),
+            percentual_video=round(level_duration / video_duration * 100, 1) if video_duration else 0.0,
+            ocorrencias=len(level_events),
+        )
+
+    return PainAnalysisSummary(
+        duracao_video_segundos=round(video_duration, 2),
+        duracao_com_dor_segundos=round(pain_duration, 2),
+        percentual_com_dor=round(pain_duration / video_duration * 100, 1) if video_duration else 0.0,
+        duracao_sem_dor_segundos=round(no_pain_duration, 2),
+        percentual_sem_dor=round(no_pain_duration / video_duration * 100, 1) if video_duration else 100.0,
+        por_nivel=by_level,
+    )
+
 
 EXERCISE_OPTIONS = [
     ExerciseOption(
@@ -598,6 +670,7 @@ def get_session_report(session_id: str) -> SessionReportResponse:
 
     deviations_count = session.total_deviations or 0
     score = session.compliance_score if session.compliance_score is not None else 100.0
+    analise_dor = _build_pain_analysis(session, events)
 
     comparacao_clinica = {
         "plano": {
@@ -640,6 +713,7 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         telemetry_json_url=telemetry_url,
         evidence_urls=evidence_urls,
         events=formatted_events,
+        analise_dor=analise_dor,
         comparacao_clinica=comparacao_clinica,
         aviso_legal="Apoio à decisão, não diagnóstico.",
     )

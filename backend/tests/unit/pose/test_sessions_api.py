@@ -339,3 +339,65 @@ def test_get_session_report(client, mock_mongo):
     assert report["aviso_legal"] == "Apoio à decisão, não diagnóstico."
     assert "comparacao_clinica" in report
 
+
+def test_session_report_calculates_pain_percentage_from_video_duration(client, mock_mongo):
+    db = mock_mongo["fiap-pos-ia-db"]
+    session_repo = SessionRepository(collection=db["sessoes"])
+    event_repo = EventRepository(collection=db["eventos"])
+    session_id = "REP-TEST-PAIN"
+    summary = SessionSummary(
+        exercise_id="FISIO-001",
+        case_id="FISIO-001",
+        side_evaluated="direito",
+        completed_repetitions=1,
+        valid_repetitions=1,
+        invalid_repetitions=0,
+        duration_seconds=10.0,
+        fps=30.0,
+        total_frames=300,
+        frames_without_pose=0,
+        compliance_score=100.0,
+    )
+    session_repo.save_session(SessionDocument(
+        session_id=session_id,
+        exercicio_id="FISIO-001",
+        case_id="FISIO-001",
+        side_evaluated="direito",
+        summary=summary,
+    ))
+    event_repo.save_events([
+        EventDocument(
+            session_id=session_id,
+            tipo=EventType.FALA_DOR,
+            instante_inicio=2.0,
+            instante_fim=4.0,
+            valores={"nivel": "dor"},
+        ),
+        EventDocument(
+            session_id=session_id,
+            tipo=EventType.FALA_DOR,
+            instante_inicio=3.0,
+            instante_fim=5.0,
+            valores={"nivel": "dor"},
+        ),
+        EventDocument(
+            session_id=session_id,
+            tipo=EventType.FALA_DOR,
+            instante_inicio=7.0,
+            instante_fim=8.0,
+            valores={"nivel": "indeterminado"},
+        ),
+    ])
+
+    response = client.get(f"/api/sessoes/{session_id}/relatorio")
+    assert response.status_code == 200
+    pain = response.json()["analise_dor"]
+
+    assert pain["duracao_video_segundos"] == 10.0
+    assert pain["duracao_com_dor_segundos"] == 3.0
+    assert pain["percentual_com_dor"] == 30.0
+    assert pain["duracao_sem_dor_segundos"] == 7.0
+    assert pain["percentual_sem_dor"] == 70.0
+    assert pain["por_nivel"]["dor"]["ocorrencias"] == 2
+    assert pain["por_nivel"]["dor"]["percentual_video"] == 30.0
+    assert pain["indeterminado_incluido_como_sem_dor"] is True
