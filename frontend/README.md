@@ -1,6 +1,6 @@
 # Frontend — Fisio Coach (React 19 & Vite)
 
-Interface web do sistema Fisio Coach para envio de vídeos de sessões, acompanhamento do processamento em tempo real, visualização de telemetria biomecânica e painel de alertas do fisioterapeuta.
+interface web do sistema Fisio Coach para envio de vídeos de sessões, acompanhamento do processamento em tempo real, visualização de telemetria biomecânica, detecção de equipamentos e painel de alertas do fisioterapeuta.
 
 > Para detalhes sobre a arquitetura integrada do sistema, consulte a [Documentação de Arquitetura](../docs/arquitetura/arquitetura-do-sistema.md).
 
@@ -19,7 +19,7 @@ frontend/
     │   ├── ds/                # Componentes base: Button, Card, StatusChip, StepList, Timeline, VideoPlayer
     │   ├── SessionsListView.jsx   # Listagem de sessões e modal de nova análise
     │   ├── ProcessingView.jsx     # Tela 4: Acompanhamento de processamento com polling
-    │   └── SessionReportView.jsx  # Tela 5: Relatório analítico individual (vídeo, timeline, laudo)
+    │   └── SessionReportView.jsx  # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)
     ├── App.jsx                # Shell da aplicação com sidebar de 220px
     ├── main.jsx               # Bootstrap React com importação de tokens
     └── styles.css             # Estilos utilitários globais
@@ -43,6 +43,12 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 
 
 Em desenvolvimento, o Vite encaminha `/api` para `http://localhost:3000`. No container, o Nginx encaminha `/api/` para `http://backend:3000` pela rede do Docker Compose; as demais requisições servem o bundle React e usam fallback para `index.html`. O backend também possui CORS liberado para comunicação direta no host.
+
+O relatório exibe o vídeo anotado com landmarks, alertas e detecção do
+equipamento na mesma camada visual. Para FISIO-006 e FISIO-007, o painel
+**Equipamento** mostra o nome, o percentual total e a divisão entre não
+detectado, parcialmente detectado e totalmente detectado. Para exercícios sem
+equipamento, mostra somente **Nenhum**.
 
 ## Configuração e variáveis de ambiente
 

@@ -46,33 +46,33 @@ O **Fisio Coach** analisa vídeos de sessões de fisioterapia e verifica se o pa
 1. O fisioterapeuta cadastra o **plano**: exercícios (a partir da lista de referência da seção 8.1), séries/repetições, limite de dor aceitável e faixa de movimento esperada.
 2. O **laudo** é estruturado (lesão, região, movimentos restritos, limite de amplitude). No MVP, é texto sintético processado por extração de entidades.
 3. O paciente grava a sessão (vídeo com áudio) e envia pela interface web.
-4. O sistema processa em segundo plano, em paralelo: **postura**, **equipamento**, **expressão facial** e **áudio**. A interface mostra o progresso.
-5. A **fusão** gera uma linha do tempo da sessão com eventos de postura, picos de dor facial e falas de dor.
+4. O sistema processa em segundo plano, em paralelo: **postura**, **equipamento** e **áudio**. A interface mostra o progresso.
+5. A **fusão** gera uma linha do tempo da sessão com eventos de postura e falas classificadas por dor.
 6. O resultado é **comparado com plano e laudo**, e classificado em verde, atenção ou crítico.
 7. Geram-se o **relatório da sessão** e o **alerta**, exibidos no painel do fisioterapeuta.
 
 ## 5. Escopo funcional
 
 ### 5.1 Análise de postura e equipamento (vídeo)
-- **RF-01** Extrair keypoints do corpo com OpenPose e calcular ângulos articulares por frame.
+- **RF-01** Extrair keypoints do corpo com MediaPipe Pose e calcular ângulos articulares por frame.
 - **RF-02** Identificar o exercício executado (ou receber como parâmetro do plano, usando os 7 exercícios de referência da seção 8.1) e segmentar **repetições**.
 - **RF-03** Comparar com a postura de referência do exercício e marcar desvios (amplitude insuficiente, compensações, assimetria).
-- **RF-04** Detectar com YOLOv8 o equipamento prescrito (faixa elástica, bastão de PVC ou cabo de espuma, halter leve, colchonete, mesa ou apoio estável) e sinalizar se ausente ou incorreto.
+- **RF-04** Detectar com YOLO o equipamento prescrito nos exercícios que o exigem: faixa elástica no FISIO-006 e halter no FISIO-007. Os demais exercícios não executam essa detecção.
 
 ### 5.2 Dor por expressão facial (vídeo)
 - **RF-05** Detectar o rosto e extrair landmarks/Action Units faciais relacionadas à dor (sobrancelha abaixada, olhos contraídos, nariz franzido, lábio superior elevado, olhos fechados).
 - **RF-06** Calcular um **índice facial de dor** por janela de tempo (0–10), baseado na escala PSPI (*Prkachin and Solomon Pain Intensity*) ou equivalente simplificado.
 - **RF-07** Tratar rosto fora de quadro ou ocluído como "sem dado" e nunca como "sem dor".
 
-### 5.3 Dor por áudio (transcrição local + Azure Text Analytics + acústica)
-- **RF-08** Transcrever o áudio em pt-BR com **modelo de reconhecimento de fala executado localmente** (sugestão: faster-whisper, modelo `small`, dentro do container), com timestamps por segmento. Substitui o Azure Speech to Text por redução de custos (ver seção 6.5 e riscos).
-- **RF-09** Com **Azure Text Analytics (AI Language)** e um dicionário pt-BR de dor, extrair: menção de dor, **região** ("joelho", "ombro"), **grau** ("7 de 10", "muita dor", "fisgada") e **sentimento**.
-- **RF-10** Extrair features acústicas (pitch, energia, pausas, respiração audível, gemidos) para um **índice vocal de dor**.
-- **RF-11** Converter o relato verbal em escala numérica 0–10 (NRS); termos qualitativos mapeiam para faixas definidas e documentadas.
+### 5.3 Dor por áudio (transcrição local e regras de domínio)
+- **RF-08** Transcrever o áudio em pt-BR com **Faster-Whisper executado localmente**, com timestamps por segmento. O áudio é convertido para mono/16 kHz, tem ruído reduzido e pico normalizado antes da inferência.
+- **RF-09** Normalizar o texto e aplicar regras de domínio para extrair menção de dor, desconforto, negação, intensidade e expressões de melhora.
+- **RF-10** Preservar o texto original, o nível classificado e os intervalos temporais para explicabilidade e exibição na timeline.
+- **RF-11** Mapear termos qualitativos para níveis determinísticos (`pouca_ou_nenhuma_dor`, `desconforto`, `dor`, `muita_dor` ou `indeterminado`), sem tratar o resultado como diagnóstico.
 
 ### 5.4 Fusão multimodal e comparação clínica
-- **RF-12** Alinhar, em uma linha do tempo única, repetições, desvios, picos de dor facial e falas de dor.
-- **RF-13** Calcular o **score de dor consolidado** por repetição e por sessão, ponderando relato verbal (maior peso, por ser autorrelato), face e voz. Discordâncias entre fontes (ex.: diz "estou bem" com face de dor) são sinalizadas como **inconsistência**.
+- **RF-12** Alinhar, em uma linha do tempo única, repetições, desvios, status do equipamento e falas classificadas por dor.
+- **RF-13** Exibir a classificação da fala com o texto original e os timestamps; uma evolução futura poderá combinar outras fontes de dor após validação clínica.
 - **RF-14** Comparar com a **prescrição**: dor acima do limite do plano, exercício com dor persistente, queda de amplitude ou de repetições frente às sessões anteriores (também é a forma de tratar a "evolução de prescrição" do edital).
 - **RF-15** Comparar com o **laudo**: movimento ou região contraindicada executada, amplitude além do limite, dor localizada na região da lesão.
 - **RF-16** Classificar a sessão em **Verde / Atenção / Crítico** com regras explícitas e justificativa textual.
@@ -101,19 +101,17 @@ O Nginx do frontend encaminha `/api` ao serviço `backend` pela rede interna do 
 ### 6.2 Fluxo de processamento
 
 ```
-Frontend (upload) ─► POST /api/sessoes ─► salva vídeo + cria sessão (status: enviado) ─► responde 202
-                                              │
-                                  processamento em segundo plano (backend)
-                                              ▼
- separação de trilhas
-  ├─► frames ─► OpenPose (ângulos, repetições, desvios)
-  │          ├─► YOLOv8 (equipamento)
-  │          └─► face landmarks/AUs ─► índice facial de dor
-  └─► áudio ─► transcrição local (faster-whisper, pt-BR, timestamps)
-             ├─► Azure Text Analytics (dor, região, grau, sentimento)
-             └─► features acústicas ─► índice vocal de dor
-                                              ▼
- Linha do tempo unificada ─► Fusão (score de dor + inconsistências)
+ Frontend (upload) ─► POST /api/sessoes ─► salva vídeo + cria sessão (status: enviado) ─► responde 202
+                                               │
+                                   processamento em segundo plano (backend)
+                                               ▼
+  separação de trilhas
+   ├─► frames ─► MediaPipe Pose (ângulos, repetições, desvios)
+   │          └─► YOLO (equipamento somente em FISIO-006/007)
+   └─► áudio ─► transcrição local (faster-whisper, pt-BR, timestamps)
+              └─► normalização + regras de domínio ─► timeline de dor
+                                               ▼
+ Linha do tempo unificada ─► Relatório (pose + equipamento + falas de dor)
  Plano + Laudo (MongoDB) ─► Motor de regras de comparação
                                               ▼
  Classificação Verde/Atenção/Crítico ─► Relatório + Alerta (MongoDB) ─► painel de alertas
@@ -152,14 +150,20 @@ Todas as rotas sob `/api` (já existente: `GET /api/health`).
 
 Vídeos, frames de evidência e relatórios ficam em volume Docker (ou GridFS), referenciados pelas coleções.
 
-### 6.5 Serviços Azure e componentes de IA
+### 6.5 Componentes de IA e decisão de execução
 
-- **Azure AI Language (Text Analytics):** obrigatório para o vídeo, chamado pelo backend via SDK, para termos críticos e sentimento.
-- **Azure Speech to Text:** **removido** por redução de custos. A transcrição passa a ser feita localmente (sugestão: faster-whisper). O edital pede o uso de Azure Speech to Text; essa mudança precisa ser validada com o professor (ver seções 11, 12 e 13).
-- **Azure Functions e Blob Storage:** fora do escopo, por não serem necessários ao núcleo do MVP.
-- **Chaves e endpoints** entram por variáveis de ambiente no Compose (`.env` fora do Git, `.env.example` versionado).
+- **MediaPipe Pose:** landmarks corporais, ângulos, fases, repetições e desvios;
+- **YOLO:** detecção especializada de faixa elástica e halter, com checkpoint
+  salvo em `backend/src/yolo/best.pt` e sem treinamento na API;
+- **Faster-Whisper:** transcrição local em CPU, com preparação de áudio,
+  prompt de domínio e timestamps;
+- **Regras de domínio:** classificação determinística das falas por níveis de
+  dor e desconforto.
 
-**Nota técnica a validar:** o Azure Face API restringiu recursos de reconhecimento de emoção; por isso a expressão de dor é tratada com bibliotecas abertas (ex.: MediaPipe Face Mesh/OpenFace), a confirmar na documentação vigente.
+Serviços de cloud para áudio ou NLP não foram adotados nesta demonstração por
+custos, complexidade de criação/configuração/manutenção e ausência de
+orçamento. Uma evolução futura poderá avaliar modelos clínicos e serviços
+externos após validação de privacidade, custo e qualidade.
 
 ## 7. Requisitos não funcionais
 
@@ -170,7 +174,7 @@ Vídeos, frames de evidência e relatórios ficam em volume Docker (ou GridFS), 
 | **Upload e timeouts** | Nginx e FastAPI configurados para vídeos de até ~200 MB (`client_max_body_size` e timeouts ampliados); vídeos de demo curtos (1–3 min) |
 | **Desempenho** | Meta: processar 1 min de vídeo em até ~5 min em máquina sem GPU; amostragem de frames (5–10 fps); transcrição com modelo `small` ou `base` |
 | **Privacidade/LGPD** | Dados de saúde são sensíveis: voluntários do grupo com **termo de consentimento** (imagem e voz), dataset de referência com casos fictícios e dados **sintéticos** para plano/laudo. Sem dados identificáveis no repositório; `data/` fora do Git |
-| **Segredos** | Chaves Azure apenas em `.env`; versionar só `.env.example` |
+| **Segredos** | Não há credenciais de cloud necessárias para o pipeline atual; futuras integrações devem usar `.env` e nunca o Git |
 | **Explicabilidade** | Toda classificação exibe as evidências que a causaram |
 | **Ética** | Indicador de apoio à decisão, nunca diagnóstico. Limitações de viés facial (iluminação, tom de pele, barba, óculos) descritas no relatório |
 | **Reprodutibilidade** | `requirements.txt` com versões fixas, seeds fixos, script de carga de dados de demonstração (seed do MongoDB) |

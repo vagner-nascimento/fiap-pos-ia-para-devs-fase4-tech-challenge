@@ -1,4 +1,4 @@
-# Resumo de Progresso e Estado Atual — Motor de Detecção de Pose (MediaPipe)
+# Resumo de Progresso e Estado Atual — Pipeline Multimodal
 
 **Data/Hora do Handover:** 29/10/2026 (atualizado)  
 **Documento de Arquitetura Principal:** `docs/arquitetura/plano-motor-deteccao-pose-mediapipe.md`
@@ -70,16 +70,28 @@
   * `frontend/nginx.conf` e `frontend/vite.config.js`: Proxies configurados para servir `/media/` a partir do backend, com `client_max_body_size 250M;` e timeouts estendidos de 600s para uploads grandes.
   * `services/pose/video_processor.py`: Transcodificação automática pós-renderização para **H.264 (`yuv420p` + `+faststart`)** via FFmpeg, garantindo playback nativo em navegadores modernos sem erros de decodificação.
   * Endpoints REST adicionados: `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`, além de resolução flexível de clipes de dataset em `POST /api/sessoes/referencia`.
-  * Testes automatizados: 102 testes passando no backend e build de produção do frontend validado via Docker (`npm run build`).
+  * Testes automatizados: 119 testes passando no backend e build de produção do frontend validado via Docker (`npm run build`).
+
+### Etapa 7: Áudio local, dor por transcrição e detecção de equipamentos (Concluída)
+- **Áudio:** extração da trilha do vídeo, conversão para mono/16 kHz, redução de
+  ruído, normalização e transcrição local com Faster-Whisper em CPU.
+- **Dor:** classificação determinística de segmentos transcritos em níveis de
+  dor/desconforto, com timestamps e texto original para a timeline do relatório.
+- **Equipamentos:** YOLO CPU-only carregado de `backend/src/yolo/best.pt`,
+  ativado somente para FISIO-006 (`faixa_elastica`) e FISIO-007 (`halter`).
+  O vídeo mantém pose, landmarks, alertas e HUD, e acrescenta status do objeto;
+  o relatório exibe os percentuais de detecção. Exercícios sem equipamento não
+  carregam o detector.
+- **Infraestrutura:** PyTorch e Torchvision foram fixados nos índices
+  CPU-only, evitando a instalação dos runtimes CUDA/NVIDIA.
 
 ---
 
 ## 2. Próximos Passos Imediatos
 
-1. Módulos complementares de IA do PRD v1.2:
-   - Análise de dor facial (MediaPipe Face Mesh / PSPI).
-   - Análise de fala e dor vocal (faster-whisper + Azure Text Analytics).
-   - Fusão multimodal de scores de dor e desvios na sessão.
-2. Expansão dos analisadores de exercícios para FISIO-002 a FISIO-007.
-3. Telas complementares de cadastro de pacientes, planos de exercícios e laudos médicos (Issues #3, #4 e #5).
-
+1. Evolução da análise de dor para modelos faciais/acústicos validados e
+   fusão clínica de múltiplas fontes.
+2. Expansão dos datasets e validação do detector YOLO em mais distâncias,
+   ângulos, cores, iluminações e tamanhos antes de qualquer uso real.
+3. Telas complementares de cadastro de pacientes, planos de exercícios e
+   laudos médicos (Issues #3, #4 e #5).
