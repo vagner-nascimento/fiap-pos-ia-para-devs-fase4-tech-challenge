@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from config.media_paths import MediaStorage
+import services.pose.video_processor as video_processor_module
 from services.pose.video_processor import VideoPoseProcessor
 
 
@@ -110,3 +111,33 @@ def test_video_processor_with_mongo_sink(temp_storage, sample_video):
     assert session_doc.exercicio_id == "KNEE_EXTENSION_SEATED"
     assert session_doc.status.value == "concluido"
 
+
+def test_transcode_muxes_audio_from_original_video(tmp_path, monkeypatch):
+    annotated_video = tmp_path / "annotated.mp4"
+    original_video = tmp_path / "original.mp4"
+    temp_h264 = tmp_path / "annotated.h264.mp4"
+    annotated_video.write_bytes(b"video")
+    original_video.write_bytes(b"video-with-audio")
+    commands = []
+
+    monkeypatch.setattr(video_processor_module.shutil, "which", lambda _: "ffmpeg")
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        temp_h264.write_bytes(b"video-with-audio")
+        return type("Completed", (), {"returncode": 0, "stderr": b""})()
+
+    monkeypatch.setattr(video_processor_module.subprocess, "run", fake_run)
+
+    VideoPoseProcessor()._transcode_to_h264_if_available(
+        annotated_video,
+        audio_source_path=original_video,
+    )
+
+    command = commands[0]
+    assert ["-map", "0:v:0", "-map", "1:a:0"] == command[
+        command.index("-map"):command.index("-c:a")
+    ]
+    assert "-an" not in command
+    assert "-c:a" in command
+    assert annotated_video.read_bytes() == b"video-with-audio"

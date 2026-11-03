@@ -23,8 +23,8 @@
   --fc-track-bg: #EEF3F2;
   --fc-track-rep: var(--fc-primary);       /* repetições */
   --fc-track-desvio: var(--fc-warn-fg);    /* desvios de postura */
-  --fc-track-dor: var(--fc-crit-fg);       /* dor facial */
   --fc-track-fala: var(--fc-primary-dark); /* fala de dor */
+  --fc-track-fala-media: #E6A700;          /* dor/desconforto */
 
   /* Tipografia */
   --fc-font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;

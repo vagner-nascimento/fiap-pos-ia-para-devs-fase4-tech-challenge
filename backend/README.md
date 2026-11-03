@@ -39,7 +39,7 @@ uv run python -m src.main
   * `GET /api/sessoes/clips-referencia`: Lista o catálogo de clipes sintéticos de referência para teste;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score e classificação de risco;
-  * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições e desvios;
+  * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições, desvios e falas de dor;
   * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico;
   * `GET /media/...`: Serve os vídeos anotados transcodificados em H.264 e snapshots de evidência em JPG.
 
@@ -99,6 +99,7 @@ backend/
 │   │   ├── database/                   # SessionDocument e EventDocument (BSON)
 │   │   └── rest/                       # Payloads e Responses da API (JSON)
 │   ├── services/
+│   │   ├── audio_transcription.py      # Extração, Whisper e classificação de fala de dor
 │   │   └── pose/                       # Motor de Visão Computacional
 │   │       ├── analyzers/              # 7 Analisadores especializados (FISIO-001 a 007)
 │   │       ├── base_analyzer.py        # Base com Template Method, histerese e auto-lado
@@ -130,6 +131,9 @@ Configuradas no arquivo `.env` (ou no `docker-compose.yaml`):
 | `DATASET_ROOT` | Caminho do repositório de clipes sintéticos | `../../fiap-pos-ia-...-datasets` | `/app/datasets` |
 | `MONGO_DB_SERVER` | URI de conexão do MongoDB | `mongodb://localhost:27017` | `mongodb://mongodb:27017` |
 | `MONGO_DB_NAME` | Nome do banco no MongoDB | `fiap-pos-ia-db` | `fiap-pos-ia-db` |
+| `WHISPER_MODEL_SIZE` | Tamanho do modelo `faster-whisper` | `medium` | `medium` |
+| `WHISPER_DEVICE` | Dispositivo de inferência do Whisper | `cpu` | `cpu` |
+| `WHISPER_COMPUTE_TYPE` | Tipo de computação do Whisper | `int8` | `int8` |
 
 ---
 

@@ -2,7 +2,8 @@
  * Timeline — Faixas temporais alinhadas para biomecânica e eventos de dor.
  * Conforme Design System:
  * Faixas de 28px (--fc-track-bg), blocos de 20px com raio 4px.
- * Uma faixa por tipo: Repetições (--fc-track-rep), Desvios (--fc-track-desvio), Dor facial (--fc-track-dor), Fala (--fc-track-fala).
+ * A fala de dor usa vermelho para dor forte, amarelo para dor/desconforto
+ * e azul para pouca ou nenhuma dor.
  */
 export function Timeline({
   events = [],
@@ -15,7 +16,6 @@ export function Timeline({
   // Separa eventos por tipo de faixa
   const repetitions = events.filter((e) => e.tipo === 'repeticao');
   const deviations = events.filter((e) => e.tipo === 'desvio');
-  const facePain = events.filter((e) => e.tipo === 'dor_facial');
   const speechPain = events.filter((e) => e.tipo === 'fala_dor');
 
   const getPositionPercent = (time) => {
@@ -29,6 +29,20 @@ export function Timeline({
     const w = ((e - s) / safeDuration) * 100;
     return Math.max(w, 2.5); // Garante visibilidade mínima de clique
   };
+
+  const getSpeechWidth = (start, end) => {
+    const s = Math.max(0, start || 0);
+    const e = Math.min(safeDuration, end || start + 0.1);
+    const width = Math.max(((e - s) / safeDuration) * 100, 0.2);
+    return `calc(${width}% - 3px)`;
+  };
+
+  const getSpeechIntensity = (level) => ({
+    muita_dor: 'Dor forte',
+    dor: 'Dor média',
+    desconforto: 'Desconforto',
+    pouca_ou_nenhuma_dor: 'Pouca ou nenhuma dor',
+  }[level] || 'Intensidade indeterminada');
 
   const handleTrackClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -118,35 +132,7 @@ export function Timeline({
           </div>
         </div>
 
-        {/* Faixa 3: Dor Facial (RF-07: sem dado não é sem dor) */}
-        <div className="timeline-track-row">
-          <span className="timeline-track-label">Dor facial</span>
-          <div className="trk">
-            {facePain.length === 0 ? (
-              <span className="trk-empty trk-striped">sem dado registrado</span>
-            ) : (
-              facePain.map((pain, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className="trk-block trk-dor"
-                  style={{
-                    left: `${getPositionPercent(pain.instante_inicio)}%`,
-                    width: `${getWidthPercent(pain.instante_inicio, pain.instante_fim)}%`,
-                    background: 'var(--fc-track-dor)',
-                  }}
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    onSeek(pain.instante_inicio);
-                  }}
-                  title={`Dor facial: ${pain.descricao || 'Expressão de desconforto'}`}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Faixa 4: Fala de Dor */}
+        {/* Faixa 3: Fala de Dor */}
         <div className="timeline-track-row">
           <span className="timeline-track-label">Fala de dor</span>
           <div className="trk">
@@ -160,14 +146,19 @@ export function Timeline({
                   className="trk-block trk-fala"
                   style={{
                     left: `${getPositionPercent(speech.instante_inicio)}%`,
-                    width: `${getWidthPercent(speech.instante_inicio, speech.instante_fim)}%`,
-                    background: 'var(--fc-track-fala)',
+                    width: getSpeechWidth(speech.instante_inicio, speech.instante_fim),
+                    background: speech.valores?.nivel === 'muita_dor'
+                      ? 'var(--fc-crit-fg)'
+                      : speech.valores?.nivel === 'dor' || speech.valores?.nivel === 'desconforto'
+                      ? 'var(--fc-track-fala-media)'
+                      : 'var(--fc-primary)',
                   }}
                   onClick={(ev) => {
                     ev.stopPropagation();
                     onSeek(speech.instante_inicio);
                   }}
-                  title={`Fala: "${speech.descricao || 'Queixa verbal'}"`}
+                  title={getSpeechIntensity(speech.valores?.nivel)}
+                  aria-label={`Fala: "${speech.descricao || 'Queixa verbal'}"`}
                 />
               ))
             )}
