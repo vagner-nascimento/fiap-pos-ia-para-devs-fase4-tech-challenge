@@ -891,6 +891,69 @@ label {
   padding: 80px 20px;
 }
 
+/* Tela 1: Plano e Laudo (Mock 01-Plano-Laudo) */
+.ds-textarea {
+  min-height: 96px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.plan-exercise-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--fc-border);
+  flex-wrap: wrap;
+}
+
+.add-exercise-box {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--fc-radius-control);
+  background: var(--fc-bg);
+  border: 1px solid var(--fc-border);
+}
+
+.btn-link-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  color: var(--fc-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.btn-link-inline:hover {
+  background: var(--fc-primary-soft);
+}
+
+.btn-icon-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--fc-border);
+  background: var(--fc-surface);
+  color: var(--fc-crit-fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-icon-danger:hover {
+  background: var(--fc-crit-bg);
+  border-color: var(--fc-crit-fg);
+}
+
 /* Responsividade Mobile (< 768px) */
 @media (max-width: 768px) {
   .r {
@@ -903,7 +966,8 @@ label {
   .m {
     padding: 20px;
   }
-  .report-main-grid {
+  .report-main-grid,
+  .plan-top-grid {
     grid-template-columns: 1fr !important;
   }
 }

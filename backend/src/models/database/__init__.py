@@ -1,6 +1,9 @@
 """Modelos de documentos e entidades de banco de dados MongoDB."""
 
 from models.database.event import EventDocument, EventType
+from models.database.medical_report import MedicalReportDocument
+from models.database.patient import PatientDocument
+from models.database.plan import PlanDocument, PrescribedExerciseItem
 from models.database.session import RiskClassification, SessionDocument, SessionStatus
 
 __all__ = [
@@ -9,4 +12,8 @@ __all__ = [
     "RiskClassification",
     "EventDocument",
     "EventType",
+    "PatientDocument",
+    "MedicalReportDocument",
+    "PlanDocument",
+    "PrescribedExerciseItem",
 ]

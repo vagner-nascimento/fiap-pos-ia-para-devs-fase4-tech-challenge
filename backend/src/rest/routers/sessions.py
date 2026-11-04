@@ -21,6 +21,8 @@ from fastapi import (
 
 from config.media_paths import MediaStorage
 from infra.database.repositories.event_repository import EventRepository
+from infra.database.repositories.medical_report_repository import MedicalReportRepository
+from infra.database.repositories.plan_repository import PlanRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument
 from models.database.session import SessionDocument, SessionStatus
@@ -692,14 +694,29 @@ def get_session_report(session_id: str) -> SessionReportResponse:
             ),
         )
 
+    plano_doc = PlanRepository().get_plan_by_patient(session.paciente_id) if session.paciente_id else None
+    laudo_doc = MedicalReportRepository().get_report_by_patient(session.paciente_id) if session.paciente_id else None
+
+    plano_label = "Conforme prescrição" if deviations_count == 0 else f"{deviations_count} desvio(s) detectado(s)"
+    if plano_doc:
+        plano_label = (
+            f"{plano_label} (Dor máx: {plano_doc.dor_maxima_aceitavel}/10 · "
+            f"Amp: {plano_doc.amplitude_esperada_texto}°)"
+        )
+
+    laudo_label = "Amplitude dentro do limite" if score >= 80 else "Amplitude com restrições clínicas"
+    if laudo_doc and laudo_doc.lesao:
+        restricao_str = f" — {', '.join(laudo_doc.movimentos_restritos)}" if laudo_doc.movimentos_restritos else ""
+        laudo_label = f"{laudo_label} ({laudo_doc.lesao}{restricao_str})"
+
     comparacao_clinica = {
         "plano": {
             "status": "ok" if deviations_count == 0 else "warn",
-            "label": "Conforme prescrição" if deviations_count == 0 else f"{deviations_count} desvio(s) detectado(s)",
+            "label": plano_label,
         },
         "laudo": {
             "status": "ok" if score >= 80 else "warn",
-            "label": "Amplitude dentro do limite" if score >= 80 else "Amplitude com restrições clínicas",
+            "label": laudo_label,
         },
         "inconsistencia": {
             "status": "info",
