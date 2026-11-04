@@ -85,13 +85,24 @@
 - **Infraestrutura:** PyTorch e Torchvision foram fixados nos índices
   CPU-only, evitando a instalação dos runtimes CUDA/NVIDIA.
 
+### Etapa 8: Inserção de Dados de Laudo e Prescrições por Paciente (Issue #3 - Concluída)
+- **Modelos e Repositórios MongoDB:**
+  * `PatientDocument` (`pacientes`), `MedicalReportDocument` (`laudos`) e `PlanDocument` / `PrescribedExerciseItem` (`planos`), com repositórios dedicados (`PatientRepository`, `MedicalReportRepository`, `PlanRepository`) e seed automático dos 4 cenários sintéticos do PRD (`PAC-001` a `PAC-004` / `LAU-A` a `LAU-D`).
+- **Extração Determinística de Laudos (`backend/src/services/clinical_extractor.py`):**
+  * Extrai região anatômica, lesão/condição, movimentos restritos e limite angular máximo a partir do texto livre em pt-BR, além de parser de faixa de amplitude esperada (`parse_amplitude_range`).
+- **API REST (`backend/src/rest/routers/patients.py`):**
+  * `GET /api/pacientes`, `POST /api/pacientes`, `GET /api/pacientes/{id}`;
+  * `POST /api/pacientes/laudo/extrair`, `POST /api/pacientes/{id}/laudo`, `GET /api/pacientes/{id}/laudo`;
+  * `POST /api/pacientes/{id}/plano`, `GET /api/pacientes/{id}/plano`, `GET /api/pacientes/catalogo-exercicios` (todos os 7 exercícios `FISIO-001` a `FISIO-007`).
+  * Integração de `comparacao_clinica` em `GET /api/sessoes/{id}/relatorio` com os dados reais do plano e laudo do paciente.
+- **Frontend (`frontend/src/components/PlanAndReportView.jsx` e `Field.jsx`):**
+  * Implementação da **Tela 1 ("Plano e laudo")** e modal da **Tela 8 ("Novo paciente")** alinhados ao Mock `01-Plano-Laudo.dc.html` e ao Design System (`tokens.css`), com chips extraídos automaticamente e edição manual pelo fisioterapeuta.
+- **Testes Automatizados:** 130 testes passando no backend (`pytest tests/ -v`).
+
 ---
 
 ## 2. Próximos Passos Imediatos
 
-1. Evolução da análise de dor para modelos faciais/acústicos validados e
-   fusão clínica de múltiplas fontes.
-2. Expansão dos datasets e validação do detector YOLO em mais distâncias,
-   ângulos, cores, iluminações e tamanhos antes de qualquer uso real.
-3. Telas complementares de cadastro de pacientes, planos de exercícios e
-   laudos médicos (Issues #3, #4 e #5).
+1. Telas do perfil Paciente: busca de prescrição/laudo e upload de vídeos por slots de exercícios prescritos com termo de aceite LGPD (Issues #4 e #5).
+2. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).
+3. Evolução da análise de dor e expansão dos datasets de validação.

@@ -39,10 +39,12 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 | [ADR 0009](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md) | **Detecção de Equipamentos com YOLO em CPU** | Aprovado | Visão Computacional / Objetos / CPU |
 | [ADR 0010](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md) | **Transcrição Local com Faster-Whisper** | Aprovado | Áudio / Custos / Privacidade |
 | [ADR 0011](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md) | **Detecção de Dor por Transcrição de Áudio** | Aprovado | PLN / Áudio / Apoio Clínico |
+| [ADR 0012](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md) | **Extração Estruturada de Laudos Médicos com Revisão Humana e Persistência de Prescrições** | Aprovado | PLN Clínico / MongoDB / Issue #3 |
 
 ---
 
 ### 3. Documentos Complementares
+- [Plano da Issue #3 – Inserção de Dados de Laudo e Prescrições](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/plans/plano-issue-3-insercao-laudo-prescricoes.md): Especificação arquitetural e de interface para cadastro de pacientes, extração estruturada de laudos e prescrição de exercícios (Issue #3);
 - [Plano do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-passo-3-frontend-relatorio-individual.md): Especificação arquitetural e de interface para o relatório individual do vídeo (Issue #6), alinhado ao Design System;
 - [Walkthrough do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-passo-3-relatorio-individual.md): Roteiro de validação do Passo 3 (Issue #6) com execução dos testes e uso da UI;
 - [Plano Detalhado do Motor de Pose](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-motor-deteccao-pose-mediapipe.md): Especificação inicial aprovada para o motor de visão (Passos 1 e 2);
