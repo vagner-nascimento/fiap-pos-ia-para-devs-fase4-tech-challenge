@@ -11,8 +11,8 @@
 - **`MediaStorage` (`backend/src/config/media_paths.py`):** Ponto único para caminhos de entrada e saída, impedindo *path traversal* e garantindo caminhos relativos para persistência.
 - **Estrutura de Pastas:** `data/inputs/` e `data/outputs/` criados com `.gitkeep`.
 - **Gitignore & Ambientes:** `.gitignore` ignora dados sensíveis de `data/`; `.env.example` atualizado com `MEDIA_ROOT=../data` e `DATASET_ROOT`.
-- **Docker Compose:** Volumes `./data:/app/data` e `../fiap-pos-ia-para-devs-fase4-tech-challenge-datasets:/app/datasets:ro` configurados.
-- **Dockerfile:** `libgl1` e `libglib2.0-0` adicionados para OpenCV/MediaPipe em imagem slim.
+- **Docker Compose:** Volume persistente `./data:/app/data`; o dataset é baixado pelo backend para `data/datasets/fisio`.
+- **Dockerfile:** `git`, `libgl1` e `libglib2.0-0` adicionados para download do dataset, OpenCV e MediaPipe.
 - **Dependências (`backend/pyproject.toml`):** `mediapipe==0.10.21`, `opencv-python-headless>=4.8,<5`, `numpy>=1.24,<2.0`, `scipy>=1.11,<2.0`, `requires-python = ">=3.11,<3.13"`.
 
 ### Etapa 2: Núcleo de Visão e Algoritmos Base (Concluída)
@@ -69,8 +69,9 @@
 - **Backend & Infraestrutura:**
   * `frontend/nginx.conf` e `frontend/vite.config.js`: Proxies configurados para servir `/media/` a partir do backend, com `client_max_body_size 250M;` e timeouts estendidos de 600s para uploads grandes.
   * `services/pose/video_processor.py`: Transcodificação automática pós-renderização para **H.264 (`yuv420p` + `+faststart`)** via FFmpeg, garantindo playback nativo em navegadores modernos sem erros de decodificação.
-  * Endpoints REST adicionados: `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`, além de resolução flexível de clipes de dataset em `POST /api/sessoes/referencia`.
-  * Testes automatizados: 119 testes passando no backend e build de produção do frontend validado via Docker (`npm run build`).
+  * Endpoints REST adicionados: status/download/catalogo em `/api/datasets/fisio`, `GET /api/sessoes/clips-referencia` e `GET /api/sessoes/{id}/relatorio`.
+  * A tela de nova análise exibe `Download Dataset` quando os clipes ainda não estão disponíveis e lista apenas vídeos reais após o download.
+  * Testes automatizados: 121 testes passando no backend e build de produção do frontend validado (`npm run build`).
 
 ### Etapa 7: Áudio local, dor por transcrição e detecção de equipamentos (Concluída)
 - **Áudio:** extração da trilha do vídeo, conversão para mono/16 kHz, redução de
@@ -101,7 +102,27 @@
 
 ---
 
-## 2. Próximos Passos Imediatos
+## 2. Progresso da tela de processamento
+
+O acompanhamento da análise utiliza seis etapas reais publicadas pelo backend:
+
+1. vídeo recebido;
+2. extração de pose e landmarks;
+3. análise biomecânica do movimento;
+4. transcrição de áudio e fala de dor;
+5. geração do vídeo anotado e evidências;
+6. persistência e relatório.
+
+O backend persiste a etapa, o índice, o percentual, a mensagem e o horário da
+última atualização durante o processamento. A tela de processamento consome
+esse contrato por polling e não deve criar etapas adicionais no frontend.
+
+Expressão facial, fusão com plano/laudo e outras capacidades ainda não
+implementadas não fazem parte dessa lista.
+
+---
+
+## 3. Próximos Passos Imediatos
 
 1. Telas do perfil Paciente: busca de prescrição/laudo e upload de vídeos por slots de exercícios prescritos com termo de aceite LGPD (Issues #4 e #5).
 2. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).

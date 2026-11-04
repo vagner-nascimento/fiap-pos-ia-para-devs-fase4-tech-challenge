@@ -209,6 +209,17 @@ label {
   color: var(--fc-text);
 }
 
+.dataset-download-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius-control);
+  background: var(--fc-bg);
+}
+
 /* Status Chips (Pílulas com Símbolo + Texto + Cor) */
 .ch {
   display: inline-flex;
@@ -412,6 +423,17 @@ label {
   background: var(--fc-primary);
   border-radius: 6px;
   transition: width 0.4s ease;
+}
+
+.progress-bar-fill.progress-active {
+  background: linear-gradient(90deg, var(--fc-primary), #49a39d, var(--fc-primary));
+  background-size: 200% 100%;
+  animation: progress-shimmer 1.8s linear infinite;
+}
+
+@keyframes progress-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
 }
 
 .progress-failed {

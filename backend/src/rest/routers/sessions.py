@@ -25,6 +25,13 @@ from infra.database.repositories.medical_report_repository import MedicalReportR
 from infra.database.repositories.plan_repository import PlanRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument
+from models.database.processing import (
+    PROCESSING_STEPS,
+    STEP_INDEX_BY_ID,
+    progress_percent,
+    progress_step_index,
+    step_id_for_progress,
+)
 from models.database.session import SessionDocument, SessionStatus
 from models.rest.session import (
     CreateSessionPayload,
@@ -36,6 +43,7 @@ from models.rest.session import (
     SessionReportResponse,
 )
 from services.pose.registry import canonical_case_id
+from services.dataset_service import DatasetError, DatasetService
 from services.pose.object_detector import detection_config
 from services.pose.sinks import CompositeResultSink, FileResultSink, MongoResultSink
 from services.pose.video_processor import VideoPoseProcessor
@@ -60,6 +68,28 @@ def _run_pose_analysis_pipeline(
         MongoResultSink(media_storage=storage),
     ])
     processor = VideoPoseProcessor(media_storage=storage, result_sink=sink)
+    session_repo = SessionRepository()
+    last_progress = (-1, -1.0)
+
+    def publish_progress(stage: str, raw_percent: float) -> None:
+        nonlocal last_progress
+        step_id = step_id_for_progress(stage)
+        step_index = progress_step_index(stage)
+        percent = progress_percent(stage, raw_percent)
+        if (step_index, percent) <= last_progress:
+            return
+        last_progress = (step_index, percent)
+        step = PROCESSING_STEPS[STEP_INDEX_BY_ID[step_id]]
+        session_repo.update_progress(
+            session_id,
+            status=SessionStatus.CONCLUIDO if stage == "concluido" else SessionStatus.PROCESSANDO,
+            etapa=step_id,
+            current_step=step_id,
+            current_step_index=step_index,
+            progress_percent=percent,
+            progress_message=step.description,
+        )
+
     try:
         processor.process_video(
             video_path=video_path,
@@ -69,12 +99,29 @@ def _run_pose_analysis_pipeline(
             target_repetitions=target_repetitions,
             patient_id=paciente_id,
             generate_annotated_video=True,
+            on_progress=publish_progress,
         )
         logger.info("Sessão '%s' processada com sucesso.", session_id)
     except Exception as exc:
         logger.exception("Erro no processamento em background da sessão '%s': %s", session_id, exc)
-        session_repo = SessionRepository()
-        session_repo.update_status(session_id, SessionStatus.ERRO, etapa="erro_processamento")
+        session_repo.update_progress(
+            session_id,
+            status=SessionStatus.ERRO,
+            etapa=(
+                PROCESSING_STEPS[last_progress[0]].id
+                if last_progress[0] >= 0
+                else PROCESSING_STEPS[0].id
+            ),
+            current_step=(
+                PROCESSING_STEPS[last_progress[0]].id
+                if last_progress[0] >= 0
+                else PROCESSING_STEPS[0].id
+            ),
+            current_step_index=last_progress[0] if last_progress[0] >= 0 else 0,
+            progress_percent=last_progress[1] if last_progress[1] >= 0 else 0.0,
+            progress_message="O processamento falhou nesta etapa.",
+            error_message=str(exc),
+        )
 
 
 def _resolve_and_prepare_video(
@@ -96,49 +143,10 @@ def _resolve_and_prepare_video(
         return input_path
 
     if dataset_clip:
-        if dataset_clip.startswith("FISIO-"):
-            parts = dataset_clip.split("-")
-            if len(parts) >= 2:
-                inferred_case = f"{parts[0]}-{parts[1]}"
-                if inferred_case != exercicio_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=(
-                            f"O clipe '{dataset_clip}' pertence ao exercício '{inferred_case}', "
-                            f"mas foi selecionado '{exercicio_id}'."
-                        ),
-                    )
-
-        # Tenta 1: via exercicio_id fornecido
         try:
-            candidate = storage.dataset_clip(exercicio_id, dataset_clip)
-            if candidate.exists():
-                return candidate
-        except Exception:
-            pass
-
-        # Tenta 2: se o nome do clipe começar com FISIO-XXX (ex: FISIO-001-correto.mp4)
-        if dataset_clip.startswith("FISIO-"):
-            parts = dataset_clip.split("-")
-            if len(parts) >= 2:
-                inferred_case = f"{parts[0]}-{parts[1]}"
-                try:
-                    candidate = storage.dataset_clip(inferred_case, dataset_clip)
-                    if candidate.exists():
-                        return candidate
-                except Exception:
-                    pass
-
-        # Tenta 3: busca recursiva no dataset_root pelo nome exato do arquivo
-        if storage.dataset_root and storage.dataset_root.is_dir():
-            matches = list(storage.dataset_root.glob(f"**/{dataset_clip}"))
-            if matches and matches[0].is_file():
-                return matches[0]
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Clipe '{dataset_clip}' não encontrado em DATASET_ROOT (exercício '{exercicio_id}').",
-        )
+            return DatasetService().resolve_clip(exercicio_id, dataset_clip)
+        except DatasetError as error:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
     if video_path:
         local_path = Path(video_path).resolve()
@@ -190,7 +198,12 @@ def _init_session_record(
         case_id=exercicio_id,
         side_evaluated=side or "auto",
         status=SessionStatus.PROCESSANDO,
-        etapa="processando_pose",
+        etapa="video_received",
+        current_step="video_received",
+        current_step_index=0,
+        total_steps=len(PROCESSING_STEPS),
+        progress_percent=0.0,
+        progress_message=PROCESSING_STEPS[0].description,
         video_path=rel_video,
         compliance_score=0.0,
         target_repetitions=target_repetitions,
@@ -275,7 +288,7 @@ def create_session(
     return CreateSessionResponse(
         session_id=session_id,
         status=SessionStatus.PROCESSANDO.value,
-        etapa="processando_pose",
+        etapa="video_received",
         message="Vídeo recebido com sucesso. Processamento biomecânico iniciado em background.",
         paciente_id=paciente_id,
         exercicio_id=exercicio_id,
@@ -305,7 +318,6 @@ def create_session_from_reference(
         session_id=session_id,
         exercicio_id=payload.exercicio_id,
         dataset_clip=payload.dataset_clip,
-        video_path=payload.video_path,
     )
 
     _init_session_record(
@@ -345,7 +357,7 @@ def create_session_from_reference(
     return CreateSessionResponse(
         session_id=session_id,
         status=SessionStatus.PROCESSANDO.value,
-        etapa="processando_pose",
+        etapa="video_received",
         message="Sessão iniciada via referência. Análise biomecânica em background.",
         paciente_id=payload.paciente_id,
         exercicio_id=payload.exercicio_id,
@@ -508,69 +520,7 @@ def list_exercises() -> list[ExerciseOption]:
     description="Retorna a lista de clipes de teste do dataset de referência disponíveis para execução imediata.",
 )
 def list_reference_clips() -> list[ReferenceClipInfo]:
-    storage = MediaStorage.from_env()
-    clips: list[ReferenceClipInfo] = []
-
-    if storage.dataset_root and storage.dataset_root.is_dir():
-        for case_dir in sorted(storage.dataset_root.glob("FISIO-*")):
-            if not case_dir.is_dir():
-                continue
-            case_id = case_dir.name
-            for clip_path in sorted(case_dir.glob("*.mp4")):
-                filename = clip_path.name
-                tipo = "correto" if "correto" in filename.lower() else "desvio"
-                desc = (
-                    "Execução padrão correta com amplitude completa"
-                    if tipo == "correto"
-                    else f"Variação motora com desvio postural ({filename})"
-                )
-                clips.append(
-                    ReferenceClipInfo(
-                        case_id=case_id,
-                        exercicio_id=CASE_TO_EXERCISE_ID.get(case_id, case_id),
-                        exercicio_nome=EXERCISE_NAMES.get(case_id, case_id),
-                        filename=filename,
-                        tipo=tipo,
-                        descricao=desc,
-                    )
-                )
-
-    if not clips:
-        clips = [
-            ReferenceClipInfo(
-                case_id="FISIO-001",
-                exercicio_id="KNEE_EXTENSION_SEATED",
-                exercicio_nome="Extensão de joelho sentado",
-                filename="FISIO-001-correto.mp4",
-                tipo="correto",
-                descricao="Execução correta com 5 repetições e amplitude ideal",
-            ),
-            ReferenceClipInfo(
-                case_id="FISIO-001",
-                exercicio_id="KNEE_EXTENSION_SEATED",
-                exercicio_nome="Extensão de joelho sentado",
-                filename="FISIO-001-extensao-parcial.mp4",
-                tipo="desvio",
-                descricao="Desvio de amplitude reduzida (extensão incompleta)",
-            ),
-            ReferenceClipInfo(
-                case_id="FISIO-001",
-                exercicio_id="KNEE_EXTENSION_SEATED",
-                exercicio_nome="Extensão de joelho sentado",
-                filename="FISIO-001-inclinacao-tronco.mp4",
-                tipo="desvio",
-                descricao="Compensação postural com inclinação do tronco para trás",
-            ),
-            ReferenceClipInfo(
-                case_id="FISIO-001",
-                exercicio_id="KNEE_EXTENSION_SEATED",
-                exercicio_nome="Extensão de joelho sentado",
-                filename="FISIO-001-velocidade-irregular.mp4",
-                tipo="desvio",
-                descricao="Ritmo muito acelerado ou irregular entre repetições",
-            ),
-        ]
-    return clips
+    return DatasetService().list_clips()
 
 
 @router.get(

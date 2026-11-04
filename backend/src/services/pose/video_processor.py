@@ -148,6 +148,9 @@ class VideoPoseProcessor:
             result.annotated_video_path = self.storage.relative(annotated_video_path)
 
         # 5. Salva os resultados através do ResultSink (arquivos e/ou MongoDB)
+        if on_progress:
+            on_progress("persistindo_resultados", 0.99)
+
         self.result_sink.save(
             result=result,
             run_id=run_id,

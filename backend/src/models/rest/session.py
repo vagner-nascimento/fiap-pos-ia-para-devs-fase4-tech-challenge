@@ -23,7 +23,6 @@ class CreateSessionPayload(BaseModel):
     dataset_clip: Optional[str] = Field(
         None, description="Nome do clipe de referência do dataset (ex: 'FISIO-001-correto.mp4')"
     )
-    video_path: Optional[str] = Field(None, description="Caminho do arquivo de vídeo no host ou container")
     side: Optional[str] = Field("auto", description="Lado do exercício: 'auto', 'direito', 'esquerdo', 'ambos'")
     target_repetitions: Optional[int] = Field(5, description="Número de repetições prescritas (alvo)")
     run_id: Optional[str] = Field(None, description="ID customizado opcional para a sessão")
@@ -38,6 +37,13 @@ class ReferenceClipInfo(BaseModel):
     filename: str
     tipo: str
     descricao: str
+
+
+class DatasetStatusResponse(BaseModel):
+    status: str
+    message: Optional[str] = None
+    case_count: int = 0
+    clip_count: int = 0
 
 
 class ExerciseOption(BaseModel):

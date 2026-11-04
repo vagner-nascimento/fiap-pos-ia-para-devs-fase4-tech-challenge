@@ -9,7 +9,26 @@ GET {{baseUrl}}/health
 Accept: application/json
 
 ### ============================================================
-### 2. Disparar Análise Biomecânica via JSON (Clipe do Dataset)
+### 2. Consultar status do dataset oficial
+### ============================================================
+GET {{baseUrl}}/datasets/fisio/status
+Accept: application/json
+
+### ============================================================
+### 3. Baixar o dataset oficial
+### ============================================================
+# O backend clona o repositório oficial para DATASET_ROOT.
+POST {{baseUrl}}/datasets/fisio/download
+Accept: application/json
+
+### ============================================================
+### 4. Listar clipes reais disponíveis
+### ============================================================
+GET {{baseUrl}}/datasets/fisio/clips
+Accept: application/json
+
+### ============================================================
+### 5. Disparar Análise Biomecânica via JSON (Clipe do Dataset)
 ### ============================================================
 # Retorna 202 Accepted imediatamente e processa o MediaPipe em segundo plano
 # @name postSessionRef
@@ -26,7 +45,7 @@ Accept: application/json
 }
 
 ### ============================================================
-### 3. Disparar Análise Biomecânica de forma SÍNCRONA (Aguardar Conclusão)
+### 6. Disparar Análise Biomecânica de forma SÍNCRONA (Aguardar Conclusão)
 ### ============================================================
 # Adicione ?sync=true para aguardar o fim do vídeo e retornar 201 com tudo calculado
 POST {{baseUrl}}/sessoes/referencia?sync=true
@@ -42,7 +61,7 @@ Accept: application/json
 }
 
 ### ============================================================
-### 4. Disparar Análise via Upload de Arquivo MP4 (multipart/form-data)
+### 7. Disparar Análise via Upload de Arquivo MP4 (multipart/form-data)
 ### ============================================================
 # Requer um arquivo de vídeo .mp4 existente no seu computador
 POST {{baseUrl}}/sessoes
@@ -61,13 +80,14 @@ Content-Disposition: form-data; name="side"
 
 auto
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="dataset_clip"
+Content-Content-Disposition: form-data; name="file"; filename="video.mp4"
+Content-Type: video/mp4
 
-FISIO-001-correto.mp4
+< ./video.mp4
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### ============================================================
-### 5. Listar Todas as Sessões do MongoDB
+### 8. Listar Todas as Sessões do MongoDB
 ### ============================================================
 GET {{baseUrl}}/sessoes
 Accept: application/json

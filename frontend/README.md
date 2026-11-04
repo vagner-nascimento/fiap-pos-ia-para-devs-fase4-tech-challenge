@@ -41,9 +41,12 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` | `/api/pacientes/catalogo-exercicios` | Retorna o catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`). |
 | `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) de até 250MB e inicia a análise (`202 Accepted`). |
 | `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
-| `GET` | `/api/sessoes/clips-referencia` | Retorna catálogo de clipes sintéticos disponíveis para teste rápido. |
+| `GET` | `/api/sessoes/clips-referencia` | Alias de compatibilidade para o catálogo real do dataset baixado. |
+| `GET` | `/api/datasets/fisio/status` | Consulta se o dataset oficial já foi baixado. |
+| `POST` | `/api/datasets/fisio/download` | Solicita o download idempotente do dataset pelo backend. |
+| `GET` | `/api/datasets/fisio/clips` | Lista os vídeos reais do dataset baixado. |
 | `GET` | `/api/sessoes` | Lista as sessões do paciente com filtros, datas, scores e status. |
-| `GET` | `/api/sessoes/{id}` | Recupera os detalhes da sessão, justificativas e classificação de risco (`verde`, `atencao`, `critico`). |
+| `GET` | `/api/sessoes/{id}` | Recupera detalhes, classificação de risco e progresso da sessão (`current_step`, `current_step_index`, `total_steps`, `progress_percent`, `progress_message` e `processing_steps`). |
 | `GET` | `/api/sessoes/{id}/eventos` | Recupera a linha do tempo de repetições e desvios posturais. |
 | `GET` | `/api/sessoes/{id}/relatorio` | Payload estruturado para a tela de relatório individual e impressão médica. |
 | `GET` | `/media/...` | Streaming de vídeos anotados H.264 (`annotated.mp4`) e snapshots fotográficos (`evidence/*.jpg`). |
@@ -56,6 +59,21 @@ equipamento na mesma camada visual. Para FISIO-006 e FISIO-007, o painel
 **Equipamento** mostra o nome, o percentual total e a divisão entre não
 detectado, parcialmente detectado e totalmente detectado. Para exercícios sem
 equipamento, mostra somente **Nenhum**.
+
+### Acompanhamento do processamento
+
+`ProcessingView` consulta `GET /api/sessoes/{id}` a cada dois segundos enquanto
+a sessão está `processando`. A lista de etapas vem do campo `processing_steps`
+e o estado visual é derivado de `current_step_index` e `progress_percent`.
+O backend publica seis etapas reais: vídeo recebido, extração de pose e
+landmarks, análise biomecânica, transcrição de áudio e fala de dor, geração do
+vídeo anotado/evidências e persistência/relatório.
+
+O frontend ignora respostas de consultas que chegaram fora de ordem e mantém a
+barra com o percentual real. Durante uma etapa ativa, um efeito visual indica
+atividade sem inventar progresso. O chip de processamento não usa símbolo
+adicional; exibe apenas o texto da etapa atual. Expressão facial e fusão com
+plano/laudo não são exibidas porque não fazem parte do pipeline implementado.
 
 ## Configuração e variáveis de ambiente
 

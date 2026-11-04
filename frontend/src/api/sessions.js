@@ -82,6 +82,16 @@ export async function listReferenceClips() {
   return handleResponse(response, 'Falha ao listar os clipes de referência.');
 }
 
+export async function getDatasetStatus() {
+  const response = await fetch(`${apiBaseUrl}/datasets/fisio/status`);
+  return handleResponse(response, 'Falha ao consultar o status do dataset.');
+}
+
+export async function downloadDataset() {
+  const response = await fetch(`${apiBaseUrl}/datasets/fisio/download`, { method: 'POST' });
+  return handleResponse(response, 'Falha ao baixar o dataset.');
+}
+
 /**
  * Retorna os exercícios que podem ser selecionados antes do upload.
  */

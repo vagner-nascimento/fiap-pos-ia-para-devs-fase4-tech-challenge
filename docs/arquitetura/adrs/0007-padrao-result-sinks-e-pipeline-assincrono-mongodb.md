@@ -54,7 +54,7 @@ Criamos a camada de acesso a dados em `infra/database/repositories/`:
 Na camada de transporte REST (`rest/routers/sessions.py`):
 1. **`POST /api/sessoes` (multipart/form-data):** Recebe o arquivo de vídeo enviado pelo paciente ou clipe de referência;
 2. **`POST /api/sessoes/referencia` (application/json):** Permite disparar execuções a partir de clipes sintéticos do dataset sem novo upload;
-3. A rota inicializa o documento da sessão no MongoDB com status `processando` (`etapa: "processando_pose"`), agenda a tarefa de visão no `BackgroundTasks` e responde **imediatamente com status `202 Accepted`**;
+3. A rota inicializa o documento da sessão no MongoDB com status `processando` (`etapa: "video_received"`), agenda a tarefa de visão no `BackgroundTasks` e responde **imediatamente com status `202 Accepted`**. O worker atualiza incrementalmente a etapa, o índice, o percentual e a mensagem conforme o pipeline avança;
 4. Parâmetro opcional `?sync=true` permite execução síncrona aguardando o processamento para scripts automatizados e testes de integração.
 
 ### 2.4 Servidor de Mídias Estáticas e Habilitação de CORS

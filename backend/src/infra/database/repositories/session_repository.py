@@ -8,6 +8,7 @@ from pymongo.collection import Collection
 
 from infra.database.mongodb_client import get_collection
 from models.database.session import SessionDocument, SessionStatus
+from models.database.processing import PROCESSING_STEPS
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,49 @@ class SessionRepository:
             {"$set": update_fields},
         )
         return result.matched_count > 0
+
+    def update_progress(
+        self,
+        session_id: str,
+        *,
+        status: SessionStatus,
+        etapa: str,
+        current_step: str,
+        current_step_index: int,
+        progress_percent: float,
+        progress_message: Optional[str] = None,
+        error_message: Optional[str] = None,
+    ) -> bool:
+        """Atualiza progresso sem permitir que uma notificação atrasada regrida o estado."""
+        now = datetime.now(timezone.utc).isoformat()
+        percent = max(0.0, min(100.0, float(progress_percent)))
+        result = self.collection.update_one(
+            {
+                "session_id": session_id,
+                "$or": [
+                    {"current_step_index": {"$lt": current_step_index}},
+                    {
+                        "current_step_index": current_step_index,
+                        "progress_percent": {"$lte": percent},
+                    },
+                    {"current_step_index": {"$exists": False}},
+                ],
+            },
+            {
+                "$set": {
+                    "status": status.value if isinstance(status, SessionStatus) else status,
+                    "etapa": etapa,
+                    "current_step": current_step,
+                    "current_step_index": current_step_index,
+                    "total_steps": len(PROCESSING_STEPS),
+                    "progress_percent": percent,
+                    "progress_message": progress_message,
+                    "error_message": error_message,
+                    "updated_at": now,
+                }
+            },
+        )
+        return result.modified_count > 0 or result.matched_count > 0
 
     def delete_session(self, session_id: str) -> bool:
         """Remove uma sessão pelo seu ID."""
