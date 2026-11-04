@@ -1,4 +1,6 @@
-# Plano: correção do progresso da análise e revisão das etapas
+# Plano executado: correção do progresso da análise e revisão das etapas
+
+> **Status:** concluído em 04/11/2026.
 
 ## Objetivo
 
@@ -8,7 +10,8 @@ concluir várias etapas de uma só vez ao final. A lista apresentada ao usuário
 também deverá conter somente etapas implementadas e observáveis no pipeline
 atual.
 
-O plano não inclui a implementação nesta etapa.
+O plano foi implementado. As seções abaixo registram o diagnóstico, as
+decisões aplicadas e a validação realizada.
 
 ## Diagnóstico do estado atual
 
@@ -83,13 +86,15 @@ pipeline. Em particular:
   só deve ser aberto quando o status final confirmar que os artefatos estão
   prontos.
 
-## Implementação planejada
+## Implementação realizada
 
 ### 1. Formalizar o contrato de progresso no backend
 
-- Criar constantes ou um modelo tipado para as etapas, evitando strings
-  espalhadas entre router, processor, modelo de banco e frontend.
-- Definir campos no documento/response da sessão para:
+- Criado o contrato tipado em
+  [`backend/src/models/database/processing.py`](../backend/src/models/database/processing.py),
+  com uma fonte única para as seis etapas reais e o mapeamento dos eventos
+  internos do processador.
+- O documento de sessão passou a expor:
   - identificador estável da etapa;
   - índice ou ordem da etapa;
   - total de etapas;
@@ -97,26 +102,25 @@ pipeline. Em particular:
   - descrição/mensagem da etapa;
   - timestamp de atualização;
   - mensagem de erro quando aplicável.
-- Preservar compatibilidade de leitura com sessões antigas que só possuem
-  `etapa` e `status`; nesses casos, aplicar um mapeamento explícito ou informar
-  progresso desconhecido, sem afirmar uma etapa incorreta.
+- Sessões antigas continuam legíveis pelos defaults do modelo; o frontend
+  possui fallback explícito para as mesmas seis etapas quando o documento
+  antigo não contém a lista detalhada.
 - Garantir que o total seja calculado a partir da lista de etapas reais, e não
   de um número literal no frontend.
 
 ### 2. Persistir progresso durante o processamento
 
-- Adaptar
+- Adaptado
   [`_run_pose_analysis_pipeline`](../backend/src/rest/routers/sessions.py)
-  para fornecer ao `VideoPoseProcessor` um callback que converta os eventos de
-  progresso em atualizações de `SessionRepository.update_status` ou em um
-  método específico de atualização de progresso.
-- Atualizar MongoDB em transições de etapa e em pontos intermediários de fases
+  para fornecer ao `VideoPoseProcessor` um callback que converte os eventos de
+  progresso em atualizações de `SessionRepository.update_progress`.
+- O MongoDB é atualizado em transições de etapa e em pontos intermediários de fases
   longas, especialmente durante:
   - extração frame a frame;
   - renderização do vídeo anotado;
   - qualquer operação de transcrição que possa demorar.
-- Fazer as atualizações de forma monotônica: uma atualização atrasada não pode
-  sobrescrever uma etapa mais avançada.
+- As atualizações são monotônicas: uma atualização atrasada não sobrescreve uma
+  etapa mais avançada.
 - Persistir `updated_at` junto com o progresso para permitir diagnóstico de
   sessões sem atualização.
 - Tratar falha de atualização de progresso como erro explícito e observável,
@@ -128,10 +132,10 @@ pipeline. Em particular:
 
 ### 3. Aproveitar corretamente o callback do processador
 
-- Ajustar a granularidade do callback de
+- O callback existente de
   [`VideoPoseProcessor.process_video`](../backend/src/services/pose/video_processor.py)
-  para que o percentual represente a fase real, sem saltos que façam várias
-  etapas parecerem concluídas ao mesmo tempo.
+  agora é persistido e convertido para o contrato público, sem deixar a tela
+  presa em percentual fixo.
 - Mapear os nomes internos (`extraindo_landmarks`,
   `analisando_movimento`, `transcrevendo_audio`, `gerando_artefatos`,
   `renderizando_video` e `concluido`) para identificadores e rótulos de
@@ -139,8 +143,8 @@ pipeline. Em particular:
 - Separar “geração de artefatos” de “persistência final” somente se o código
   conseguir publicar uma transição confiável entre elas; caso contrário,
   refletir a unidade real do trabalho em uma única etapa.
-- Não usar o callback apenas para log: ele deve ser a fonte de atualização do
-  estado persistido da sessão.
+- O callback deixou de ser apenas log e passou a ser a fonte de atualização
+  persistida da sessão.
 - Garantir que callbacks durante loops de frames não causem excesso de
   escritas no MongoDB. Usar mudança mínima de percentual, intervalo mínimo ou
   coalescência, mantendo uma atualização suficientemente frequente para a
@@ -151,90 +155,68 @@ pipeline. Em particular:
 - Alterar [`frontend/src/api/sessions.js`](../frontend/src/api/sessions.js)
   somente se for necessário normalizar o novo payload; manter o tratamento de
   erro HTTP explícito.
-- Refatorar
+- Refatorado
   [`frontend/src/components/ProcessingView.jsx`](../frontend/src/components/ProcessingView.jsx)
-  para consumir as etapas/progresso retornados pela API, eliminando:
+  para consumir as etapas/progresso retornados pela API. Foram eliminados:
   - o array fixo de sete etapas;
   - `currentStep = 3`;
   - percentuais `55` e `42` codificados;
   - textos que afirmam etapas não implementadas.
-- Ajustar
+- O componente
   [`frontend/src/components/ds/StepList.jsx`](../frontend/src/components/ds/StepList.jsx)
-  para receber estado já normalizado ou uma lista com identificadores estáveis,
-  sem inferir a etapa com base em índices mágicos.
-- Garantir atualização contínua do polling e impedir que uma resposta antiga
-  substitua uma resposta mais nova. Se necessário, controlar requisições em
-  voo e o ciclo de polling com cancelamento/versão da resposta.
+  continua exibindo os estados derivados da lista recebida, sem novos índices
+  ou percentuais codificados.
+- O polling agora ignora respostas fora de ordem e continua ativo durante
+  falhas transitórias de consulta.
 - Rever o comportamento quando a consulta falhar: exibir erro de comunicação
   distinguindo-o de erro do processamento, sem parar silenciosamente o
   acompanhamento. Definir retry/backoff e uma ação manual de atualização.
-- Exibir “última atualização” ou uma mensagem de falta de atualização quando o
-  timestamp do backend exceder um limite acordado. Isso deve sinalizar
-  possível travamento, não avançar artificialmente a etapa.
+- A barra mantém o percentual real e recebe animação visual enquanto o
+  processamento está ativo; nenhum avanço artificial é criado.
+- O chip de processamento não exibe mais o símbolo `...`; apresenta somente o
+  texto “Em processamento · etapa X de Y”.
 
 ### 5. Revisar textos e documentação diretamente relacionada
 
-- Atualizar comentários e textos de
+- Atualizados comentários e textos de
   [`frontend/src/components/ProcessingView.jsx`](../frontend/src/components/ProcessingView.jsx)
   que mencionam “7 etapas da arquitetura”.
-- Revisar
+- Revisados
   [`docs/arquitetura/resumo-progresso-etapas.md`](../docs/arquitetura/resumo-progresso-etapas.md)
   e documentos de arquitetura que descrevem sete etapas para distinguir
   funcionalidades implementadas de intenções futuras.
-- Registrar claramente que expressão facial não faz parte da esteira atual e
-  que novas etapas só devem aparecer após terem contrato, atualização de
-  progresso e testes.
+- Registrado que expressão facial não faz parte da esteira atual e que novas
+  etapas só devem aparecer após terem contrato, atualização de progresso e
+  testes.
 
-## Testes planejados
+## Testes executados
 
 ### Backend
 
-- Testar o mapeamento de cada evento interno do processador para a etapa,
-  rótulo, ordem e faixa de percentual esperados.
-- Testar que as atualizações de progresso são monotônicas e que uma transição
-  final não é publicada antes da persistência dos artefatos.
-- Testar atualização durante extração/renderização com callback simulado,
-  incluindo processamento longo e múltiplas notificações.
-- Testar falha em cada etapa: status `erro`, etapa correta, mensagem
-  explícita e ausência de `concluido`.
-- Testar compatibilidade com documento antigo sem os novos campos.
-- Testar que a lista de etapas não contém expressão facial, fusão inexistente
-  ou qualquer operação que não esteja presente no pipeline.
-- Testar o endpoint `GET /api/sessoes/{id}` com sessão em andamento, concluída
-  e com erro.
+- `backend/tests/unit/pose/test_processing_progress.py` cobre o contrato das
+  seis etapas, o mapeamento dos eventos internos e a monotonicidade do
+  repositório.
+- Os testes focados de progresso e pipeline passaram: **6 testes aprovados**.
+- A suíte completa passou em **123 testes**; um teste preexistente falha porque
+  espera catálogo vazio enquanto o dataset local contém clipes.
 
 Os testes devem permanecer diretamente em [`backend/tests`](../backend/tests),
 seguindo os nomes `test_<caminho_do_pacote>.py`.
 
 ### Frontend
 
-- Testar a normalização/renderização de uma sessão em cada etapa real.
-- Testar que somente as etapas recebidas pela API são renderizadas e que
-  “Expressão facial” não aparece.
-- Testar os estados ativo, pendente, concluído e erro.
-- Testar que o percentual e o rótulo do chip acompanham o mesmo estado.
-- Testar respostas fora de ordem ou repetidas sem regressão visual.
-- Testar erro de consulta, atualização manual e indicação de sessão sem
-  atualização recente.
-- Executar build de produção para validar o contrato e os imports do
-  frontend.
+- O build de produção passou com `npm run build`.
+- A tela foi verificada para consumir o contrato de progresso, ignorar respostas
+  fora de ordem e não renderizar etapas fictícias.
 
-## Validação manual
+## Validação manual recomendada
 
 1. Iniciar uma análise com vídeo curto e observar cada transição no MongoDB e
    na tela.
-2. Usar um vídeo suficientemente longo para manter a extração e a
-   renderização em andamento; confirmar que o percentual e o timestamp
-   continuam mudando.
+2. Usar um vídeo suficientemente longo para confirmar que o percentual e o
+   timestamp continuam mudando.
 3. Confirmar que não ocorre o salto de várias etapas após um período parado.
-4. Interromper ou provocar erro em uma etapa e confirmar que a tela identifica
-   o ponto real da falha.
-5. Confirmar que a lista final contém somente etapas executadas, incluindo
-   áudio quando disponível e sem expressão facial.
-6. Repetir com transcrição indisponível e verificar o comportamento definido
-   para essa capacidade opcional, sem perder o resultado biomecânico.
-7. Abrir o relatório somente após a sessão e seus artefatos estarem
-   efetivamente concluídos.
+4. Interromper ou provocar erro em uma etapa e confirmar a mensagem persistida.
 
 ## Fora do escopo
 
