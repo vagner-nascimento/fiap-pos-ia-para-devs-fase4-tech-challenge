@@ -85,7 +85,9 @@ dist/assets/index-Bt3CuTCM.js   264.68 kB │ gzip: 80.39 kB
    Abra no navegador: `http://localhost:8080`.
 3. **Disparar uma Análise de Demonstração:**
    - Clique em **"Nova Análise de Vídeo"**;
-   - Selecione a aba **"Clipes de Teste do Dataset"** e escolha `FISIO-001-extensao-parcial.mp4`;
+   - Selecione a aba **"Clipes de Teste do Dataset"**;
+   - Se o dataset ainda não estiver disponível, clique em **"Download Dataset"** e aguarde a conclusão;
+   - Escolha `FISIO-001-extensao-parcial.mp4` após o catálogo ser carregado;
    - Clique em **"Iniciar Análise Biomecânica"**;
    - Acompanhe a transição das etapas na Tela de Processamento;
    - Ao concluir, o relatório se abrirá automaticamente com o vídeo anotado, timeline com os marcadores de desvio, fotos em `evidence/` e laudo clínico.

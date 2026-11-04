@@ -157,13 +157,21 @@ def test_post_session_json_reference(client, mock_mongo, tmp_path):
         out.write(frame)
     out.release()
 
+    dataset_root = tmp_path / "dataset"
+    case_dir = dataset_root / "FISIO-001"
+    case_dir.mkdir(parents=True)
+    dataset_clip = case_dir / "FISIO-001-teste.mp4"
+    dataset_clip.write_bytes(video_path.read_bytes())
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setenv("DATASET_ROOT", str(dataset_root))
+
     # Disparo assíncrono (default, 202 Accepted)
     res_async = client.post(
         "/api/sessoes/referencia",
         json={
             "exercicio_id": "FISIO-001",
             "paciente_id": "PAC-JSON-1",
-            "video_path": str(video_path),
+            "dataset_clip": dataset_clip.name,
             "side": "auto",
             "target_repetitions": 5,
         },
@@ -180,6 +188,7 @@ def test_post_session_json_reference(client, mock_mongo, tmp_path):
     saved = session_repo.get_session(session_id)
     assert saved is not None
     assert saved.status in (SessionStatus.PROCESSANDO, SessionStatus.CONCLUIDO)
+    monkeypatch.undo()
 
 
 def test_post_session_multipart_upload(client, mock_mongo, tmp_path):
@@ -230,16 +239,7 @@ def test_list_reference_clips(client):
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
-    assert len(data) >= 1
-    # Verifica que o clipe padrão FISIO-001 está presente
-    clip_names = [c["filename"] for c in data]
-    assert any("FISIO-001" in name for name in clip_names)
-    first = data[0]
-    assert "case_id" in first
-    assert "exercicio_id" in first
-    assert "exercicio_nome" in first
-    assert "filename" in first
-    assert "tipo" in first
+    assert data == []
 
 
 def test_list_exercises_for_manual_upload(client):
