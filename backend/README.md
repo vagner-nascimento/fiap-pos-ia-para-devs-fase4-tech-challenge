@@ -68,7 +68,7 @@ uv run python -m cli.analyze_video \
 
 **Principais Parâmetros:**
 * `--video`: Caminho absoluto ou relativo para o arquivo `.mp4`;
-* `--dataset-clip`: Nome do clipe dentro de `DATASET_ROOT` (alternativa a `--video`);
+* `--dataset-clip`: Nome do clipe dentro do dataset local (alternativa a `--video`);
 * `--case`: Código do exercício (`FISIO-001` a `FISIO-007`);
 * `--side`: Lado do corpo avaliado (`auto` [padrão], `direito` ou `esquerdo`);
 * `--target-reps`: Quantidade de repetições prescritas (padrão: 5);

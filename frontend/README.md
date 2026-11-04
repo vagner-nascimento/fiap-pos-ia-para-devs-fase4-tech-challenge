@@ -34,7 +34,7 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` | `/api/health` | Obtém o status da API e do MongoDB para a tela de monitoramento. |
 | `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) de até 250MB e inicia a análise (`202 Accepted`). |
 | `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
-| `GET` | `/api/sessoes/clips-referencia` | Retorna catálogo de clipes sintéticos disponíveis para teste rápido. |
+| `GET` | `/api/sessoes/clips-referencia` | Alias de compatibilidade para o catálogo real do dataset baixado. |
 | `GET` | `/api/datasets/fisio/status` | Consulta se o dataset oficial já foi baixado. |
 | `POST` | `/api/datasets/fisio/download` | Solicita o download idempotente do dataset pelo backend. |
 | `GET` | `/api/datasets/fisio/clips` | Lista os vídeos reais do dataset baixado. |

@@ -26,7 +26,7 @@ docker compose -f docker-compose.yaml up -d --build
 * **Frontend Web:** [http://localhost:8080](http://localhost:8080)
 * **Backend API (Docs OpenAPI):** [http://localhost:3000/docs](http://localhost:3000/docs)
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
-* **Dataset:** o botão `Download Dataset` clona os vídeos oficiais para `data/datasets/fisio`;
+* **Dataset:** o botão `Download Dataset` clona o repositório oficial para `data/datasets/fisio`; o catálogo fica disponível após o status `ready`;
 * **MongoDB:** `mongodb://localhost:27017`
 
 > A demonstração roda em CPU. O PyTorch usado pelo detector YOLO é resolvido

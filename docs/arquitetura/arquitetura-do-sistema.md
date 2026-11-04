@@ -37,12 +37,12 @@ flowchart TB
     end
 
     subgraph Externos [" Sistemas Externos e Suporte "]
-        dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>(Sistema Externo - Local)</i><br/>25 clipes sintéticos de referência<br/>para calibração e validação"]
+        dataset_repo["📁 <b>Repositório de Datasets</b><br/><i>(GitHub público)</i><br/>Clipes sintéticos de referência<br/>baixados sob demanda"]
     end
 
     paciente -->|Envia vídeo e áudio gravados<br/>HTTPS / Web| fisio_coach
     fisio -->|Prescreve planos e consulta alertas<br/>HTTPS / Web| fisio_coach
-    fisio_coach -->|Lê clipes de referência<br/>Volume Docker :ro| dataset_repo
+    fisio_coach -->|Backend clona e persiste<br/>em data/datasets/fisio| dataset_repo
 
     classDef person fill:#08427b,stroke:#052e56,color:#ffffff,stroke-width:2px;
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:2px;

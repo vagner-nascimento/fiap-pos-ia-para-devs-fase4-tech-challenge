@@ -9,7 +9,7 @@ Concluímos com sucesso a implementação do **Motor de Detecção de Movimentos
 ### Arquitetura & Infraestrutura de Mídia
 - `MediaStorage` (`backend/src/config/media_paths.py`): centraliza a resolução de caminhos, garantindo segurança contra *path traversal* e gerando caminhos relativos prontos para o banco de dados.
 - Diretórios de mídia estruturados fora do Git (`data/inputs/` e `data/outputs/`) com `.gitkeep`.
-- `docker-compose.yaml` e `Dockerfile` configurados com volumes (`/app/data` e `/app/datasets:ro`) e bibliotecas de sistema (`libgl1`, `libglib2.0-0`).
+- `docker-compose.yaml` e `Dockerfile` configurados com volume persistente `/app/data`; o backend baixa o dataset para `/app/data/datasets/fisio` e a imagem inclui `git`, `libgl1` e `libglib2.0-0`.
 
 ### Núcleo de Visão Computacional (MediaPipe)
 - `geometry.py`: Ângulos 2D, distâncias euclidianas e inclinações em pixels sem distorções de aspecto.
@@ -56,7 +56,7 @@ Foram cobertos:
 Execução no vídeo `FISIO-001-extensao-parcial.mp4` (2.374 frames gravados a 120fps):
 ```bash
 PYTHONPATH=src uv run python -m cli.analyze_video \
-  --video ../../fiap-pos-ia-para-devs-fase4-tech-challenge-datasets/FISIO-001/FISIO-001-extensao-parcial.mp4 \
+  --video ../data/datasets/fisio/FISIO-001/FISIO-001-extensao-parcial.mp4 \
   --case FISIO-001 \
   --side auto \
   --target-reps 5 \
