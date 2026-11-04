@@ -88,7 +88,27 @@
 
 ---
 
-## 2. Próximos Passos Imediatos
+## 2. Progresso da tela de processamento
+
+O acompanhamento da análise utiliza seis etapas reais publicadas pelo backend:
+
+1. vídeo recebido;
+2. extração de pose e landmarks;
+3. análise biomecânica do movimento;
+4. transcrição de áudio e fala de dor;
+5. geração do vídeo anotado e evidências;
+6. persistência e relatório.
+
+O backend persiste a etapa, o índice, o percentual, a mensagem e o horário da
+última atualização durante o processamento. A tela de processamento consome
+esse contrato por polling e não deve criar etapas adicionais no frontend.
+
+Expressão facial, fusão com plano/laudo e outras capacidades ainda não
+implementadas não fazem parte dessa lista.
+
+---
+
+## 3. Próximos Passos Imediatos
 
 1. Evolução da análise de dor para modelos faciais/acústicos validados e
    fusão clínica de múltiplas fontes.

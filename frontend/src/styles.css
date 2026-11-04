@@ -425,6 +425,17 @@ label {
   transition: width 0.4s ease;
 }
 
+.progress-bar-fill.progress-active {
+  background: linear-gradient(90deg, var(--fc-primary), #49a39d, var(--fc-primary));
+  background-size: 200% 100%;
+  animation: progress-shimmer 1.8s linear infinite;
+}
+
+@keyframes progress-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 .progress-failed {
   background: var(--fc-crit-fg);
 }

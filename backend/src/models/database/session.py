@@ -6,6 +6,11 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
+from models.database.processing import (
+    PROCESSING_STEPS,
+    ProcessingStep,
+    default_processing_steps,
+)
 from services.pose.models import SessionSummary
 
 
@@ -31,7 +36,17 @@ class SessionDocument(BaseModel):
     case_id: str = Field(..., description="Identificador do caso clínico de referência")
     side_evaluated: str = Field(..., description="Lado avaliado: direito, esquerdo ou ambos")
     status: SessionStatus = Field(default=SessionStatus.CONCLUIDO, description="Status do processamento da sessão")
-    etapa: str = Field(default="pose_concluida", description="Etapa atual da esteira de IA")
+    etapa: str = Field(default="result_persistence", description="Etapa atual da esteira de IA")
+    processing_steps: list[ProcessingStep] = Field(
+        default_factory=default_processing_steps,
+        description="Etapas reais disponíveis para acompanhamento do processamento",
+    )
+    current_step: str = Field(default="video_received", description="Identificador da etapa atual")
+    current_step_index: int = Field(default=0, ge=0, description="Índice da etapa atual")
+    total_steps: int = Field(default=len(PROCESSING_STEPS), ge=1, description="Total de etapas reais")
+    progress_percent: float = Field(default=0.0, ge=0.0, le=100.0, description="Progresso global da sessão")
+    progress_message: Optional[str] = Field(default=None, description="Mensagem da etapa atual")
+    error_message: Optional[str] = Field(default=None, description="Mensagem do erro de processamento")
     risk_classification: RiskClassification = Field(
         default=RiskClassification.VERDE, description="Classificação clínica de risco/conformidade"
     )

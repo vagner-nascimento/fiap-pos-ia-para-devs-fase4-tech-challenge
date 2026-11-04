@@ -23,6 +23,13 @@ from config.media_paths import MediaStorage
 from infra.database.repositories.event_repository import EventRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument
+from models.database.processing import (
+    PROCESSING_STEPS,
+    STEP_INDEX_BY_ID,
+    progress_percent,
+    progress_step_index,
+    step_id_for_progress,
+)
 from models.database.session import SessionDocument, SessionStatus
 from models.rest.session import (
     CreateSessionPayload,
@@ -59,6 +66,28 @@ def _run_pose_analysis_pipeline(
         MongoResultSink(media_storage=storage),
     ])
     processor = VideoPoseProcessor(media_storage=storage, result_sink=sink)
+    session_repo = SessionRepository()
+    last_progress = (-1, -1.0)
+
+    def publish_progress(stage: str, raw_percent: float) -> None:
+        nonlocal last_progress
+        step_id = step_id_for_progress(stage)
+        step_index = progress_step_index(stage)
+        percent = progress_percent(stage, raw_percent)
+        if (step_index, percent) <= last_progress:
+            return
+        last_progress = (step_index, percent)
+        step = PROCESSING_STEPS[STEP_INDEX_BY_ID[step_id]]
+        session_repo.update_progress(
+            session_id,
+            status=SessionStatus.CONCLUIDO if stage == "concluido" else SessionStatus.PROCESSANDO,
+            etapa=step_id,
+            current_step=step_id,
+            current_step_index=step_index,
+            progress_percent=percent,
+            progress_message=step.description,
+        )
+
     try:
         processor.process_video(
             video_path=video_path,
@@ -68,12 +97,29 @@ def _run_pose_analysis_pipeline(
             target_repetitions=target_repetitions,
             patient_id=paciente_id,
             generate_annotated_video=True,
+            on_progress=publish_progress,
         )
         logger.info("Sessão '%s' processada com sucesso.", session_id)
     except Exception as exc:
         logger.exception("Erro no processamento em background da sessão '%s': %s", session_id, exc)
-        session_repo = SessionRepository()
-        session_repo.update_status(session_id, SessionStatus.ERRO, etapa="erro_processamento")
+        session_repo.update_progress(
+            session_id,
+            status=SessionStatus.ERRO,
+            etapa=(
+                PROCESSING_STEPS[last_progress[0]].id
+                if last_progress[0] >= 0
+                else PROCESSING_STEPS[0].id
+            ),
+            current_step=(
+                PROCESSING_STEPS[last_progress[0]].id
+                if last_progress[0] >= 0
+                else PROCESSING_STEPS[0].id
+            ),
+            current_step_index=last_progress[0] if last_progress[0] >= 0 else 0,
+            progress_percent=last_progress[1] if last_progress[1] >= 0 else 0.0,
+            progress_message="O processamento falhou nesta etapa.",
+            error_message=str(exc),
+        )
 
 
 def _resolve_and_prepare_video(
@@ -150,7 +196,12 @@ def _init_session_record(
         case_id=exercicio_id,
         side_evaluated=side or "auto",
         status=SessionStatus.PROCESSANDO,
-        etapa="processando_pose",
+        etapa="video_received",
+        current_step="video_received",
+        current_step_index=0,
+        total_steps=len(PROCESSING_STEPS),
+        progress_percent=0.0,
+        progress_message=PROCESSING_STEPS[0].description,
         video_path=rel_video,
         compliance_score=0.0,
         target_repetitions=target_repetitions,
@@ -235,7 +286,7 @@ def create_session(
     return CreateSessionResponse(
         session_id=session_id,
         status=SessionStatus.PROCESSANDO.value,
-        etapa="processando_pose",
+        etapa="video_received",
         message="Vídeo recebido com sucesso. Processamento biomecânico iniciado em background.",
         paciente_id=paciente_id,
         exercicio_id=exercicio_id,
@@ -304,7 +355,7 @@ def create_session_from_reference(
     return CreateSessionResponse(
         session_id=session_id,
         status=SessionStatus.PROCESSANDO.value,
-        etapa="processando_pose",
+        etapa="video_received",
         message="Sessão iniciada via referência. Análise biomecânica em background.",
         paciente_id=payload.paciente_id,
         exercicio_id=payload.exercicio_id,
