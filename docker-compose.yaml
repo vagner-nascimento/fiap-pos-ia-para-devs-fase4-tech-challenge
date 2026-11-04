@@ -23,10 +23,9 @@ services:
       MONGO_DB_NAME: fiap-pos-ia-db
       MONGO_DB_SERVER: mongodb://mongodb:27017
       MEDIA_ROOT: /app/data
-      DATASET_ROOT: /app/datasets
+      DATASET_ROOT: /app/data/datasets/fisio
     volumes:
       - ./data:/app/data
-      - ../fiap-pos-ia-para-devs-fase4-tech-challenge-datasets:/app/datasets:ro
     depends_on:
       mongodb:
         condition: service_healthy

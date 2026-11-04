@@ -36,8 +36,11 @@ uv run python -m src.main
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
 * **Rotas de Sessões e Biomecânica:**
   * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`), registra sessão e processa em background (`202 Accepted`);
-  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe do dataset via payload JSON;
-  * `GET /api/sessoes/clips-referencia`: Lista o catálogo de clipes sintéticos de referência para teste;
+  * `GET /api/datasets/fisio/status`: Consulta se o dataset oficial está disponível;
+  * `POST /api/datasets/fisio/download`: Clona o dataset oficial para a área persistente do backend;
+  * `GET /api/datasets/fisio/clips`: Lista os vídeos reais disponíveis;
+  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe catalogado do dataset;
+  * `GET /api/sessoes/clips-referencia`: Alias do catálogo de clipes reais;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score e classificação de risco;
   * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições, desvios e falas de dor;
@@ -138,7 +141,8 @@ Configuradas no arquivo `.env` (ou no `docker-compose.yaml`):
 | Variável | Descrição | Padrão Local | Padrão Docker |
 |---|---|---|---|
 | `MEDIA_ROOT` | Raiz onde entradas e saídas de mídia são gravadas | `../data` | `/app/data` |
-| `DATASET_ROOT` | Caminho do repositório de clipes sintéticos | `../../fiap-pos-ia-...-datasets` | `/app/datasets` |
+| `DATASET_ROOT` | Caminho persistente do clone de clipes sintéticos | `../data/datasets/fisio` | `/app/data/datasets/fisio` |
+| `DATASET_REF` | Branch/ref clonada pelo backend | `main` | `main` |
 | `MONGO_DB_SERVER` | URI de conexão do MongoDB | `mongodb://localhost:27017` | `mongodb://mongodb:27017` |
 | `MONGO_DB_NAME` | Nome do banco no MongoDB | `fiap-pos-ia-db` | `fiap-pos-ia-db` |
 | `WHISPER_MODEL_SIZE` | Tamanho do modelo `faster-whisper` | `medium` | `medium` |

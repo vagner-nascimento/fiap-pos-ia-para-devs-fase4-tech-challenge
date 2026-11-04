@@ -8,8 +8,10 @@ import {
   createSessionUpload,
   listReferenceClips,
   listExercises,
+  getDatasetStatus,
+  downloadDataset,
 } from '../api/sessions';
-import { Plus, RefreshCw, PlayCircle, FileText, Upload, Film, X } from 'lucide-react';
+import { Plus, RefreshCw, PlayCircle, FileText, Upload, Film, X, Download } from 'lucide-react';
 
 /**
  * SessionsListView — Histórico de sessões e modal para nova análise biomecânica.
@@ -32,6 +34,8 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [datasetStatus, setDatasetStatus] = useState(null);
+  const [isDownloadingDataset, setIsDownloadingDataset] = useState(false);
 
   const fetchSessionsList = useCallback(async () => {
     setLoading(true);
@@ -55,8 +59,10 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
     setIsModalOpen(true);
     setSubmitError(null);
     try {
-      const [exercises, clips] = await Promise.all([listExercises(), listReferenceClips()]);
+      const [exercises, status] = await Promise.all([listExercises(), getDatasetStatus()]);
       setExerciseOptions(exercises);
+      setDatasetStatus(status);
+      const clips = status.status === 'ready' ? await listReferenceClips() : [];
       setReferenceClips(clips);
       if (exercises.length > 0 && !selectedExerciseId) {
         setSelectedExerciseId(exercises[0].case_id);
@@ -66,6 +72,32 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
       }
     } catch (err) {
       setSubmitError(err.message || 'Falha ao carregar os exercícios disponíveis.');
+    }
+  };
+
+  const handleDownloadDataset = async () => {
+    setIsDownloadingDataset(true);
+    setSubmitError(null);
+    try {
+      let status = await downloadDataset();
+      while (status.status === 'downloading' || status.status === 'not_downloaded') {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        status = await getDatasetStatus();
+      }
+      setDatasetStatus(status);
+      if (status.status !== 'ready') {
+        throw new Error(status.message || 'O dataset não pôde ser disponibilizado.');
+      }
+      const clips = await listReferenceClips();
+      setReferenceClips(clips);
+      if (clips.length > 0) {
+        setSelectedClip(clips[0].filename);
+        setSelectedExerciseId(clips[0].case_id);
+      }
+    } catch (err) {
+      setSubmitError(err.message || 'Falha ao baixar o dataset.');
+    } finally {
+      setIsDownloadingDataset(false);
     }
   };
 
@@ -326,6 +358,19 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
               {modalTab === 'reference' ? (
                 <div>
                   <label htmlFor="select-clip">Selecione o clipe do dataset sintético:</label>
+                  {datasetStatus?.status !== 'ready' ? (
+                    <div className="dataset-download-state">
+                      <p className="mu">
+                        {datasetStatus?.status === 'downloading'
+                          ? 'Download do dataset em andamento...'
+                          : 'Os vídeos do dataset ainda não estão disponíveis nesta aplicação.'}
+                      </p>
+                      <Button type="button" onClick={handleDownloadDataset} disabled={isDownloadingDataset}>
+                        <Download size={16} />
+                        {isDownloadingDataset ? 'Baixando Dataset...' : 'Download Dataset'}
+                      </Button>
+                    </div>
+                  ) : (
                   <select
                     id="select-clip"
                     className="in"
@@ -346,6 +391,7 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
                       </option>
                     ))}
                   </select>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -423,7 +469,14 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    (modalTab === 'reference' &&
+                      (datasetStatus?.status !== 'ready' || !selectedClip))
+                  }
+                >
                   {isSubmitting ? 'Iniciando Esteira...' : 'Iniciar Análise Biomecânica'}
                 </Button>
               </div>
