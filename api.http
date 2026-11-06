@@ -135,3 +135,75 @@ Accept: application/json
 ### ============================================================
 GET {{baseUrl}}/sessoes/{{sessionId}}/relatorio
 Accept: application/json
+
+### ============================================================
+### 13. Listar Pacientes Cadastrados (Issue #3 / #4)
+### ============================================================
+GET {{baseUrl}}/pacientes
+Accept: application/json
+
+### ============================================================
+### 14. Consultar Dados Consolidados do Paciente (Paciente + Laudo + Plano)
+### ============================================================
+GET {{baseUrl}}/pacientes/PAC-001
+Accept: application/json
+
+### ============================================================
+### 15. Extrair Entidades Estruturadas de Texto de Laudo (Preview)
+### ============================================================
+POST {{baseUrl}}/pacientes/laudo/extrair
+Content-Type: application/json
+Accept: application/json
+
+{
+  "texto_original": "Tendinopatia de ombro direito. Evitar elevação acima de 90° sem controle."
+}
+
+### ============================================================
+### 16. Inserir / Atualizar Laudo Médico por Paciente (Issue #3)
+### ============================================================
+POST {{baseUrl}}/pacientes/PAC-001/laudo
+Content-Type: application/json
+Accept: application/json
+
+{
+  "texto_original": "Tendinopatia de ombro direito. Evitar elevação acima de 90° sem controle.",
+  "regiao": "ombro direito",
+  "lesao": "tendinopatia",
+  "movimentos_restritos": ["elevação > 90°"],
+  "revisado_profissional": true
+}
+
+### ============================================================
+### 17. Inserir / Atualizar Plano de Prescrição de Exercícios por Paciente (Issue #3)
+### ============================================================
+POST {{baseUrl}}/pacientes/PAC-001/plano
+Content-Type: application/json
+Accept: application/json
+
+{
+  "dor_maxima_aceitavel": 4,
+  "amplitude_esperada_texto": "60 – 90",
+  "exercicios": [
+    {
+      "exercicio_id": "FISIO-006",
+      "series": 3,
+      "repeticoes": 10,
+      "lado": "direito",
+      "instrucoes": "Elevar até 90° sem inclinar o tronco."
+    },
+    {
+      "exercicio_id": "FISIO-005",
+      "series": 3,
+      "repeticoes": 8,
+      "lado": "ambos"
+    },
+    {
+      "exercicio_id": "FISIO-002",
+      "series": 2,
+      "repeticoes": 12,
+      "lado": "esquerdo"
+    }
+  ]
+}
+

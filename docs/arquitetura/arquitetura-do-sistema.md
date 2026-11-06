@@ -98,14 +98,13 @@ Detalhamento da arquitetura interna do container Backend (`backend/src/`):
 flowchart TB
     subgraph "API Layer (FastAPI Controllers)"
         RouterSessions["Sessions Router<br/>/api/sessoes (POST multipart, POST JSON, GET)"]
-        RouterPlans["Plans Router<br/>/api/plans"]
-        RouterReports["Reports Router<br/>/api/reports"]
+        RouterPatients["Patients, Plans & Reports Router<br/>/api/pacientes (Pacientes, Laudos e Planos)"]
     end
 
     subgraph "Config & Infrastructure"
         MediaStorage["MediaStorage<br/>(Resolução segura e isolamento de caminhos)"]
         DBConnection["MongoDB Client<br/>(PyMongo / Motor)"]
-        Repos["Repositories Layer<br/>SessionRepository & EventRepository"]
+        Repos["Repositories Layer<br/>Session, Event, Patient, Plan & MedicalReport"]
     end
 
     subgraph "Pose Engine (Vision & Biomechanics)"
@@ -129,14 +128,17 @@ flowchart TB
         CompSink["CompositeResultSink<br/>(Despacho combinado disco + banco)"]
     end
 
-    subgraph "Clinical Audio Engine"
+    subgraph "Clinical Audio & Text Engine"
         PainTextExtractor["PainTextExtractor<br/>(Normalização + regras clínicas)"]
         MultimodalFusion["PainTimeline<br/>(Segmentos de fala e eventos)"]
+        ClinicalExtractor["ClinicalExtractor<br/>(Extração determinística de laudos pt-BR)"]
     end
 
     RouterSessions --> MediaStorage
     RouterSessions --> Processor
     RouterSessions --> Repos
+    RouterPatients --> Repos
+    RouterPatients --> ClinicalExtractor
     Repos --> DBConnection
     Processor --> LandmarkExtractor
     Processor --> Registry
@@ -164,8 +166,8 @@ flowchart TB
     classDef sink fill:#438dd5,stroke:#2063a8,color:#ffffff,stroke-width:1.5px;
     classDef planned fill:#f0f0f0,stroke:#9e9e9e,color:#424242,stroke-dasharray: 4 4;
 
-    class RouterSessions,RouterPlans,RouterReports controller;
-    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,ObjectDetector,AudioTranscription,PainTextExtractor,MultimodalFusion,FFmpegTranscoder engine;
+    class RouterSessions,RouterPatients controller;
+    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,ObjectDetector,AudioTranscription,PainTextExtractor,MultimodalFusion,ClinicalExtractor,FFmpegTranscoder engine;
     class MediaStorage,DBConnection,Repos infra;
     class ResultSink,FileSink,MongoSink,CompSink sink;
 ```
@@ -327,14 +329,14 @@ RAIZ_DO_REPOSITORIO/
 
 ### Coleções do MongoDB (`fiap-pos-ia-db`)
 
-#### Implementadas no Passo 2:
+#### Implementadas:
 1. **`sessoes`:** Documento central da sessão (`SessionDocument`). Contém `session_id`, `paciente_id`, `exercicio_id`, `case_id`, `side_evaluated`, `status` (`enviado`, `processando`, `concluido`, `erro`), `etapa`, `compliance_score`, `target_repetitions`, repetições válidas/inválidas, total de desvios, `risk_classification` (`verde`, `atencao`, `critico`), `justificativas` explicáveis em português e referências relativas para os arquivos sob `data/` (`video_path`, `annotated_video_path`, `analysis_path`, `telemetry_path`).
-2. **`eventos`:** Coleção desacoplada de eventos da sessão (`EventDocument`). Armazena cada repetição (`tipo: "repeticao"`, com pico angular, duração e validade) e cada desvio detectado (`tipo: "desvio"`, com severidade, frame inicial/final e caminho do snapshot em `evidence/`).
+2. **`eventos`:** Coleção desacoplada de eventos da sessão (`EventDocument`). Armazena cada repetição (`tipo: "repeticao"`, com pico angular, duração e validade), cada desvio detectado (`tipo: "desvio"`, com severidade, frame inicial/final e caminho do snapshot em `evidence/`) e cada fala relacionada à dor (`tipo: "fala_dor"`, com timestamps, nível e texto transcrito).
+3. **`pacientes`:** Cadastro do paciente (`PatientDocument` — `paciente_id`, `nome` fictício, `idade`, `observacoes` e flag `synthetic=True` para conformidade LGPD), com seed inicial automático (`PAC-001` a `PAC-004`).
+4. **`laudos`:** Diagnóstico médico ortopédico estruturado (`MedicalReportDocument` — `laudo_id`, `paciente_id`, `texto_original`, `regiao`, `lesao`, `movimentos_restritos`, `limite_amplitude_max`, `extraido_automaticamente` e `revisado_profissional`).
+5. **`planos`:** Prescrição do fisioterapeuta (`PlanDocument` — `plano_id`, `paciente_id`, `dor_maxima_aceitavel` na escala 0–10, `amplitude_esperada_texto`/`min`/`max` e lista de exercícios `PrescribedExerciseItem` com `slot_id`, `exercicio_id`, `series`, `repeticoes`, `lado`, `equipamento` e `instrucoes`).
 
 #### Planejadas para Passos Futuros:
-3. **`pacientes`:** Cadastro do paciente, histórico clínico e lesões diagnosticadas.
-4. **`planos`:** Prescrição do fisioterapeuta (exercício, repetições alvo, faixa de ângulo esperada, limite de dor tolerável).
-5. **`laudos`:** Diagnóstico médico ortopédico estruturado com restrições de movimento e amplitudes máximas permitidas.
 6. **`alertas`:** Notificações direcionadas ao painel do fisioterapeuta sobre desvios críticos ou relatos de dor acima do limiar.
 
 ---
@@ -346,6 +348,7 @@ RAIZ_DO_REPOSITORIO/
 | **Execução em CPU (sem GPU)** | MediaPipe Pose, YOLO e Faster-Whisper configurados para CPU; PyTorch/Torchvision CPU-only | Permite rodar o pipeline completo em computador convencional ou container Docker sem CUDA, GPU dedicada ou custos de instâncias de GPU na nuvem. |
 | **Detecção de equipamentos** | YOLO especializado para `faixa_elastica` e `halter`, ativado apenas nos exercícios que exigem esses objetos | Mantém a análise de pose e fornece status por frame e percentuais no relatório sem custo nos demais exercícios. |
 | **Transcrição e dor verbal** | Faster-Whisper local, preparação de áudio, prompt pt-BR e regras determinísticas de domínio | Evita custo e dependência de cloud e mantém segmentos temporais explicáveis para a timeline. |
+| **Extração de laudos e prescrições** | Extrator determinístico local em pt-BR (`clinical_extractor.py`) com revisão humana (*human-in-the-loop*) na UI | Identifica região, lesão e restrições angulares instantaneamente sem serviços externos, permitindo conferência e edição pelo fisioterapeuta. |
 | **Integridade de Caracteres no Vídeo** | Renderização do HUD via Pillow (`ImageDraw` com fonte TrueType UTF-8) | Exibe acentuação correta em português (`ã`, `á`, `ç`) e notações científicas (`°`, `≥`), eliminando interrogações (`?`) típicas do OpenCV Hershey. |
 | **HUD Responsivo e Dinâmico** | Cálculo proporcional baseado na largura e altura do frame | Garante que vídeos verticais (típicos de gravações de smartphone) e horizontais exibam caixas de alerta perfeitamente enquadradas sem cortes de texto. |
 | **Streaming e Compatibilidade Web** | Transcodificação pós-renderização via FFmpeg em H.264 (`yuv420p` + `+faststart`) e Nginx com 250MB | Permite playback nativo instantâneo no frontend React via tag `<video>` em qualquer browser moderno sem erros de codec, suportando vídeos de alta resolução. |

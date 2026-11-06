@@ -14,9 +14,10 @@ frontend/
 ├── Dockerfile                 # Build multi-stage (Node 20 + Nginx Alpine)
 └── src/
     ├── tokens.css             # Design Tokens oficiais (--fc-* e Plus Jakarta Sans)
-    ├── api/                   # Clientes REST desacoplados (sessions.js, health.js)
+    ├── api/                   # Clientes REST desacoplados (patients.js, sessions.js, health.js)
     ├── components/            # Telas da jornada e componentes do Design System
-    │   ├── ds/                # Componentes base: Button, Card, StatusChip, StepList, Timeline, VideoPlayer
+    │   ├── ds/                # Componentes base: Button, Card, Field, StatusChip, StepList, Timeline, VideoPlayer
+    │   ├── PlanAndReportView.jsx  # Tela 1 e 8: Cadastro de paciente, plano de exercícios e laudo médico
     │   ├── SessionsListView.jsx   # Listagem de sessões e modal de nova análise
     │   ├── ProcessingView.jsx     # Tela 4: Acompanhamento de processamento com polling
     │   └── SessionReportView.jsx  # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)
@@ -32,6 +33,12 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | Método | Caminho | Uso |
 | --- | --- | --- |
 | `GET` | `/api/health` | Obtém o status da API e do MongoDB para a tela de monitoramento. |
+| `GET` / `POST` | `/api/pacientes` | Lista e cadastra pacientes sintéticos (com filtro `?nome=`). |
+| `GET` | `/api/pacientes/{id}` | Recupera dados consolidados do paciente (`patient`, `laudo` e `plano`). |
+| `POST` | `/api/pacientes/laudo/extrair` | Extrai entidades clínicas do texto do laudo em tempo real para conferência na UI. |
+| `GET` / `POST` | `/api/pacientes/{id}/laudo` | Consulta e salva o laudo médico estruturado do paciente. |
+| `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios e limites de dor/amplitude. |
+| `GET` | `/api/pacientes/catalogo-exercicios` | Retorna o catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`). |
 | `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) de até 250MB e inicia a análise (`202 Accepted`). |
 | `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
 | `GET` | `/api/sessoes/clips-referencia` | Alias de compatibilidade para o catálogo real do dataset baixado. |

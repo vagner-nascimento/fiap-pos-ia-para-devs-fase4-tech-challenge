@@ -3,6 +3,7 @@ import {
   Activity,
   CheckCircle2,
   CircleAlert,
+  ClipboardList,
   Clock3,
   Database,
   Film,
@@ -12,6 +13,7 @@ import {
   HeartPulse,
 } from 'lucide-react';
 import { fetchHealth } from './api/health';
+import { PlanAndReportView } from './components/PlanAndReportView';
 import { SessionsListView } from './components/SessionsListView';
 import { ProcessingView } from './components/ProcessingView';
 import { SessionReportView } from './components/SessionReportView';
@@ -19,7 +21,7 @@ import { Card } from './components/ds/Card';
 import { Button } from './components/ds/Button';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('sessions'); // 'sessions' | 'processing' | 'report' | 'health'
+  const [currentView, setCurrentView] = useState('sessions'); // 'plan' | 'sessions' | 'processing' | 'report' | 'health'
   const [activeSessionId, setActiveSessionId] = useState(null);
 
   // Estado da tela de Health Check
@@ -76,6 +78,14 @@ export default function App() {
         <nav className="sidebar-nav">
           <button
             type="button"
+            className={`sidebar-nav-item ${currentView === 'plan' ? 'on' : ''}`}
+            onClick={() => setCurrentView('plan')}
+          >
+            <ClipboardList size={16} /> <span>Plano e laudo</span>
+          </button>
+
+          <button
+            type="button"
             className={`sidebar-nav-item ${currentView === 'sessions' ? 'on' : ''}`}
             onClick={() => setCurrentView('sessions')}
           >
@@ -105,6 +115,8 @@ export default function App() {
 
       {/* Área de Conteúdo Principal */}
       <main className="m">
+        {currentView === 'plan' && <PlanAndReportView />}
+
         {currentView === 'sessions' && (
           <SessionsListView
             onSelectSession={handleOpenReport}

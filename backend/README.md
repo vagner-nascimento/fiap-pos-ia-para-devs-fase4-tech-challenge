@@ -34,6 +34,14 @@ uv run python -m src.main
 
 * **Swagger / OpenAPI:** [http://localhost:3000/docs](http://localhost:3000/docs)
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
+* **Rotas de Pacientes, Planos e Laudos (Issue #3):**
+  * `GET /api/pacientes`: Lista pacientes sintéticos cadastrados (com seed inicial `PAC-001` a `PAC-004` e filtro opcional `?nome=`);
+  * `POST /api/pacientes`: Cadastra ou atualiza um paciente sintético;
+  * `GET /api/pacientes/{id}`: Retorna os dados consolidados do paciente (`patient` + `laudo` + `plano`);
+  * `POST /api/pacientes/laudo/extrair`: Extrai automaticamente região, lesão e restrições a partir do texto livre do laudo (preview);
+  * `POST /api/pacientes/{id}/laudo` · `GET /api/pacientes/{id}/laudo`: Salva e consulta o laudo médico estruturado do paciente;
+  * `POST /api/pacientes/{id}/plano` · `GET /api/pacientes/{id}/plano`: Salva e consulta o plano de prescrição de exercícios e limites clínicos do paciente;
+  * `GET /api/pacientes/catalogo-exercicios`: Catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`) para prescrição.
 * **Rotas de Sessões e Biomecânica:**
   * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`), registra sessão e processa em background (`202 Accepted`);
   * `GET /api/datasets/fisio/status`: Consulta se o dataset oficial está disponível;
@@ -114,18 +122,19 @@ backend/
 │   │   └── media_paths.py              # MediaStorage: isolamento e resolução de caminhos
 │   ├── infra/database/                 # Conexão MongoDB e repositórios
 │   │   ├── mongodb_client.py           # Conector e gerenciador de sessões PyMongo
-│   │   └── repositories/               # SessionRepository e EventRepository
+│   │   └── repositories/               # Session, Event, Patient, Plan e MedicalReport Repositories
 │   ├── models/                         # Modelos de Domínio e Transporte
-│   │   ├── database/                   # SessionDocument e EventDocument (BSON)
+│   │   ├── database/                   # Documentos MongoDB (sessoes, eventos, pacientes, laudos, planos)
 │   │   └── rest/                       # Payloads e Responses da API (JSON)
 │   ├── services/
 │   │   ├── audio_transcription.py      # Áudio, Faster-Whisper local e classificação de fala de dor
+│   │   ├── clinical_extractor.py       # Extrator determinístico de entidades de laudos médicos (pt-BR)
 │   │   └── pose/                       # Motor de Visão Computacional
 │   │       ├── analyzers/              # 7 Analisadores especializados (FISIO-001 a 007)
 │   │       ├── base_analyzer.py        # Base com Template Method, histerese e auto-lado
 │   │       ├── geometry.py             # Fórmulas trigonométricas e ângulos 2D
 │   │       ├── hud_renderer.py         # HUD responsivo com Pillow e UTF-8
-│       ├── object_detector.py      # YOLO CPU-only para faixa elástica e halter
+│   │       ├── object_detector.py      # YOLO CPU-only para faixa elástica e halter
 │   │       ├── joint_mapper.py         # Mapeamento de landmarks e lados corporais
 │   │       ├── landmark_extractor.py   # Extração via MediaPipe Pose com sampling a 30 FPS
 │   │       ├── models.py               # Modelos Pydantic de eventos e telemetria
@@ -135,11 +144,11 @@ backend/
 │   │       └── video_processor.py      # Orquestrador ponta a ponta do pipeline de vídeo
 │   ├── yolo/
 │   │   └── best.pt                 # Melhor checkpoint pré-treinado; não há treino na API
-│   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/sessoes)
+│   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/pacientes, /api/sessoes)
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (119 testes)
+    └── unit/                           # Testes unitários com Pytest (130 testes)
 ```
 
 ---
@@ -178,3 +187,4 @@ Para uma visão detalhada sobre a arquitetura do motor de visão e persistência
 * 📑 [ADR 0009: Detecção de Equipamentos com YOLO](../docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md)
 * 📑 [ADR 0010: Transcrição Local com Faster-Whisper](../docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
 * 📑 [ADR 0011: Detecção de Dor por Transcrição](../docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
+* 📑 [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](../docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)

@@ -71,6 +71,10 @@ uv run ./backend/src/cli/analyze_video.py \
 
 Com a stack ativa, você pode disparar análises e consultar sessões/eventos diretamente pelo VS Code usando o arquivo de conveniência [`api.http`](api.http):
 
+* **Cadastro e consulta de pacientes, laudos e prescrições (Issue #3):**
+  `GET http://localhost:3000/api/pacientes` · `POST http://localhost:3000/api/pacientes` · `GET http://localhost:3000/api/pacientes/{id}`
+* **Inserção de laudo médico com extração automática e plano de exercícios:**
+  `POST http://localhost:3000/api/pacientes/{id}/laudo` · `POST http://localhost:3000/api/pacientes/{id}/plano`
 * **Download/status do dataset:** `GET /api/datasets/fisio/status` · `POST /api/datasets/fisio/download`
 * **Disparo assíncrono por clipe do dataset (retorna 202 com BackgroundTasks):**
   `POST http://localhost:3000/api/sessoes/referencia`
@@ -94,14 +98,17 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
    * **`evidence/*.jpg`**: Snapshots fotográficos congelados no momento exato em que cada desvio ocorreu.
 
 2. **No Banco de Dados MongoDB (`fiap-pos-ia-db`):**
+   * **Coleção `pacientes`**: Cadastro sintético dos pacientes (`paciente_id`, `nome`, `idade`, `observacoes`), com seed inicial (`PAC-001` a `PAC-004`);
+   * **Coleção `laudos`**: Laudo médico estruturado com região anatômica, lesão, movimentos restritos e limite angular máximo extraídos do texto e revisados pelo profissional;
+   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com séries, repetições, lado e equipamento);
    * **Coleção `sessoes`**: Documento executivo consolidado com status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
-   * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade) e desvios posturais com referências às evidências fotográficas.
+   * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade), desvios posturais com referências às evidências fotográficas e falas relacionadas à dor (`fala_dor`).
 
 ---
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **119 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **130 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -125,6 +132,8 @@ uv run pytest tests -v
   * [ADR 0009: Detecção de Equipamentos com YOLO](docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md)
   * [ADR 0010: Transcrição Local com Faster-Whisper](docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
   * [ADR 0011: Detecção de Dor por Transcrição](docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
+  * [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
+* 🗂️ **[Plano – Issue #3 (Inserção de Dados de Laudo e Prescrições)](plans/plano-issue-3-insercao-laudo-prescricoes.md)** — Especificação de backend, extração clínica e frontend para planos e laudos;
 * 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
 * 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).
