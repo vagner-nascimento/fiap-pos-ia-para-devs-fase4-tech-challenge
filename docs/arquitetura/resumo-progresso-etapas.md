@@ -105,7 +105,7 @@
   * Busca tolerante a acentos e caixa alta/baixa em `GET /api/pacientes?nome=` (ex.: buscar `"claudia"` retorna `"Cláudia M."` / `PAC-003`).
   * Novo endpoint `GET /api/pacientes/{id}/sessoes` e enriquecimento de `GET /api/pacientes/{id}` com `sessoes_recentes` para cruzar os slots prescritos com as sessões já enviadas pelo paciente.
 - **Frontend (`frontend/src/components/PatientPrescriptionView.jsx`):**
-  * Implementação da **Tela 2 ("Minha prescrição")** seguindo o Mock `02-Paciente-Envio.dc.html` e o Design System (`tokens.css`), com busca por nome/ID, pílulas de acesso rápido, card **"Laudo e limites"** e listagem dos **slots de exercícios prescritos** com status (`● Enviada`, `Em análise` ou `Pendente de envio`).
+  * Implementação da **Tela 2 ("Minha prescrição")** seguindo o Mock `02-Paciente-Envio.dc.html` e o Design System (`tokens.css`), onde o paciente busca exclusivamente seu próprio cadastro por nome ou ID (sem expor outros pacientes por privacidade/LGPD), visualizando o card **"Laudo e limites"** e a listagem dos **slots de exercícios prescritos** com status (`● Enviada`, `Em análise` ou `Pendente de envio`).
 - **Testes Automatizados:** 137 testes passando no backend (`pytest tests/ -v`).
 
 ---

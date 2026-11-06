@@ -58,8 +58,8 @@ flowchart LR
 > - **Na Issue #5 (próxima etapa):** acoplaremos a cada slot de exercício prescrito o seletor de vídeo/clipe, termo de consentimento LGPD e disparo de upload multipart por slot (`POST /api/sessoes`).
 
 > [!TIP]
-> **Busca Tolerante a Acentos (Diacríticos) e Atalhos de Demonstração:**
-> Para garantir ótima usabilidade durante a demonstração em vídeo, a busca `GET /api/pacientes?nome=` ignora acentuação (ex.: digitar `"claudia"` encontra `"Cláudia M."`) e a tela exibe pílulas de acesso rápido para os 4 pacientes sintéticos do seed (`Marina T.`, `Roberto S.`, `Cláudia M.`, `Fernando L.`).
+> **Busca Tolerante a Acentos (Diacríticos) e Privacidade (LGPD):**
+> A busca `GET /api/pacientes?nome=` ignora acentuação (ex.: digitar `"claudia"` encontra `"Cláudia M."`). Por privacidade, a tela do paciente não lista nem sugere outros pacientes cadastrados: o paciente deve informar seu próprio nome ou código identificador (`PAC-001`) para visualizar sua prescrição.
 
 ---
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Card } from './ds/Card';
 import { Button } from './ds/Button';
 import { StatusChip } from './ds/StatusChip';
@@ -9,30 +9,26 @@ import {
   FileText,
   PlayCircle,
   CircleAlert,
-  UserCheck,
   ShieldCheck,
   ClipboardCheck,
   Dumbbell,
+  UserCheck,
 } from 'lucide-react';
 
 /**
  * PatientPrescriptionView — Tela 2 ("Minha prescrição" — Visão do Paciente, Issue #4)
  * Implementa o Passo 2 da Jornada Principal (docs/jornada-proposta-001.md e PRD v1.2),
  * alinhada ao Design System (docs/design/DESIGN.md) e ao Mock 02-Paciente-Envio.dc.html.
+ * Por privacidade (LGPD), não lista outros pacientes: o paciente deve buscar seu próprio
+ * cadastro informando seu nome ou código identificador (ex.: PAC-001).
  */
 export function PatientPrescriptionView({ onSelectSession, onSelectProcessing }) {
-  // Estado da busca e listagem de pacientes
-  const [searchQuery, setSearchQuery] = useState('Marina T.');
-  const [allPatients, setAllPatients] = useState([]);
-  const [matchedPatients, setMatchedPatients] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState('PAC-001');
-
-  // Dados consolidados do paciente selecionado (cadastro + laudo + plano + sessões)
+  const [searchQuery, setSearchQuery] = useState('');
   const [bundle, setBundle] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isSearching, setIsSearching] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchEmpty, setSearchEmpty] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const loadPatientPrescription = useCallback(async (pacienteId) => {
     if (!pacienteId) return;
@@ -41,7 +37,6 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     try {
       const data = await getPatientBundle(pacienteId);
       setBundle(data);
-      setSelectedPatientId(data.patient.paciente_id);
     } catch (err) {
       setError(err.message || 'Não foi possível carregar os dados de prescrição e laudo.');
     } finally {
@@ -49,77 +44,51 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     }
   }, []);
 
-  const initView = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setSearchEmpty(false);
-    try {
-      const patientsList = await listPatients();
-      setAllPatients(patientsList);
-      setMatchedPatients(patientsList);
-
-      const defaultPatient =
-        patientsList.find((p) => p.paciente_id === 'PAC-001') || patientsList[0];
-
-      if (defaultPatient) {
-        setSearchQuery(defaultPatient.nome);
-        setSelectedPatientId(defaultPatient.paciente_id);
-        const bundleData = await getPatientBundle(defaultPatient.paciente_id);
-        setBundle(bundleData);
-      }
-    } catch (err) {
-      setError(err.message || 'Falha ao conectar com a API de pacientes.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    initView();
-  }, [initView]);
-
   const handleSearchSubmit = async (e) => {
     if (e) e.preventDefault();
     const trimmed = searchQuery.trim();
-    setIsSearching(true);
     setError(null);
     setSearchEmpty(false);
 
+    if (trimmed.length < 2) {
+      setError('Por favor, informe pelo menos 2 caracteres do seu nome ou seu código (ex.: PAC-001).');
+      return;
+    }
+
+    setHasSearched(true);
+    setLoading(true);
+
     try {
       const results = await listPatients(trimmed);
-      setMatchedPatients(results);
 
       if (results.length === 0) {
         setSearchEmpty(true);
         setBundle(null);
       } else {
-        // Carrega automaticamente o primeiro paciente correspondente
-        await loadPatientPrescription(results[0].paciente_id);
+        // Prioriza correspondência exata por ID ou nome, sem expor listagem de outros pacientes
+        const normalizedQuery = trimmed.toLowerCase();
+        const bestMatch =
+          results.find(
+            (p) =>
+              p.paciente_id.toLowerCase() === normalizedQuery ||
+              p.nome.toLowerCase() === normalizedQuery
+          ) || results[0];
+
+        await loadPatientPrescription(bestMatch.paciente_id);
       }
     } catch (err) {
       setError(err.message || 'Erro ao buscar prescrição do paciente.');
     } finally {
-      setIsSearching(false);
+      setLoading(false);
     }
   };
 
-  const handleQuickSelectPatient = async (patient) => {
-    setSearchQuery(patient.nome);
+  const handleClearSearch = () => {
+    setSearchQuery('');
     setSearchEmpty(false);
-    setMatchedPatients([patient]);
-    await loadPatientPrescription(patient.paciente_id);
-  };
-
-  const handleClearSearch = async () => {
-    setSearchEmpty(false);
-    setMatchedPatients(allPatients);
-    const first = allPatients[0];
-    if (first) {
-      setSearchQuery(first.nome);
-      await loadPatientPrescription(first.paciente_id);
-    } else {
-      setSearchQuery('');
-    }
+    setHasSearched(false);
+    setError(null);
+    setBundle(null);
   };
 
   const formatDateTime = (isoString) => {
@@ -177,7 +146,7 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
             type="button"
             variant="secondary"
             onClick={() => loadPatientPrescription(patient.paciente_id)}
-            disabled={loading || isSearching}
+            disabled={loading}
           >
             <RefreshCw size={16} className={loading ? 'spin' : ''} />
             <span>Atualizar dados</span>
@@ -195,71 +164,19 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               type="text"
               className="in"
               style={{ flex: 1, minWidth: '220px' }}
-              placeholder="Ex: Marina T., Cláudia, Roberto ou PAC-001"
+              placeholder="Digite seu nome (ex.: Marina T.) ou código (ex.: PAC-001)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Button type="submit" disabled={isSearching || loading}>
+            <Button type="submit" disabled={loading}>
               <Search size={16} />
-              <span>{isSearching ? 'Buscando...' : 'Buscar'}</span>
+              <span>{loading ? 'Buscando...' : 'Buscar'}</span>
             </Button>
           </div>
         </form>
-
-        {/* Pílulas de acesso rápido para demonstração fluida */}
-        {allPatients.length > 0 && (
-          <div
-            className="f"
-            style={{ marginTop: '12px', flexWrap: 'wrap', gap: '8px' }}
-            aria-label="Pacientes sintéticos de demonstração"
-          >
-            <span className="mu" style={{ fontSize: '12px' }}>
-              Pacientes cadastrados:
-            </span>
-            {allPatients.map((p) => {
-              const isSelected = p.paciente_id === selectedPatientId && !searchEmpty;
-              return (
-                <button
-                  key={p.paciente_id}
-                  type="button"
-                  className={`patient-quick-chip ${isSelected ? 'active' : ''}`}
-                  onClick={() => handleQuickSelectPatient(p)}
-                >
-                  <UserCheck size={13} />
-                  <span>
-                    {p.nome} <small>({p.paciente_id})</small>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Se a busca retornar mais de 1 paciente, mostra seletor de correspondências */}
-        {matchedPatients.length > 1 && !searchEmpty && (
-          <div className="prescription-matches-bar">
-            <span className="mu">
-              <strong>{matchedPatients.length}</strong> pacientes encontrados para a busca —
-              selecione:
-            </span>
-            <div className="f" style={{ flexWrap: 'wrap', gap: '8px' }}>
-              {matchedPatients.map((p) => (
-                <Button
-                  key={p.paciente_id}
-                  type="button"
-                  variant={p.paciente_id === selectedPatientId ? 'primary' : 'secondary'}
-                  style={{ height: '34px', padding: '0 12px', fontSize: '13px' }}
-                  onClick={() => loadPatientPrescription(p.paciente_id)}
-                >
-                  {p.nome} ({p.paciente_id})
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
       </Card>
 
-      {/* Estado de Erro de API (DESIGN.md seção 4) */}
+      {/* Estado de Erro de API ou Validação (DESIGN.md seção 4) */}
       {error && (
         <Card
           style={{
@@ -274,10 +191,24 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               <CircleAlert size={20} />
               <strong>■ {error}</strong>
             </div>
-            <Button variant="secondary" onClick={initView}>
-              Tentar novamente
-            </Button>
+            {searchQuery.trim().length >= 2 && (
+              <Button variant="secondary" onClick={handleSearchSubmit}>
+                Tentar novamente
+              </Button>
+            )}
           </div>
+        </Card>
+      )}
+
+      {/* Estado Inicial antes da busca (Privacidade / LGPD: nenhum paciente listado) */}
+      {!hasSearched && !loading && !patient && (
+        <Card style={{ marginTop: '20px', textAlign: 'center', padding: '44px 20px' }}>
+          <UserCheck size={36} className="mu" style={{ margin: '0 auto 12px' }} />
+          <h2>Identifique-se para acessar sua prescrição</h2>
+          <p className="mu" style={{ maxWidth: '480px', margin: '0 auto' }}>
+            Para proteger a privacidade dos dados clínicos, informe seu nome ou código de paciente
+            no campo de busca acima e clique em <strong>Buscar</strong>.
+          </p>
         </Card>
       )}
 
@@ -287,18 +218,17 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
           <Search size={36} className="mu" style={{ margin: '0 auto 12px' }} />
           <h2>Nenhuma prescrição encontrada</h2>
           <p className="mu" style={{ maxWidth: '460px', margin: '0 auto 16px' }}>
-            Não localizamos nenhum paciente sintético correspondente a{' '}
-            <strong>&ldquo;{searchQuery}&rdquo;</strong>. Verifique o nome digitado ou escolha um
-            dos pacientes cadastrados acima.
+            Não localizamos cadastro correspondente a <strong>&ldquo;{searchQuery}&rdquo;</strong>.
+            Verifique o nome ou código informado com seu fisioterapeuta.
           </p>
           <Button variant="secondary" onClick={handleClearSearch}>
-            Ver prescrição padrão (Marina T.)
+            Limpar busca
           </Button>
         </Card>
       )}
 
       {/* Estado de Carregamento (Skeleton / Spinner) */}
-      {loading && !searchEmpty && (
+      {loading && (
         <Card style={{ marginTop: '20px', textAlign: 'center', padding: '48px 20px' }}>
           <div className="spin-indicator" />
           <p className="mu">Carregando dados de laudo médico e prescrição do paciente...</p>
@@ -315,7 +245,11 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
           <Card className="prescription-laudo-card">
             <div
               className="f"
-              style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}
+              style={{
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '12px',
+              }}
             >
               <div>
                 <h2 style={{ margin: 0 }}>Laudo e limites</h2>
@@ -329,9 +263,7 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
 
             {laudo ? (
               <>
-                <p style={{ fontSize: '15px', fontWeight: 500 }}>
-                  {laudo.texto_original}
-                </p>
+                <p style={{ fontSize: '15px', fontWeight: 500 }}>{laudo.texto_original}</p>
 
                 {/* Chips Estruturados do Laudo */}
                 <div className="f" style={{ flexWrap: 'wrap', marginTop: '12px', gap: '8px' }}>
@@ -415,7 +347,10 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
                 flexWrap: 'wrap',
               }}
             >
-              <span className="mu" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                className="mu"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
                 <ShieldCheck size={15} style={{ color: 'var(--fc-ok-fg)' }} />
                 Prescrição válida · dados fictícios (LGPD)
               </span>
@@ -554,4 +489,3 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     </div>
   );
 }
-
