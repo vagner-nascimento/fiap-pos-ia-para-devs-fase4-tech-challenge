@@ -44,6 +44,7 @@ Registros formais de decisões arquiteturais que orientaram a concepção do sis
 ---
 
 ### 3. Documentos Complementares
+- [Plano da Issue #4 – Busca de Dados de Laudo e Prescrições pelo Paciente](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/plans/plano-issue-4-busca-laudo-prescricoes.md): Especificação da Tela 2 (*"Minha prescrição"*), busca tolerante a acentos e exibição de slots prescritos (Issue #4);
 - [Plano da Issue #3 – Inserção de Dados de Laudo e Prescrições](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/plans/plano-issue-3-insercao-laudo-prescricoes.md): Especificação arquitetural e de interface para cadastro de pacientes, extração estruturada de laudos e prescrição de exercícios (Issue #3);
 - [Plano do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/plano-passo-3-frontend-relatorio-individual.md): Especificação arquitetural e de interface para o relatório individual do vídeo (Issue #6), alinhado ao Design System;
 - [Walkthrough do Passo 3 – Relatório Individual e Frontend](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/walkthrough-passo-3-relatorio-individual.md): Roteiro de validação do Passo 3 (Issue #6) com execução dos testes e uso da UI;

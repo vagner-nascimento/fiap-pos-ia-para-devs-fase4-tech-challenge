@@ -207,3 +207,26 @@ Accept: application/json
   ]
 }
 
+### ============================================================
+### 18. Buscar Prescrição pelo Nome do Paciente — Tolerante a Acentos (Issue #4)
+### ============================================================
+GET {{baseUrl}}/pacientes?nome=claudia
+Accept: application/json
+
+### ============================================================
+### 19. Consultar Laudo Médico e Plano de Prescrição do Paciente (Issue #4)
+### ============================================================
+GET {{baseUrl}}/pacientes/PAC-001/laudo
+Accept: application/json
+
+###
+GET {{baseUrl}}/pacientes/PAC-001/plano
+Accept: application/json
+
+### ============================================================
+### 20. Listar Histórico de Sessões por Paciente (Issue #4)
+### ============================================================
+GET {{baseUrl}}/pacientes/PAC-001/sessoes
+Accept: application/json
+
+

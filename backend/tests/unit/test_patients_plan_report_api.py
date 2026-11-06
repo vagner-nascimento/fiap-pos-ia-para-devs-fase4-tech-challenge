@@ -266,3 +266,76 @@ def test_session_report_integrates_with_patient_plan_and_laudo(client):
     assert "Dor máx: 4/10" in report["comparacao_clinica"]["plano"]["label"]
     assert "tendinopatia" in report["comparacao_clinica"]["laudo"]["label"]
 
+
+# -------------------------------------------------------------------------
+# 3. Testes de Busca pelo Paciente e Sessões da Prescrição (Issue #4)
+# -------------------------------------------------------------------------
+
+def test_search_patients_accent_insensitive_and_by_id(client):
+    # Busca sem acento deve encontrar "Cláudia M." (PAC-003)
+    res_no_accent = client.get("/api/pacientes?nome=claudia")
+    assert res_no_accent.status_code == 200
+    data_no_accent = res_no_accent.json()
+    assert len(data_no_accent) == 1
+    assert data_no_accent[0]["paciente_id"] == "PAC-003"
+    assert data_no_accent[0]["nome"] == "Cláudia M."
+
+    # Busca com acento deve encontrar "Cláudia M." (PAC-003)
+    res_with_accent = client.get("/api/pacientes?nome=Cláudia")
+    assert res_with_accent.status_code == 200
+    assert len(res_with_accent.json()) == 1
+    assert res_with_accent.json()[0]["paciente_id"] == "PAC-003"
+
+    # Busca por código sintético insensível a caixa
+    res_by_id = client.get("/api/pacientes?nome=pac-004")
+    assert res_by_id.status_code == 200
+    assert len(res_by_id.json()) == 1
+    assert res_by_id.json()[0]["nome"] == "Fernando L."
+
+    # Busca sem correspondência retorna lista vazia
+    res_empty = client.get("/api/pacientes?nome=PacienteInexistenteXYZ")
+    assert res_empty.status_code == 200
+    assert res_empty.json() == []
+
+
+def test_list_patient_sessions_and_bundle_includes_recent_sessions(client):
+    # Inicializa seed
+    client.get("/api/pacientes")
+
+    session_repo = SessionRepository()
+    session_repo.save_session(
+        SessionDocument(
+            session_id="SESS-PAC001-SLOT1",
+            paciente_id="PAC-001",
+            exercicio_id="FISIO-006",
+            case_id="FISIO-006",
+            side_evaluated="direito",
+            status=SessionStatus.CONCLUIDO,
+            compliance_score=95.0,
+            risk_classification=RiskClassification.VERDE,
+        )
+    )
+
+    # Endpoint dedicado GET /api/pacientes/{id}/sessoes
+    res_sessions = client.get("/api/pacientes/PAC-001/sessoes")
+    assert res_sessions.status_code == 200
+    sessions_list = res_sessions.json()
+    assert len(sessions_list) == 1
+    assert sessions_list[0]["session_id"] == "SESS-PAC001-SLOT1"
+    assert sessions_list[0]["exercicio_id"] == "FISIO-006"
+
+    # Bundle consolidado GET /api/pacientes/{id} inclui sessoes_recentes
+    res_bundle = client.get("/api/pacientes/PAC-001")
+    assert res_bundle.status_code == 200
+    bundle = res_bundle.json()
+    assert bundle["patient"]["paciente_id"] == "PAC-001"
+    assert bundle["laudo"]["laudo_id"] == "LAU-A"
+    assert bundle["plano"]["plano_id"] == "PLN-PAC-001"
+    assert len(bundle["sessoes_recentes"]) == 1
+    assert bundle["sessoes_recentes"][0]["session_id"] == "SESS-PAC001-SLOT1"
+
+    # Paciente inexistente retorna 404 em /sessoes
+    res_404 = client.get("/api/pacientes/PAC-INEXISTENTE/sessoes")
+    assert res_404.status_code == 404
+
+

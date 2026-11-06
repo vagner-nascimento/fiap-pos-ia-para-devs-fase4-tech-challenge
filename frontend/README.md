@@ -17,10 +17,11 @@ frontend/
     ├── api/                   # Clientes REST desacoplados (patients.js, sessions.js, health.js)
     ├── components/            # Telas da jornada e componentes do Design System
     │   ├── ds/                # Componentes base: Button, Card, Field, StatusChip, StepList, Timeline, VideoPlayer
-    │   ├── PlanAndReportView.jsx  # Tela 1 e 8: Cadastro de paciente, plano de exercícios e laudo médico
-    │   ├── SessionsListView.jsx   # Listagem de sessões e modal de nova análise
-    │   ├── ProcessingView.jsx     # Tela 4: Acompanhamento de processamento com polling
-    │   └── SessionReportView.jsx  # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)
+    │   ├── PlanAndReportView.jsx       # Tela 1 e 8: Cadastro de paciente, plano de exercícios e laudo médico (Fisio)
+    │   ├── PatientPrescriptionView.jsx # Tela 2: Minha prescrição — busca de laudo, limites e exercícios pelo paciente
+    │   ├── SessionsListView.jsx        # Listagem de sessões e modal de nova análise
+    │   ├── ProcessingView.jsx          # Tela 4: Acompanhamento de processamento com polling
+    │   └── SessionReportView.jsx       # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)
     ├── App.jsx                # Shell da aplicação com sidebar de 220px
     ├── main.jsx               # Bootstrap React com importação de tokens
     └── styles.css             # Estilos utilitários globais
@@ -33,8 +34,9 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | Método | Caminho | Uso |
 | --- | --- | --- |
 | `GET` | `/api/health` | Obtém o status da API e do MongoDB para a tela de monitoramento. |
-| `GET` / `POST` | `/api/pacientes` | Lista e cadastra pacientes sintéticos (com filtro `?nome=`). |
-| `GET` | `/api/pacientes/{id}` | Recupera dados consolidados do paciente (`patient`, `laudo` e `plano`). |
+| `GET` / `POST` | `/api/pacientes` | Lista e cadastra pacientes sintéticos (com filtro `?nome=` insensível a acentos). |
+| `GET` | `/api/pacientes/{id}` | Recupera dados consolidados do paciente (`patient`, `laudo`, `plano` e `sessoes_recentes`). |
+| `GET` | `/api/pacientes/{id}/sessoes` | Lista o histórico de sessões enviadas/concluídas pelo paciente. |
 | `POST` | `/api/pacientes/laudo/extrair` | Extrai entidades clínicas do texto do laudo em tempo real para conferência na UI. |
 | `GET` / `POST` | `/api/pacientes/{id}/laudo` | Consulta e salva o laudo médico estruturado do paciente. |
 | `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios e limites de dor/amplitude. |

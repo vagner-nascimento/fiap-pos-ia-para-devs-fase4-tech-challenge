@@ -976,6 +976,68 @@ label {
   border-color: var(--fc-crit-fg);
 }
 
+/* Tela 2: Minha Prescrição (Mock 02-Paciente-Envio — Issue #4) */
+.patient-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--fc-radius-pill);
+  border: 1px solid var(--fc-border);
+  background: var(--fc-bg);
+  color: var(--fc-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.patient-quick-chip:hover {
+  background: var(--fc-primary-soft);
+  border-color: var(--fc-primary);
+  color: var(--fc-primary);
+}
+
+.patient-quick-chip.active {
+  background: var(--fc-primary);
+  border-color: var(--fc-primary);
+  color: #ffffff;
+}
+
+.patient-quick-chip small {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.prescription-matches-bar {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--fc-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.prescription-limits-box {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--fc-radius-control);
+  background: var(--fc-bg);
+  border: 1px solid var(--fc-border);
+}
+
+.prescription-slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--fc-border);
+  flex-wrap: wrap;
+}
+
 /* Responsividade Mobile (< 768px) */
 @media (max-width: 768px) {
   .r {
@@ -989,7 +1051,8 @@ label {
     padding: 20px;
   }
   .report-main-grid,
-  .plan-top-grid {
+  .plan-top-grid,
+  .prescription-main-grid {
     grid-template-columns: 1fr !important;
   }
 }

@@ -100,6 +100,14 @@
   * Implementação da **Tela 1 ("Plano e laudo")** e modal da **Tela 8 ("Novo paciente")** alinhados ao Mock `01-Plano-Laudo.dc.html` e ao Design System (`tokens.css`), com chips extraídos automaticamente e edição manual pelo fisioterapeuta.
 - **Testes Automatizados:** 130 testes passando no backend (`pytest tests/ -v`).
 
+### Etapa 9: Busca de Dados de Laudo e Prescrições pelo Paciente (Issue #4 - Concluída)
+- **Backend (`PatientRepository` e `/api/pacientes`):**
+  * Busca tolerante a acentos e caixa alta/baixa em `GET /api/pacientes?nome=` (ex.: buscar `"claudia"` retorna `"Cláudia M."` / `PAC-003`).
+  * Novo endpoint `GET /api/pacientes/{id}/sessoes` e enriquecimento de `GET /api/pacientes/{id}` com `sessoes_recentes` para cruzar os slots prescritos com as sessões já enviadas pelo paciente.
+- **Frontend (`frontend/src/components/PatientPrescriptionView.jsx`):**
+  * Implementação da **Tela 2 ("Minha prescrição")** seguindo o Mock `02-Paciente-Envio.dc.html` e o Design System (`tokens.css`), com busca por nome/ID, pílulas de acesso rápido, card **"Laudo e limites"** e listagem dos **slots de exercícios prescritos** com status (`● Enviada`, `Em análise` ou `Pendente de envio`).
+- **Testes Automatizados:** 137 testes passando no backend (`pytest tests/ -v`).
+
 ---
 
 ## 2. Progresso da tela de processamento
@@ -124,6 +132,6 @@ implementadas não fazem parte dessa lista.
 
 ## 3. Próximos Passos Imediatos
 
-1. Telas do perfil Paciente: busca de prescrição/laudo e upload de vídeos por slots de exercícios prescritos com termo de aceite LGPD (Issues #4 e #5).
+1. Upload de vídeos pelo paciente diretamente nos slots de exercícios prescritos com termo de aceite LGPD (Issue #5).
 2. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).
 3. Evolução da análise de dor e expansão dos datasets de validação.
