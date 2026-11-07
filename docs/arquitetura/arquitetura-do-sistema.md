@@ -1,8 +1,8 @@
 # Arquitetura do Sistema – Fisio Coach
 
 **Tech Challenge · Fase 4 · Pós-Tech IA para Devs (FIAP)**  
-**Versão:** 1.0 · **Data:** Outubro de 2026  
-**Status:** Aprovado e em implementação
+**Versão:** 1.2 · **Data:** Novembro de 2026  
+**Status:** Implementado (Issues #1 a #7 concluídas)
 
 ---
 
@@ -14,8 +14,9 @@ O sistema analisa sessões gravadas em vídeo (contendo trilhas visuais e de áu
 1. **Rastrear postura e biomecânica:** Extrair landmarks corporais, calcular ângulos articulares em tempo real, segmentar repetições válidas/inválidas e identificar desvios posturais específicos do exercício prescrito;
 2. **Analisar fala relacionada à dor:** Extrair o áudio, transcrever localmente em pt-BR com Faster-Whisper e classificar segmentos por regras determinísticas de domínio;
 3. **Verificar equipamentos:** Nos exercícios FISIO-006 e FISIO-007, detectar faixa elástica e halter com YOLO e apresentar o resultado no vídeo e no relatório;
-4. **Fusão Multimodal e Alinhamento Clínico:** Correlacionar repetições, desvios e segmentos de fala classificados em uma linha do tempo unificada, confrontando o desempenho do paciente com a prescrição;
-5. **Geração de Evidências e Laudos:** Renderizar vídeos anotados com Head-Up Display (HUD) responsivo e gerar relatórios executivos com snapshots comprobatórios dos desvios.
+4. **Fusão Multimodal e Alinhamento Clínico:** Correlacionar repetições, desvios e segmentos de fala classificados em uma linha do tempo unificada, confrontando o desempenho do paciente com a prescrição e o laudo médico;
+5. **Geração de Evidências e Laudos Individuais:** Renderizar vídeos anotados com Head-Up Display (HUD) responsivo e gerar relatórios executivos por sessão com decomposição por série ($N$ séries $\times$ $M$ repetições) e snapshots comprobatórios dos desvios;
+6. **Evolução Longitudinal Multi-Dias e Painel de Alertas Clínicos:** Acompanhar a jornada do paciente ao longo de múltiplos dias de tratamento (`dias_tratamento`, com suporte a exercícios diferentes por dia via `dias_prescritos`), avaliando a progressão de **Amplitude Articular (°)**, **Consistência Biomecânica (%)** e **Nível de Dor (0–10)** e gerando alertas automáticos priorizados por severidade (`■ Crítico`, `▲ Atenção`, `● Adequado`).
 
 ---
 
@@ -50,7 +51,7 @@ flowchart TB
 
     class paciente,fisio person;
     class fisio_coach system;
-    class dataset_repo,azure_language external;
+    class dataset_repo external;
 ```
 
 ---
@@ -64,11 +65,11 @@ flowchart TB
     usuario["👥 <b>Fisioterapeuta / Paciente</b><br/><i>(Pessoa)</i><br/>Acessa a plataforma pelo navegador web"]
 
     subgraph BoundaryFisioCoach [" Fronteira do Sistema Fisio Coach (Docker Compose) "]
-        frontend["💻 <b>Frontend Web SPA</b><br/><i>(Container: React 19 / Vite / Nginx)</i><br/>Interface web para upload de vídeos,<br/>acompanhamento de progresso e telemetria"]
+        frontend["💻 <b>Frontend Web SPA</b><br/><i>(Container: React 19 / Vite / Nginx)</i><br/>Interface web para prescrição, envio de vídeos,<br/>relatórios de sessão, evolução longitudinal e alertas"]
 
-        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>(Container: Python 3.11 / FastAPI / MediaPipe + YOLO + Whisper)</i><br/>Orquestra visão computacional, áudio local,<br/>detecção de equipamentos e endpoints REST"]
+        backend["⚙️ <b>Backend API & AI Engine</b><br/><i>(Container: Python 3.11 / FastAPI / MediaPipe + YOLO + Whisper)</i><br/>Orquestra visão computacional, áudio local, evolução<br/>longitudinal multi-dias, alertas e endpoints REST"]
 
-        mongodb[("🗄️ <b>Banco de Dados</b><br/><i>(Container: MongoDB 7.0)</i><br/>Persiste documentos de sessões, eventos<br/>biomecânicos, planos e pacientes")]
+        mongodb[("🗄️ <b>Banco de Dados</b><br/><i>(Container: MongoDB 7.0)</i><br/>Persiste documentos em 6 coleções: pacientes,<br/>laudos, planos, sessoes, eventos e alertas")]
 
         storage[("💾 <b>Armazenamento de Mídias</b><br/><i>(Volume Docker: ./data)</i><br/>Armazena vídeos originais, vídeos anotados MP4,<br/>snapshots JPG de evidência e telemetria JSON")]
     end
@@ -97,14 +98,15 @@ Detalhamento da arquitetura interna do container Backend (`backend/src/`):
 ```mermaid
 flowchart TB
     subgraph "API Layer (FastAPI Controllers)"
-        RouterSessions["Sessions Router<br/>/api/sessoes (POST multipart, POST JSON, GET)"]
-        RouterPatients["Patients, Plans & Reports Router<br/>/api/pacientes (Pacientes, Laudos e Planos)"]
+        RouterSessions["Sessions Router<br/>/api/sessoes (POST multipart, POST JSON, GET, PATCH)"]
+        RouterPatients["Patients, Plans & Evolution Router<br/>/api/pacientes (Pacientes, Laudos, Planos e Evolução)"]
+        RouterAlerts["Alerts Router<br/>/api/alertas (GET, PATCH)"]
     end
 
     subgraph "Config & Infrastructure"
         MediaStorage["MediaStorage<br/>(Resolução segura e isolamento de caminhos)"]
         DBConnection["MongoDB Client<br/>(PyMongo / Motor)"]
-        Repos["Repositories Layer<br/>Session, Event, Patient, Plan & MedicalReport"]
+        Repos["Repositories Layer<br/>Session, Event, Patient, Plan, MedicalReport & Alert"]
     end
 
     subgraph "Pose Engine (Vision & Biomechanics)"
@@ -124,21 +126,25 @@ flowchart TB
     subgraph "Persistence Sinks (Padrão Strategy)"
         ResultSink["ResultSink (Interface)"]
         FileSink["FileResultSink<br/>(analysis.json, telemetry.json)"]
-        MongoSink["MongoResultSink<br/>(Classificação de Risco, sessoes, eventos)"]
+        MongoSink["MongoResultSink<br/>(Classificação de Risco, sessoes, eventos, alertas)"]
         CompSink["CompositeResultSink<br/>(Despacho combinado disco + banco)"]
     end
 
-    subgraph "Clinical Audio & Text Engine"
+    subgraph "Clinical Audio, Text & Longitudinal Evolution Engine"
         PainTextExtractor["PainTextExtractor<br/>(Normalização + regras clínicas)"]
         MultimodalFusion["PainTimeline<br/>(Segmentos de fala e eventos)"]
         ClinicalExtractor["ClinicalExtractor<br/>(Extração determinística de laudos pt-BR)"]
+        EvolutionService["EvolutionService<br/>(Amplitude, Consistência, Dor 0-10, Séries N×M e Alertas)"]
     end
 
     RouterSessions --> MediaStorage
     RouterSessions --> Processor
     RouterSessions --> Repos
+    RouterSessions --> EvolutionService
     RouterPatients --> Repos
     RouterPatients --> ClinicalExtractor
+    RouterPatients --> EvolutionService
+    RouterAlerts --> Repos
     Repos --> DBConnection
     Processor --> LandmarkExtractor
     Processor --> Registry
@@ -158,6 +164,7 @@ flowchart TB
     MongoSink -.->|implementa| ResultSink
     CompSink -.->|implementa| ResultSink
     MongoSink --> Repos
+    MongoSink --> EvolutionService
     FileSink --> MediaStorage
 
     classDef controller fill:#1168bd,stroke:#0b4884,color:#ffffff,stroke-width:1.5px;
@@ -166,8 +173,8 @@ flowchart TB
     classDef sink fill:#438dd5,stroke:#2063a8,color:#ffffff,stroke-width:1.5px;
     classDef planned fill:#f0f0f0,stroke:#9e9e9e,color:#424242,stroke-dasharray: 4 4;
 
-    class RouterSessions,RouterPatients controller;
-    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,ObjectDetector,AudioTranscription,PainTextExtractor,MultimodalFusion,ClinicalExtractor,FFmpegTranscoder engine;
+    class RouterSessions,RouterPatients,RouterAlerts controller;
+    class Processor,LandmarkExtractor,Registry,BaseAnalyzer,Analyzers,Geometry,RepetitionDetector,HudRenderer,ObjectDetector,AudioTranscription,PainTextExtractor,MultimodalFusion,ClinicalExtractor,EvolutionService,FFmpegTranscoder engine;
     class MediaStorage,DBConnection,Repos infra;
     class ResultSink,FileSink,MongoSink,CompSink sink;
 ```
@@ -330,14 +337,12 @@ RAIZ_DO_REPOSITORIO/
 ### Coleções do MongoDB (`fiap-pos-ia-db`)
 
 #### Implementadas:
-1. **`sessoes`:** Documento central da sessão (`SessionDocument`). Contém `session_id`, `paciente_id`, `slot_id` (vínculo com o slot da prescrição, ex.: `SLOT-1`), `exercicio_id`, `case_id`, `side_evaluated`, `lgpd_aceite` (registro auditável do aceite do Termo de Consentimento LGPD para imagem e voz), `original_filename`, `file_size_bytes`, `status` (`enviado`, `processando`, `concluido`, `erro`), `etapa`, `compliance_score`, `target_repetitions`, repetições válidas/inválidas, total de desvios, `risk_classification` (`verde`, `atencao`, `critico`), `justificativas` explicáveis em português e referências relativas para os arquivos sob `data/` (`video_path`, `annotated_video_path`, `analysis_path`, `telemetry_path`).
+1. **`sessoes`:** Documento central da sessão (`SessionDocument`). Contém `session_id`, `paciente_id`, `slot_id` (vínculo com o slot da prescrição, ex.: `SLOT-1`), `dia_tratamento` (`1..D`), `series_prescritas` ($N$), `repeticoes_por_serie` ($M$), `serie_index`, `exercicio_id`, `case_id`, `side_evaluated`, `lgpd_aceite` (registro auditável do aceite do Termo de Consentimento LGPD para imagem e voz), `original_filename`, `file_size_bytes`, `status` (`enviado`, `processando`, `concluido`, `erro`), `etapa`, `compliance_score`, `target_repetitions`, repetições válidas/inválidas, total de desvios, métricas longitudinais (`amplitude_maxima`, `amplitude_media`, `consistencia_score`, `dor_score_0_10`, `dor_percentual_tempo`, `series_breakdown`), `avaliado_fisioterapeuta`, `risk_classification` (`verde`, `atencao`, `critico`), `justificativas` explicáveis em português e referências relativas para os arquivos sob `data/` (`video_path`, `annotated_video_path`, `analysis_path`, `telemetry_path`).
 2. **`eventos`:** Coleção desacoplada de eventos da sessão (`EventDocument`). Armazena cada repetição (`tipo: "repeticao"`, com pico angular, duração e validade), cada desvio detectado (`tipo: "desvio"`, com severidade, frame inicial/final e caminho do snapshot em `evidence/`) e cada fala relacionada à dor (`tipo: "fala_dor"`, com timestamps, nível e texto transcrito).
 3. **`pacientes`:** Cadastro do paciente (`PatientDocument` — `paciente_id`, `nome` fictício, `idade`, `observacoes` e flag `synthetic=True` para conformidade LGPD), com seed inicial automático (`PAC-001` a `PAC-004`).
 4. **`laudos`:** Diagnóstico médico ortopédico estruturado (`MedicalReportDocument` — `laudo_id`, `paciente_id`, `texto_original`, `regiao`, `lesao`, `movimentos_restritos`, `limite_amplitude_max`, `extraido_automaticamente` e `revisado_profissional`).
-5. **`planos`:** Prescrição do fisioterapeuta (`PlanDocument` — `plano_id`, `paciente_id`, `dor_maxima_aceitavel` na escala 0–10, `amplitude_esperada_texto`/`min`/`max` e lista de exercícios `PrescribedExerciseItem` com `slot_id`, `exercicio_id`, `series`, `repeticoes`, `lado`, `equipamento` e `instrucoes`).
-
-#### Planejadas para Passos Futuros:
-6. **`alertas`:** Notificações direcionadas ao painel do fisioterapeuta sobre desvios críticos ou relatos de dor acima do limiar.
+5. **`planos`:** Prescrição do fisioterapeuta (`PlanDocument` — `plano_id`, `paciente_id`, `dias_tratamento`, `dor_maxima_aceitavel` na escala 0–10, `amplitude_esperada_texto`/`min`/`max`, `avaliado_evolucao`, `observacoes_avaliacao_final` e lista de exercícios `PrescribedExerciseItem` com `slot_id`, `exercicio_id`, `dia_tratamento`, `dias_prescritos` para cronogramas diários personalizados, `series`, `repeticoes`, `lado`, `equipamento` e `instrucoes`).
+6. **`alertas`:** Notificações clínicas direcionadas ao painel do fisioterapeuta (`AlertDocument` — `alerta_id`, `paciente_id`, `session_id`, `slot_id`, `dia_tratamento`, `severidade` em `critico`/`atencao`/`verde`, `tipo`, `titulo`, `motivo`, `evidencia_resumo` e `estado` em `novo`/`lido`/`tratado`).
 
 ---
 
@@ -349,6 +354,7 @@ RAIZ_DO_REPOSITORIO/
 | **Detecção de equipamentos** | YOLO especializado para `faixa_elastica` e `halter`, ativado apenas nos exercícios que exigem esses objetos | Mantém a análise de pose e fornece status por frame e percentuais no relatório sem custo nos demais exercícios. |
 | **Transcrição e dor verbal** | Faster-Whisper local, preparação de áudio, prompt pt-BR e regras determinísticas de domínio | Evita custo e dependência de cloud e mantém segmentos temporais explicáveis para a timeline. |
 | **Extração de laudos e prescrições** | Extrator determinístico local em pt-BR (`clinical_extractor.py`) com revisão humana (*human-in-the-loop*) na UI | Identifica região, lesão e restrições angulares instantaneamente sem serviços externos, permitindo conferência e edição pelo fisioterapeuta. |
+| **Evolução Longitudinal e Alertas** | Agregador determinístico multi-dias (`evolution_service.py`), decomposição automática em séries (`Série 1..N`), agendamento por dia (`dias_prescritos`) e coleção `alertas` | Consolida a evolução clínica de Amplitude (°), Consistência (0–100%) e Dor (0–10) ao longo dos dias e sessões de tratamento com linguagem ética de apoio à decisão. |
 | **Integridade de Caracteres no Vídeo** | Renderização do HUD via Pillow (`ImageDraw` com fonte TrueType UTF-8) | Exibe acentuação correta em português (`ã`, `á`, `ç`) e notações científicas (`°`, `≥`), eliminando interrogações (`?`) típicas do OpenCV Hershey. |
 | **HUD Responsivo e Dinâmico** | Cálculo proporcional baseado na largura e altura do frame | Garante que vídeos verticais (típicos de gravações de smartphone) e horizontais exibam caixas de alerta perfeitamente enquadradas sem cortes de texto. |
 | **Streaming e Compatibilidade Web** | Transcodificação pós-renderização via FFmpeg em H.264 (`yuv420p` + `+faststart`) e Nginx com 250MB | Permite playback nativo instantâneo no frontend React via tag `<video>` em qualquer browser moderno sem erros de codec, suportando vídeos de alta resolução. |

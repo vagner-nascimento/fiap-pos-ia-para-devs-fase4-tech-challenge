@@ -118,8 +118,8 @@
 - **Testes Automatizados:** 139 testes passando no backend (`pytest tests/ -v`).
 
 ### Etapa 11: Relatório Final de Evolução Longitudinal Multi-Dias e Painel de Alertas (Issue #7 - Concluída)
-- **Modelagem Multi-Dias e Decomposição em Séries (`PlanDocument`, `SessionDocument`, `AlertDocument`):**
-  * Inclusão de `dias_tratamento`, `avaliado_evolucao` e `observacoes_avaliacao_final` em `PlanDocument`.
+- **Modelagem Multi-Dias, Prescrição por Dia e Decomposição em Séries (`PlanDocument`, `PrescribedExerciseItem`, `SessionDocument`, `AlertDocument`):**
+  * Inclusão de `dias_tratamento`, `avaliado_evolucao` e `observacoes_avaliacao_final` em `PlanDocument`, além de `dias_prescritos` e `dia_tratamento` em `PrescribedExerciseItem` para permitir prescrever exercícios diferentes em cada dia do tratamento.
   * Inclusão de `dia_tratamento`, `series_prescritas`, `repeticoes_por_serie`, `serie_index`, `amplitude_maxima`, `amplitude_media`, `consistencia_score`, `dor_score_0_10`, `dor_percentual_tempo`, `series_breakdown` (`Série 1..N`) e `avaliado_fisioterapeuta` em `SessionDocument`.
   * Criação de `AlertDocument` (`alertas`) e `AlertRepository` com severidade (`critico`, `atencao`, `verde`) e status (`novo`, `lido`, `tratado`).
 - **Serviço de Evolução Longitudinal (`backend/src/services/evolution_service.py`):**
@@ -131,8 +131,8 @@
 - **Frontend (`PatientEvolutionReportView.jsx`, `AlertsPanelView.jsx`, `PlanAndReportView.jsx`, `PatientPrescriptionView.jsx`, `SessionReportView.jsx`):**
   * **Tela 7 (`PatientEvolutionReportView.jsx`):** Cards comparativos dos 3 pilares (Amplitude, Consistência e Dor), 3 gráficos SVG longitudinais por dia (`Dia 1..D`), tabela por dia, evolução por exercício prescrito com decomposição expansível por série (`Série 1..N`), parecer clínico de apoio à decisão e formulário de avaliação final do fisioterapeuta/médico.
   * **Tela 6 (`AlertsPanelView.jsx`):** Painel de alertas com contadores de severidade (`■ Crítico`, `▲ Atenção`, `● Adequado`), filtros e ação `"Marcar como tratado"`.
-  * Seletores de dia de tratamento (`Dia 1..D`) na visão do paciente (`PatientPrescriptionView.jsx`), configuração de `dias_tratamento` no plano (`PlanAndReportView.jsx`) e card de desempenho por série no relatório individual (`SessionReportView.jsx`).
-- **Testes Automatizados:** 146 testes passando no backend (`pytest tests/ -v`).
+  * Seletores de dia de tratamento (`Dia 1..D`) na visão do paciente (`PatientPrescriptionView.jsx`) exibindo apenas os exercícios prescritos para o dia selecionado, abas e chips de dias por exercício no plano (`PlanAndReportView.jsx`) e card de desempenho por série no relatório individual (`SessionReportView.jsx`).
+- **Testes Automatizados:** 147 testes passando no backend (`pytest tests/ -v`).
 
 ---
 

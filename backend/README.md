@@ -128,9 +128,9 @@ backend/
 │   │   └── media_paths.py              # MediaStorage: isolamento e resolução de caminhos
 │   ├── infra/database/                 # Conexão MongoDB e repositórios
 │   │   ├── mongodb_client.py           # Conector e gerenciador de sessões PyMongo
-│   │   └── repositories/               # Session, Event, Patient, Plan e MedicalReport Repositories
+│   │   └── repositories/               # Session, Event, Patient, Plan, MedicalReport e Alert Repositories
 │   ├── models/                         # Modelos de Domínio e Transporte
-│   │   ├── database/                   # Documentos MongoDB (sessoes, eventos, pacientes, laudos, planos)
+│   │   ├── database/                   # Documentos MongoDB (sessoes, eventos, pacientes, laudos, planos, alertas)
 │   │   └── rest/                       # Payloads e Responses da API (JSON)
 │   ├── services/
 │   │   ├── audio_transcription.py      # Áudio, Faster-Whisper local e classificação de fala de dor
@@ -155,7 +155,7 @@ backend/
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (146 testes)
+    └── unit/                           # Testes unitários com Pytest (147 testes)
 ```
 
 ---
@@ -196,3 +196,4 @@ Para uma visão detalhada sobre a arquitetura do motor de visão e persistência
 * 📑 [ADR 0011: Detecção de Dor por Transcrição](../docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
 * 📑 [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](../docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
 * 📑 [ADR 0013: Busca Privada de Prescrição, Upload por Slot e Consentimento LGPD](../docs/arquitetura/adrs/0013-upload-de-videos-por-slot-e-consentimento-lgpd.md)
+* 📑 [ADR 0014: Relatório Final de Evolução Longitudinal Multi-Dias e Painel de Alertas](../docs/arquitetura/adrs/0014-relatorio-final-evolucao-multi-dias-e-alertas.md)

@@ -41,7 +41,7 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` | `/api/pacientes/{id}/sessoes` | Lista o histórico de sessões enviadas/concluídas pelo paciente. |
 | `POST` | `/api/pacientes/laudo/extrair` | Extrai entidades clínicas do texto do laudo em tempo real para conferência na UI. |
 | `GET` / `POST` | `/api/pacientes/{id}/laudo` | Consulta e salva o laudo médico estruturado do paciente. |
-| `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios (`dias_tratamento`, séries e repetições) e limites de dor/amplitude. |
+| `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios (`dias_tratamento`, `dias_prescritos` por exercício, séries e repetições) e limites de dor/amplitude. |
 | `GET` | `/api/pacientes/{id}/relatorio-evolucao` | Obtém o Relatório Final de Evolução Longitudinal do Paciente (Amplitude, Consistência e Nível de Dor por dia/exercício/série). |
 | `POST` | `/api/pacientes/{id}/seed-evolucao` | Simula/popula a jornada multi-dias completa do paciente (3 dias de tratamento) para demonstração imediata. |
 | `POST` | `/api/pacientes/{id}/avaliar-evolucao` | Registra a avaliação final longitudinal do fisioterapeuta/médico. |

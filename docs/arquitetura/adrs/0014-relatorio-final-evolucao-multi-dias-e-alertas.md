@@ -21,8 +21,9 @@ Além disso, o fisioterapeuta precisa de um **Painel de Alertas Clínicos** cons
 
 ## 2. Decisão Arquitetural
 
-1. **Modelagem Multi-Dias e Decomposição em Séries (`SessionDocument` e `PlanDocument`):**
+1. **Modelagem Multi-Dias, Prescrição por Dia e Decomposição em Séries (`SessionDocument`, `PlanDocument` e `PrescribedExerciseItem`):**
    - `PlanDocument` passa a armazenar `dias_tratamento` (default `3`), `avaliado_evolucao` e `observacoes_avaliacao_final`.
+   - `PrescribedExerciseItem` passa a suportar `dias_prescritos: list[int]` e `dia_tratamento: Optional[int]` (com helpers `applies_to_day(day, total_days)` e `resolved_days(total_days)`), permitindo que o fisioterapeuta prescreva **exercícios diferentes para cada dia do tratamento** (ex.: `FISIO-006` e `FISIO-003` no Dia 1; `FISIO-006` e `FISIO-001` no Dia 2) ou exercícios recorrentes em múltiplos dias.
    - `SessionDocument` passa a armazenar `dia_tratamento` (`1..D`), `series_prescritas` ($N$), `repeticoes_por_serie` ($M$), `serie_index` (opcional), `amplitude_maxima`, `amplitude_media`, `consistencia_score`, `dor_score_0_10`, `dor_percentual_tempo`, `series_breakdown` (lista de métricas por série `Série 1..N`) e `avaliado_fisioterapeuta`.
    - Quando um vídeo contém todas as repetições do exercício no dia, o motor `build_series_breakdown` agrupa automaticamente os `RepetitionEvent` (ou sintetiza a partir do resumo da sessão) em blocos de tamanho $M$ (`repeticoes_por_serie`), calculando a amplitude média, pico e consistência de cada série (`Série 1..N`).
 
@@ -47,7 +48,7 @@ Além disso, o fisioterapeuta precisa de um **Painel de Alertas Clínicos** cons
 - **Positivas:**
   - Atende integralmente à jornada multi-dias do paciente ($D$ dias $\times$ $K$ exercícios/dia $\times$ $N$ séries $\times$ $M$ repetições/série).
   - Resolve também as demandas correlatas de decomposição em múltiplas séries e histórico evolutivo por slot de exercício.
-  - Preserva 100% de compatibilidade retroativa com as sessões e testes existentes (146 testes automatizados passando no backend).
+  - Preserva 100% de compatibilidade retroativa com as sessões e testes existentes (147 testes automatizados passando no backend).
 - **Trade-offs:**
   - Para sessões legadas que não possuíam `amplitude_media` ou `series_breakdown` persistidos no documento da sessão, `ensure_session_metrics_populated` reconstrói essas métricas sob demanda a partir dos eventos no MongoDB ou dos contadores da sessão.
 

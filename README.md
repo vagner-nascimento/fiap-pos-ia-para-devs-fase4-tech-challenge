@@ -102,7 +102,7 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 2. **No Banco de Dados MongoDB (`fiap-pos-ia-db`):**
    * **Coleção `pacientes`**: Cadastro sintético dos pacientes (`paciente_id`, `nome`, `idade`, `observacoes`), com seed inicial (`PAC-001` a `PAC-004`);
    * **Coleção `laudos`**: Laudo médico estruturado com região anatômica, lesão, movimentos restritos e limite angular máximo extraídos do texto e revisados pelo profissional;
-   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (`dias_tratamento`, dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com `slot_id`, séries, repetições, lado e equipamento);
+   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (`dias_tratamento`, dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com `slot_id`, `dias_prescritos`/`dia_tratamento` por exercício, séries, repetições, lado e equipamento);
    * **Coleção `sessoes`**: Documento executivo consolidado com vínculo ao dia de tratamento (`dia_tratamento`), slot da prescrição (`slot_id`), séries e repetições (`series_prescritas`, `repeticoes_por_serie`, `series_breakdown`), métricas evolutivas (`amplitude_media`, `amplitude_maxima`, `consistencia_score`, `dor_score_0_10`), aceite LGPD (`lgpd_aceite`), arquivo original (`original_filename`, `file_size_bytes`), status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
    * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade), desvios posturais com referências às evidências fotográficas e falas relacionadas à dor (`fala_dor`);
    * **Coleção `alertas`**: Alertas clínicos automáticos de severidade (`critico`, `atencao`, `verde`) e status (`novo`, `lido`, `tratado`) gerados durante a jornada do paciente.
@@ -111,7 +111,7 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **146 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **147 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
