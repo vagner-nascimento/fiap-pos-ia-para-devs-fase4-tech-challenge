@@ -832,6 +832,20 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
                             {isDone && slotSession.compliance_score != null
                               ? ` · Conformidade: ${slotSession.compliance_score.toFixed(0)}%`
                               : ''}
+                            {slotSession.lgpd_aceite !== false && (
+                              <span
+                                className="ch ok"
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 8px',
+                                  marginLeft: '8px',
+                                  verticalAlign: 'middle',
+                                }}
+                                title="Consentimento LGPD (imagem e voz) registrado nesta sessão"
+                              >
+                                <ShieldCheck size={12} /> ● Termo LGPD aceito
+                              </span>
+                            )}
                           </p>
                         ) : (
                           <p className="mu" style={{ marginTop: '4px', fontSize: '12px' }}>

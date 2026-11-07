@@ -100,6 +100,8 @@ class SessionReportResponse(BaseModel):
 
     session_id: str
     paciente_id: Optional[str] = None
+    slot_id: Optional[str] = None
+    lgpd_aceite: bool = True
     exercicio_id: str
     exercicio_nome: str
     case_id: Optional[str] = None

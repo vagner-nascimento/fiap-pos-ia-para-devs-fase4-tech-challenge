@@ -11,7 +11,7 @@ import {
   getDatasetStatus,
   downloadDataset,
 } from '../api/sessions';
-import { Plus, RefreshCw, PlayCircle, FileText, Upload, Film, X, Download } from 'lucide-react';
+import { Plus, RefreshCw, PlayCircle, FileText, Upload, Film, X, Download, ShieldCheck } from 'lucide-react';
 
 /**
  * SessionsListView — Histórico de sessões e modal para nova análise biomecânica.
@@ -265,8 +265,24 @@ export function SessionsListView({ onSelectSession, onSelectProcessing }) {
                     >
                       <td className="session-id-cell">
                         <strong>{sess.session_id}</strong>
+                        {sess.slot_id && (
+                          <small className="mu" style={{ display: 'block', fontSize: '11px' }}>
+                            {sess.slot_id}
+                          </small>
+                        )}
                       </td>
-                      <td>{sess.paciente_id || 'PAC-001'}</td>
+                      <td>
+                        <div>{sess.paciente_id || 'PAC-001'}</div>
+                        {sess.lgpd_aceite !== false && (
+                          <span
+                            className="ch ok"
+                            style={{ fontSize: '10px', padding: '1px 6px', marginTop: '3px' }}
+                            title="Termo de Consentimento LGPD aceito pelo paciente"
+                          >
+                            <ShieldCheck size={11} /> ● LGPD aceito
+                          </span>
+                        )}
+                      </td>
                       <td>{sess.exercicio_id}</td>
                       <td className="mu">{formatDateTime(sess.created_at)}</td>
                       <td>

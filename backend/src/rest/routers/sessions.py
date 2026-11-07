@@ -754,6 +754,8 @@ def get_session_report(session_id: str) -> SessionReportResponse:
     return SessionReportResponse(
         session_id=session.session_id,
         paciente_id=session.paciente_id or "PAC-001",
+        slot_id=session.slot_id,
+        lgpd_aceite=session.lgpd_aceite if session.lgpd_aceite is not None else True,
         exercicio_id=session.exercicio_id,
         exercicio_nome=exercicio_nome,
         case_id=session.case_id,

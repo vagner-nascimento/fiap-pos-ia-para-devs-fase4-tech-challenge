@@ -420,5 +420,13 @@ def test_patient_slot_video_upload_and_lgpd_validation(client, tmp_path):
     assert slot2_sess["original_filename"] == "sessao_slot2_bastao.mp4"
     assert slot2_sess["file_size_bytes"] == len(video_bytes)
 
+    # 5. Verifica que o endpoint de relatório também retorna slot_id e lgpd_aceite
+    report_res = client.get(f"/api/sessoes/{created['session_id']}/relatorio")
+    assert report_res.status_code == 200
+    report_json = report_res.json()
+    assert report_json["slot_id"] == "SLOT-2"
+    assert report_json["lgpd_aceite"] is True
+
+
 
 
