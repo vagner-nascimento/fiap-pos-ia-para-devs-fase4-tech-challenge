@@ -18,7 +18,7 @@ frontend/
     ├── components/            # Telas da jornada e componentes do Design System
     │   ├── ds/                # Componentes base: Button, Card, Field, StatusChip, StepList, Timeline, VideoPlayer
     │   ├── PlanAndReportView.jsx       # Tela 1 e 8: Cadastro de paciente, plano de exercícios e laudo médico (Fisio)
-    │   ├── PatientPrescriptionView.jsx # Tela 2: Minha prescrição — busca de laudo, limites e exercícios pelo paciente
+    │   ├── PatientPrescriptionView.jsx # Telas 2 e 3: Minha prescrição e envio de vídeos por slot com termo LGPD (Paciente)
     │   ├── SessionsListView.jsx        # Listagem de sessões e modal de nova análise
     │   ├── ProcessingView.jsx          # Tela 4: Acompanhamento de processamento com polling
     │   └── SessionReportView.jsx       # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)

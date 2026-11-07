@@ -11,7 +11,9 @@ class CreateSessionResponse(BaseModel):
     etapa: str = Field(..., description="Etapa atual do fluxo de processamento")
     message: str = Field(..., description="Mensagem informativa sobre o processamento")
     paciente_id: Optional[str] = Field(default=None, description="ID do paciente vinculado")
+    slot_id: Optional[str] = Field(default=None, description="Identificador do slot na prescrição (ex: 'SLOT-1')")
     exercicio_id: str = Field(..., description="Exercício selecionado")
+    lgpd_aceite: bool = Field(default=True, description="Registro de aceite do termo LGPD")
     created_at: str = Field(..., description="Timestamp de criação")
 
 
@@ -20,11 +22,13 @@ class CreateSessionPayload(BaseModel):
 
     exercicio_id: str = Field(..., description="Identificador do caso ou exercício (ex: 'FISIO-001')")
     paciente_id: Optional[str] = Field(None, description="Identificador sintético do paciente (ex: 'PAC-001')")
+    slot_id: Optional[str] = Field(None, description="Identificador do slot da prescrição (ex: 'SLOT-1')")
     dataset_clip: Optional[str] = Field(
         None, description="Nome do clipe de referência do dataset (ex: 'FISIO-001-correto.mp4')"
     )
     side: Optional[str] = Field("auto", description="Lado do exercício: 'auto', 'direito', 'esquerdo', 'ambos'")
     target_repetitions: Optional[int] = Field(5, description="Número de repetições prescritas (alvo)")
+    lgpd_aceite: bool = Field(True, description="Confirmação do termo de consentimento LGPD")
     run_id: Optional[str] = Field(None, description="ID customizado opcional para a sessão")
 
 
