@@ -14,14 +14,16 @@ frontend/
 ├── Dockerfile                 # Build multi-stage (Node 20 + Nginx Alpine)
 └── src/
     ├── tokens.css             # Design Tokens oficiais (--fc-* e Plus Jakarta Sans)
-    ├── api/                   # Clientes REST desacoplados (patients.js, sessions.js, health.js)
+    ├── api/                   # Clientes REST desacoplados (patients.js, sessions.js, alerts.js, health.js)
     ├── components/            # Telas da jornada e componentes do Design System
     │   ├── ds/                # Componentes base: Button, Card, Field, StatusChip, StepList, Timeline, VideoPlayer
-    │   ├── PlanAndReportView.jsx       # Tela 1 e 8: Cadastro de paciente, plano de exercícios e laudo médico (Fisio)
-    │   ├── PatientPrescriptionView.jsx # Telas 2 e 3: Minha prescrição e envio de vídeos por slot com termo LGPD (Paciente)
-    │   ├── SessionsListView.jsx        # Listagem de sessões e modal de nova análise
-    │   ├── ProcessingView.jsx          # Tela 4: Acompanhamento de processamento com polling
-    │   └── SessionReportView.jsx       # Tela 5: Relatório (vídeo, timeline, dor, equipamento e laudo)
+    │   ├── PlanAndReportView.jsx          # Tela 1 e 8: Cadastro de paciente, plano de exercícios (multi-dias) e laudo médico (Fisio)
+    │   ├── PatientPrescriptionView.jsx    # Telas 2 e 3: Minha prescrição e envio de vídeos por dia/slot com termo LGPD (Paciente)
+    │   ├── SessionsListView.jsx           # Listagem de sessões e modal de nova análise
+    │   ├── ProcessingView.jsx             # Tela 4: Acompanhamento de processamento com polling
+    │   ├── SessionReportView.jsx          # Tela 5: Relatório da sessão (vídeo, timeline, séries, dor, equipamento e laudo)
+    │   ├── AlertsPanelView.jsx            # Tela 6: Painel de alertas clínicos com contadores e tratativa (Issue #7)
+    │   └── PatientEvolutionReportView.jsx # Tela 7: Relatório final de evolução longitudinal multi-dias (Issue #7)
     ├── App.jsx                # Shell da aplicação com sidebar de 220px
     ├── main.jsx               # Bootstrap React com importação de tokens
     └── styles.css             # Estilos utilitários globais
@@ -39,10 +41,13 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` | `/api/pacientes/{id}/sessoes` | Lista o histórico de sessões enviadas/concluídas pelo paciente. |
 | `POST` | `/api/pacientes/laudo/extrair` | Extrai entidades clínicas do texto do laudo em tempo real para conferência na UI. |
 | `GET` / `POST` | `/api/pacientes/{id}/laudo` | Consulta e salva o laudo médico estruturado do paciente. |
-| `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios e limites de dor/amplitude. |
+| `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios (`dias_tratamento`, séries e repetições) e limites de dor/amplitude. |
+| `GET` | `/api/pacientes/{id}/relatorio-evolucao` | Obtém o Relatório Final de Evolução Longitudinal do Paciente (Amplitude, Consistência e Nível de Dor por dia/exercício/série). |
+| `POST` | `/api/pacientes/{id}/seed-evolucao` | Simula/popula a jornada multi-dias completa do paciente (3 dias de tratamento) para demonstração imediata. |
+| `POST` | `/api/pacientes/{id}/avaliar-evolucao` | Registra a avaliação final longitudinal do fisioterapeuta/médico. |
 | `GET` | `/api/pacientes/catalogo-exercicios` | Retorna o catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`). |
-| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`, até 200MB) por slot (`slot_id`, `paciente_id`, `exercicio`/`exercicio_id`, `lgpd_aceite`) com progresso via `XMLHttpRequest` e inicia a análise (`202 Accepted`). |
-| `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON (suportando `slot_id` e `lgpd_aceite`). |
+| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`, até 200MB) por dia e slot (`dia_tratamento`, `slot_id`, `series_prescritas`, `repeticoes_por_serie`, `paciente_id`, `exercicio`/`exercicio_id`, `lgpd_aceite`) com progresso via `XMLHttpRequest` e inicia a análise (`202 Accepted`). |
+| `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON (suportando `slot_id`, `dia_tratamento`, `series_prescritas`, `repeticoes_por_serie` e `lgpd_aceite`). |
 | `GET` | `/api/sessoes/clips-referencia` | Alias de compatibilidade para o catálogo real do dataset baixado. |
 | `GET` | `/api/datasets/fisio/status` | Consulta se o dataset oficial já foi baixado. |
 | `POST` | `/api/datasets/fisio/download` | Solicita o download idempotente do dataset pelo backend. |
@@ -51,6 +56,8 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` | `/api/sessoes/{id}` | Recupera detalhes, classificação de risco e progresso da sessão (`current_step`, `current_step_index`, `total_steps`, `progress_percent`, `progress_message` e `processing_steps`). |
 | `GET` | `/api/sessoes/{id}/eventos` | Recupera a linha do tempo de repetições e desvios posturais. |
 | `GET` | `/api/sessoes/{id}/relatorio` | Payload estruturado para a tela de relatório individual e impressão médica. |
+| `PATCH` | `/api/sessoes/{id}/avaliar` | Marca a sessão individual como avaliada pelo fisioterapeuta. |
+| `GET` / `PATCH` | `/api/alertas` / `/api/alertas/{id}` | Lista alertas clínicos com contadores por severidade e atualiza o status (`novo`, `lido`, `tratado`). |
 | `GET` | `/media/...` | Streaming de vídeos anotados H.264 (`annotated.mp4`) e snapshots fotográficos (`evidence/*.jpg`). |
 
 

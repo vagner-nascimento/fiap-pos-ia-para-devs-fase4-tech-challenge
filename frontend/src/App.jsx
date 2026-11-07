@@ -12,6 +12,8 @@ import {
   RefreshCw,
   HeartPulse,
   UserCheck,
+  TrendingUp,
+  BellRing,
 } from 'lucide-react';
 import { fetchHealth } from './api/health';
 import { PlanAndReportView } from './components/PlanAndReportView';
@@ -19,12 +21,15 @@ import { PatientPrescriptionView } from './components/PatientPrescriptionView';
 import { SessionsListView } from './components/SessionsListView';
 import { ProcessingView } from './components/ProcessingView';
 import { SessionReportView } from './components/SessionReportView';
+import PatientEvolutionReportView from './components/PatientEvolutionReportView';
+import AlertsPanelView from './components/AlertsPanelView';
 import { Card } from './components/ds/Card';
 import { Button } from './components/ds/Button';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('sessions'); // 'plan' | 'prescription' | 'sessions' | 'processing' | 'report' | 'health'
+  const [currentView, setCurrentView] = useState('sessions'); // 'plan' | 'prescription' | 'sessions' | 'processing' | 'report' | 'evolution' | 'alerts' | 'health'
   const [activeSessionId, setActiveSessionId] = useState(null);
+  const [activePatientId, setActivePatientId] = useState('PAC-001');
 
   // Estado da tela de Health Check
   const [health, setHealth] = useState(null);
@@ -65,6 +70,17 @@ export default function App() {
 
   const handleBackToSessions = () => {
     setCurrentView('sessions');
+  };
+
+  const handleOpenEvolution = (patientId = 'PAC-001') => {
+    if (patientId) {
+      setActivePatientId(patientId);
+    }
+    setCurrentView('evolution');
+  };
+
+  const handleOpenAlerts = () => {
+    setCurrentView('alerts');
   };
 
   const isHealthy = health?.status === 'healthy' && health?.database === 'healthy';
@@ -114,6 +130,22 @@ export default function App() {
 
           <button
             type="button"
+            className={`sidebar-nav-item ${currentView === 'evolution' ? 'on' : ''}`}
+            onClick={() => setCurrentView('evolution')}
+          >
+            <TrendingUp size={16} /> <span>Evolução do paciente</span>
+          </button>
+
+          <button
+            type="button"
+            className={`sidebar-nav-item ${currentView === 'alerts' ? 'on' : ''}`}
+            onClick={() => setCurrentView('alerts')}
+          >
+            <BellRing size={16} /> <span>Painel de alertas</span>
+          </button>
+
+          <button
+            type="button"
             className={`sidebar-nav-item ${currentView === 'health' ? 'on' : ''}`}
             onClick={() => setCurrentView('health')}
           >
@@ -125,12 +157,15 @@ export default function App() {
 
       {/* Área de Conteúdo Principal */}
       <main className="m">
-        {currentView === 'plan' && <PlanAndReportView />}
+        {currentView === 'plan' && (
+          <PlanAndReportView onOpenEvolution={handleOpenEvolution} />
+        )}
 
         {currentView === 'prescription' && (
           <PatientPrescriptionView
             onSelectSession={handleOpenReport}
             onSelectProcessing={handleOpenProcessing}
+            onOpenEvolution={handleOpenEvolution}
           />
         )}
 
@@ -153,6 +188,22 @@ export default function App() {
           <SessionReportView
             sessionId={activeSessionId}
             onBackToSessions={handleBackToSessions}
+            onOpenEvolution={handleOpenEvolution}
+          />
+        )}
+
+        {currentView === 'evolution' && (
+          <PatientEvolutionReportView
+            initialPatientId={activePatientId}
+            onSelectSession={handleOpenReport}
+            onOpenAlerts={handleOpenAlerts}
+          />
+        )}
+
+        {currentView === 'alerts' && (
+          <AlertsPanelView
+            onSelectSession={handleOpenReport}
+            onOpenEvolution={handleOpenEvolution}
           />
         )}
 

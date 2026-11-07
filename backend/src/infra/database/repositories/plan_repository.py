@@ -51,3 +51,25 @@ class PlanRepository:
             return None
         return PlanDocument.model_validate(doc)
 
+    def mark_evolution_evaluated(
+        self,
+        paciente_id: str,
+        avaliado: bool = True,
+        observacoes: Optional[str] = None,
+    ) -> Optional[PlanDocument]:
+        """Registra a avaliação final do médico/fisioterapeuta sobre a evolução do plano."""
+        now = datetime.now(timezone.utc).isoformat()
+        update_fields: dict = {
+            "avaliado_evolucao": avaliado,
+            "updated_at": now,
+        }
+        if observacoes is not None:
+            update_fields["observacoes_avaliacao_final"] = observacoes
+        result = self.collection.update_one(
+            {"paciente_id": paciente_id},
+            {"$set": update_fields},
+        )
+        if result.matched_count == 0:
+            return None
+        return self.get_plan_by_patient(paciente_id)
+

@@ -11,11 +11,19 @@ from pathlib import Path
 from typing import Any, Optional
 
 from config.media_paths import MediaStorage
+from infra.database.repositories.alert_repository import AlertRepository
 from infra.database.repositories.event_repository import EventRepository
+from infra.database.repositories.medical_report_repository import MedicalReportRepository
+from infra.database.repositories.patient_repository import PatientRepository
+from infra.database.repositories.plan_repository import PlanRepository
 from infra.database.repositories.session_repository import SessionRepository
 from models.database.event import EventDocument, EventType
 from models.database.session import RiskClassification, SessionDocument, SessionStatus
 from services.audio_transcription import SpeechSegment
+from services.evolution_service import (
+    compute_session_evolution_metrics,
+    generate_alerts_for_session,
+)
 from services.pose.models import DeviationSeverity, ExerciseAnalysisResult
 
 logger = logging.getLogger(__name__)
@@ -164,11 +172,47 @@ class MongoResultSink(ResultSink):
         merged_extra = dict(existing_session.extra if existing_session and existing_session.extra else {})
         merged_extra.update(result.extra or {})
 
+        resolved_paciente_id = paciente_id or (existing_session.paciente_id if existing_session else None)
+        resolved_slot_id = kwargs.get("slot_id") or (existing_session.slot_id if existing_session else None)
+        resolved_dia = int(
+            kwargs.get("dia_tratamento")
+            or (existing_session.dia_tratamento if existing_session else 1)
+            or 1
+        )
+        resolved_series = int(
+            kwargs.get("series_prescritas")
+            or (existing_session.series_prescritas if existing_session else 1)
+            or 1
+        )
+        resolved_reps_serie = int(
+            kwargs.get("repeticoes_por_serie")
+            or (existing_session.repeticoes_por_serie if existing_session else None)
+            or result.session_summary.target_repetitions
+            or 5
+        )
+        resolved_serie_index = (
+            kwargs.get("serie_index")
+            if kwargs.get("serie_index") is not None
+            else (existing_session.serie_index if existing_session else None)
+        )
+
+        speech_segments = kwargs.get("speech_segments", [])
+        evo_metrics = compute_session_evolution_metrics(
+            result=result,
+            speech_segments=speech_segments,
+            series_prescritas=resolved_series,
+            repeticoes_por_serie=resolved_reps_serie,
+        )
+
         # Criação do documento da sessão
         session_doc = SessionDocument(
             session_id=run_id,
-            paciente_id=paciente_id or (existing_session.paciente_id if existing_session else None),
-            slot_id=kwargs.get("slot_id") or (existing_session.slot_id if existing_session else None),
+            paciente_id=resolved_paciente_id,
+            slot_id=resolved_slot_id,
+            dia_tratamento=resolved_dia,
+            series_prescritas=resolved_series,
+            repeticoes_por_serie=resolved_reps_serie,
+            serie_index=resolved_serie_index,
             exercicio_id=result.session_summary.exercise_id,
             case_id=result.session_summary.case_id,
             side_evaluated=result.session_summary.side_evaluated,
@@ -194,6 +238,15 @@ class MongoResultSink(ResultSink):
             analysis_path=analysis_rel,
             telemetry_path=telemetry_rel,
             compliance_score=result.session_summary.compliance_score,
+            amplitude_maxima=evo_metrics["amplitude_maxima"],
+            amplitude_media=evo_metrics["amplitude_media"],
+            consistencia_score=evo_metrics["consistencia_score"],
+            dor_score_0_10=evo_metrics["dor_score_0_10"],
+            dor_percentual_tempo=evo_metrics["dor_percentual_tempo"],
+            series_breakdown=evo_metrics["series_breakdown"],
+            avaliado_fisioterapeuta=(
+                existing_session.avaliado_fisioterapeuta if existing_session else False
+            ),
             target_repetitions=result.session_summary.target_repetitions,
             completed_repetitions=result.session_summary.completed_repetitions,
             valid_repetitions=result.session_summary.valid_repetitions,
@@ -280,6 +333,24 @@ class MongoResultSink(ResultSink):
         # Persistência via repositórios
         saved_session_id = self.session_repo.save_session(session_doc)
         inserted_events = self.event_repo.save_events(events)
+
+        # Geração automática de alertas clínicos na coleção 'alertas' quando aplicável
+        try:
+            if session_doc.paciente_id:
+                patient_doc = PatientRepository().get_patient(session_doc.paciente_id)
+                plan_doc = PlanRepository().get_plan_by_patient(session_doc.paciente_id)
+                report_doc = MedicalReportRepository().get_report_by_patient(session_doc.paciente_id)
+                generated_alerts = generate_alerts_for_session(
+                    session=session_doc,
+                    paciente_nome=patient_doc.nome if patient_doc else session_doc.paciente_id,
+                    plano=plan_doc,
+                    laudo=report_doc,
+                )
+                alert_repo = AlertRepository()
+                for alt in generated_alerts:
+                    alert_repo.save_alert(alt)
+        except Exception as exc:
+            logger.warning("Não foi possível registrar alertas automáticos para run_id=%s: %s", run_id, exc)
 
         logger.info(
             "MongoDB: Sessão %s persistida com classificação %s e %d eventos associados.",

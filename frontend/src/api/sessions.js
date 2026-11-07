@@ -138,3 +138,13 @@ export async function listExercises() {
   const response = await fetch(`${apiBaseUrl}/sessoes/exercicios`);
   return handleResponse(response, 'Falha ao listar os exercícios disponíveis.');
 }
+
+/**
+ * Marca uma sessão individual como avaliada pelo fisioterapeuta e trata seus alertas (Issue #7).
+ */
+export async function markSessionEvaluated(sessionId) {
+  const response = await fetch(`${apiBaseUrl}/sessoes/${encodeURIComponent(sessionId)}/avaliar`, {
+    method: 'PATCH',
+  });
+  return handleResponse(response, 'Falha ao marcar sessão como avaliada.');
+}

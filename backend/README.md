@@ -41,19 +41,24 @@ uv run python -m src.main
   * `GET /api/pacientes/{id}/sessoes`: Retorna o histórico de sessões do paciente ordenadas da mais recente para a mais antiga;
   * `POST /api/pacientes/laudo/extrair`: Extrai automaticamente região, lesão e restrições a partir do texto livre do laudo (preview);
   * `POST /api/pacientes/{id}/laudo` · `GET /api/pacientes/{id}/laudo`: Salva e consulta o laudo médico estruturado do paciente;
-  * `POST /api/pacientes/{id}/plano` · `GET /api/pacientes/{id}/plano`: Salva e consulta o plano de prescrição de exercícios e limites clínicos do paciente;
+  * `POST /api/pacientes/{id}/plano` · `GET /api/pacientes/{id}/plano`: Salva e consulta o plano de prescrição de exercícios (`dias_tratamento`, séries e repetições por exercício) e limites clínicos do paciente;
+  * `GET /api/pacientes/{id}/relatorio-evolucao`: Relatório Final de Evolução Longitudinal do paciente (Amplitude, Consistência e Nível de Dor ao longo dos dias e sessões de exercícios — Issue #7);
+  * `POST /api/pacientes/{id}/seed-evolucao`: Popula jornada multi-dias completa (`Dia 1`, `Dia 2`, `Dia 3`) para demonstração imediata (Issue #7);
+  * `POST /api/pacientes/{id}/avaliar-evolucao`: Registra avaliação final do fisioterapeuta/médico sobre a evolução longitudinal do paciente (Issue #7);
   * `GET /api/pacientes/catalogo-exercicios`: Catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`) para prescrição.
-* **Rotas de Sessões e Biomecânica (Issues #5 e #6):**
-  * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`, `.mov`, `.webm` de até `200 MB`) com `paciente_id`, `slot_id`, `exercicio` (ou `exercicio_id`) e `lgpd_aceite=true`, registra sessão e processa em background (`202 Accepted`);
+* **Rotas de Sessões, Biomecânica e Alertas (Issues #5, #6 e #7):**
+  * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`, `.mov`, `.webm` de até `200 MB`) com `paciente_id`, `slot_id`, `dia_tratamento`, `series_prescritas`, `repeticoes_por_serie`, `exercicio` (ou `exercicio_id`) e `lgpd_aceite=true`, registra sessão e processa em background (`202 Accepted`);
   * `GET /api/datasets/fisio/status`: Consulta se o dataset oficial está disponível;
   * `POST /api/datasets/fisio/download`: Clona o dataset oficial para a área persistente do backend;
   * `GET /api/datasets/fisio/clips`: Lista os vídeos reais disponíveis;
-  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe catalogado do dataset (suportando também `slot_id` e `lgpd_aceite`);
+  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe catalogado do dataset (suportando também `slot_id`, `dia_tratamento`, `series_prescritas`, `repeticoes_por_serie` e `lgpd_aceite`);
   * `GET /api/sessoes/clips-referencia`: Alias do catálogo de clipes reais;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score, classificação de risco e progresso (`processing_steps`, `current_step`, `current_step_index`, `total_steps`, `progress_percent` e `progress_message`);
   * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições, desvios e falas de dor;
-  * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico (incluindo `slot_id`, `lgpd_aceite` e `comparacao_clinica`);
+  * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico (incluindo `slot_id`, `dia_tratamento`, `series_breakdown`, `lgpd_aceite` e `comparacao_clinica`);
+  * `PATCH /api/sessoes/{id}/avaliar`: Marca a sessão como avaliada pelo fisioterapeuta;
+  * `GET /api/alertas` · `PATCH /api/alertas/{id}`: Lista alertas clínicos com contadores por severidade (`critico`, `atencao`, `verde`) e atualiza status (`novo`, `lido`, `tratado`);
   * `GET /api/sessoes/exercicios`: Catálogo de exercícios com os equipamentos obrigatórios;
   * `GET /media/...`: Serve os vídeos anotados transcodificados em H.264 e snapshots de evidência em JPG.
 
@@ -130,6 +135,7 @@ backend/
 │   ├── services/
 │   │   ├── audio_transcription.py      # Áudio, Faster-Whisper local e classificação de fala de dor
 │   │   ├── clinical_extractor.py       # Extrator determinístico de entidades de laudos médicos (pt-BR)
+│   │   ├── evolution_service.py        # Agregação longitudinal multi-dias (Amplitude, Consistência, Dor, Séries e Alertas)
 │   │   └── pose/                       # Motor de Visão Computacional
 │   │       ├── analyzers/              # 7 Analisadores especializados (FISIO-001 a 007)
 │   │       ├── base_analyzer.py        # Base com Template Method, histerese e auto-lado
@@ -145,11 +151,11 @@ backend/
 │   │       └── video_processor.py      # Orquestrador ponta a ponta do pipeline de vídeo
 │   ├── yolo/
 │   │   └── best.pt                 # Melhor checkpoint pré-treinado; não há treino na API
-│   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/pacientes, /api/sessoes)
+│   ├── rest/routers/                   # Endpoints da API REST (/api/health, /api/pacientes, /api/sessoes, /api/alertas)
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (139 testes)
+    └── unit/                           # Testes unitários com Pytest (146 testes)
 ```
 
 ---

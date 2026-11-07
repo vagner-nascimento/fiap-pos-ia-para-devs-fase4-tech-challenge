@@ -86,6 +86,8 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
   `GET http://localhost:3000/api/sessoes/{id}/eventos`
 * **Streaming de vídeo anotado e snapshots:**
   `GET http://localhost:3000/media/outputs/{id}/pose/annotated.mp4`
+* **Relatório Final de Evolução Longitudinal Multi-Dias e Painel de Alertas (Issue #7):**
+  `GET http://localhost:3000/api/pacientes/{id}/relatorio-evolucao` · `POST http://localhost:3000/api/pacientes/{id}/seed-evolucao` · `POST http://localhost:3000/api/pacientes/{id}/avaliar-evolucao` · `GET http://localhost:3000/api/alertas` · `PATCH http://localhost:3000/api/alertas/{id}`
 
 ---
 
@@ -100,15 +102,16 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 2. **No Banco de Dados MongoDB (`fiap-pos-ia-db`):**
    * **Coleção `pacientes`**: Cadastro sintético dos pacientes (`paciente_id`, `nome`, `idade`, `observacoes`), com seed inicial (`PAC-001` a `PAC-004`);
    * **Coleção `laudos`**: Laudo médico estruturado com região anatômica, lesão, movimentos restritos e limite angular máximo extraídos do texto e revisados pelo profissional;
-   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com `slot_id`, séries, repetições, lado e equipamento);
-   * **Coleção `sessoes`**: Documento executivo consolidado com vínculo ao slot da prescrição (`slot_id`), aceite LGPD (`lgpd_aceite`), arquivo original (`original_filename`, `file_size_bytes`), status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
-   * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade), desvios posturais com referências às evidências fotográficas e falas relacionadas à dor (`fala_dor`).
+   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (`dias_tratamento`, dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com `slot_id`, séries, repetições, lado e equipamento);
+   * **Coleção `sessoes`**: Documento executivo consolidado com vínculo ao dia de tratamento (`dia_tratamento`), slot da prescrição (`slot_id`), séries e repetições (`series_prescritas`, `repeticoes_por_serie`, `series_breakdown`), métricas evolutivas (`amplitude_media`, `amplitude_maxima`, `consistencia_score`, `dor_score_0_10`), aceite LGPD (`lgpd_aceite`), arquivo original (`original_filename`, `file_size_bytes`), status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
+   * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade), desvios posturais com referências às evidências fotográficas e falas relacionadas à dor (`fala_dor`);
+   * **Coleção `alertas`**: Alertas clínicos automáticos de severidade (`critico`, `atencao`, `verde`) e status (`novo`, `lido`, `tratado`) gerados durante a jornada do paciente.
 
 ---
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **139 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **146 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -134,9 +137,11 @@ uv run pytest tests -v
   * [ADR 0011: Detecção de Dor por Transcrição](docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
   * [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
   * [ADR 0013: Busca Privada de Prescrição, Upload por Slot e Consentimento LGPD](docs/arquitetura/adrs/0013-upload-de-videos-por-slot-e-consentimento-lgpd.md)
+  * [ADR 0014: Relatório Final de Evolução Longitudinal Multi-Dias e Painel de Alertas](docs/arquitetura/adrs/0014-relatorio-final-evolucao-multi-dias-e-alertas.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
 * 🗂️ **[Plano – Issue #3 (Inserção de Dados de Laudo e Prescrições)](plans/plano-issue-3-insercao-laudo-prescricoes.md)** — Especificação de backend, extração clínica e frontend para planos e laudos;
 * 🗂️ **[Plano – Issue #4 (Busca de Dados de Laudo e Prescrições pelo Paciente)](plans/plano-issue-4-busca-laudo-prescricoes.md)** — Especificação da visão do paciente (Tela 2 — *"Minha prescrição"*), busca tolerante a acentos e status por slot;
 * 🗂️ **[Plano – Issue #5 (Upload de Vídeo de Seção de Exercícios pelo Paciente)](plans/plano-issue-5-upload-videos-paciente.md)** — Especificação do upload de vídeos por slot prescrito (Tela 3 — *"Enviar sessões"*), progresso via XHR e aceite LGPD;
+* 🗂️ **[Plano – Issue #7 (Relatório Final de Evolução do Paciente e Painel de Alertas)](plans/plano-issue-7-relatorio-final-evolucao-alertas.md)** — Especificação da jornada multi-dias ($N$ séries $\times$ $M$ repetições por exercício), evolução de amplitude/consistência/dor e alertas clínicos;
 * 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
 * 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).
