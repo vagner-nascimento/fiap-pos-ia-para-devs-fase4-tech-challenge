@@ -124,27 +124,62 @@ def _run_pose_analysis_pipeline(
         )
 
 
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"}
+MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # Limite de 200 MB (DESIGN.md seção 4 / PRD seção 7)
+
+
 def _resolve_and_prepare_video(
     session_id: str,
     exercicio_id: str,
     file: Optional[UploadFile] = None,
     dataset_clip: Optional[str] = None,
     video_path: Optional[str] = None,
-) -> Path:
+) -> tuple[Path, Optional[str], Optional[int]]:
     """Resolve o caminho de vídeo (seja upload multipart, clipe do dataset ou caminho local)."""
     storage = MediaStorage.from_env()
 
     if file is not None and getattr(file, "filename", None):
+        raw_filename = Path(file.filename).name
+        ext = Path(raw_filename).suffix.lower()
+        if ext not in ALLOWED_VIDEO_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Formato de arquivo inválido ('{ext or raw_filename}'). "
+                    "Envie um arquivo de vídeo válido (.mp4, .mov, .webm)."
+                ),
+            )
+
         input_path = storage.session_input(session_id)
         input_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(input_path, "wb") as buffer:
-            while chunk := file.file.read(1024 * 1024):
-                buffer.write(chunk)
-        return input_path
+        total_bytes = 0
+        try:
+            with open(input_path, "wb") as buffer:
+                while chunk := file.file.read(1024 * 1024):
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="O arquivo de vídeo excede o limite máximo permitido de 200 MB.",
+                        )
+                    buffer.write(chunk)
+        except HTTPException:
+            input_path.unlink(missing_ok=True)
+            raise
+
+        if total_bytes == 0:
+            input_path.unlink(missing_ok=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O arquivo de vídeo enviado está vazio.",
+            )
+        return input_path, raw_filename, total_bytes
 
     if dataset_clip:
         try:
-            return DatasetService().resolve_clip(exercicio_id, dataset_clip)
+            clip_path = DatasetService().resolve_clip(exercicio_id, dataset_clip)
+            size_bytes = clip_path.stat().st_size if clip_path.exists() else None
+            return clip_path, Path(dataset_clip).name, size_bytes
         except DatasetError as error:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
@@ -155,7 +190,7 @@ def _resolve_and_prepare_video(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Arquivo de vídeo não encontrado em '{video_path}'.",
             )
-        return local_path
+        return local_path, local_path.name, local_path.stat().st_size
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -163,7 +198,12 @@ def _resolve_and_prepare_video(
     )
 
 
-def _normalize_exercise_id(exercicio_id: str) -> str:
+def _normalize_exercise_id(exercicio_id: Optional[str]) -> str:
+    if not exercicio_id or not exercicio_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="É obrigatório informar 'exercicio_id' ou 'exercicio'.",
+        )
     try:
         return canonical_case_id(exercicio_id)
     except KeyError as exc:
@@ -173,6 +213,14 @@ def _normalize_exercise_id(exercicio_id: str) -> str:
         ) from exc
 
 
+def _validate_lgpd_consent(lgpd_aceite: bool) -> None:
+    if not lgpd_aceite:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="É obrigatório aceitar o termo de consentimento LGPD (imagem e voz) para enviar a sessão.",
+        )
+
+
 def _init_session_record(
     session_id: str,
     exercicio_id: str,
@@ -180,6 +228,10 @@ def _init_session_record(
     side: str,
     target_repetitions: Optional[int],
     video_target: Path,
+    slot_id: Optional[str] = None,
+    lgpd_aceite: bool = True,
+    original_filename: Optional[str] = None,
+    file_size_bytes: Optional[int] = None,
 ) -> SessionDocument:
     """Cria e persiste o registro inicial da sessão com status 'processando'."""
     storage = MediaStorage.from_env()
@@ -194,9 +246,13 @@ def _init_session_record(
     session_doc = SessionDocument(
         session_id=session_id,
         paciente_id=paciente_id,
+        slot_id=slot_id,
         exercicio_id=exercicio_id,
         case_id=exercicio_id,
         side_evaluated=side or "auto",
+        lgpd_aceite=lgpd_aceite,
+        original_filename=original_filename,
+        file_size_bytes=file_size_bytes,
         status=SessionStatus.PROCESSANDO,
         etapa="video_received",
         current_step="video_received",
@@ -225,15 +281,18 @@ def _init_session_record(
     summary="Criar sessão via upload de vídeo (multipart/form-data)",
     description=(
         "Endpoint principal conforme PRD v1.2 seção 6.3: recebe upload de vídeo multipart "
-        "com paciente_id e exercicio, registra a sessão no MongoDB e processa a visão em segundo plano."
+        "com paciente_id e exercicio (ou exercicio_id), registra a sessão no MongoDB e processa a visão em segundo plano."
     ),
 )
 def create_session(
     response: Response,
     background_tasks: BackgroundTasks,
     file: Optional[UploadFile] = File(None, description="Arquivo de vídeo gravado (.mp4)"),
-    exercicio_id: str = Form(..., description="Identificador do caso ou exercício (ex: 'FISIO-001')"),
+    exercicio_id: Optional[str] = Form(None, description="Identificador do caso ou exercício (ex: 'FISIO-001')"),
+    exercicio: Optional[str] = Form(None, description="Alias do identificador do exercício conforme PRD v1.2"),
     paciente_id: Optional[str] = Form(None, description="Identificador sintético do paciente (ex: 'PAC-001')"),
+    slot_id: Optional[str] = Form(None, description="Identificador do slot na prescrição (ex: 'SLOT-1')"),
+    lgpd_aceite: bool = Form(True, description="Aceite do termo de consentimento LGPD para imagem e voz"),
     dataset_clip: Optional[str] = Form(None, description="Nome do clipe dentro de datasets se não enviar arquivo direto"),
     video_path: Optional[str] = Form(None, description="Caminho do vídeo já presente no filesystem"),
     side: Optional[str] = Form("auto", description="Lado avaliado: auto, direito, esquerdo, ambos"),
@@ -241,11 +300,12 @@ def create_session(
     run_id: Optional[str] = Form(None, description="ID customizado da sessão (se omitido, será gerado)"),
     sync: bool = Query(False, description="Se True, executa síncrono e retorna 201 com o documento completo"),
 ):
-    exercicio_id = _normalize_exercise_id(exercicio_id)
-    session_id = run_id or f"{exercicio_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-    video_target = _resolve_and_prepare_video(
+    _validate_lgpd_consent(lgpd_aceite)
+    resolved_exercise_id = _normalize_exercise_id(exercicio_id or exercicio)
+    session_id = run_id or f"{resolved_exercise_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    video_target, orig_name, size_bytes = _resolve_and_prepare_video(
         session_id=session_id,
-        exercicio_id=exercicio_id,
+        exercicio_id=resolved_exercise_id,
         file=file,
         dataset_clip=dataset_clip,
         video_path=video_path,
@@ -253,17 +313,21 @@ def create_session(
 
     _init_session_record(
         session_id=session_id,
-        exercicio_id=exercicio_id,
+        exercicio_id=resolved_exercise_id,
         paciente_id=paciente_id,
         side=side or "auto",
         target_repetitions=target_repetitions,
         video_target=video_target,
+        slot_id=slot_id,
+        lgpd_aceite=lgpd_aceite,
+        original_filename=orig_name,
+        file_size_bytes=size_bytes,
     )
 
     if sync:
         _run_pose_analysis_pipeline(
             video_path=video_target,
-            exercicio_id=exercicio_id,
+            exercicio_id=resolved_exercise_id,
             session_id=session_id,
             side=side or "auto",
             target_repetitions=target_repetitions,
@@ -278,7 +342,7 @@ def create_session(
     background_tasks.add_task(
         _run_pose_analysis_pipeline,
         video_path=video_target,
-        exercicio_id=exercicio_id,
+        exercicio_id=resolved_exercise_id,
         session_id=session_id,
         side=side or "auto",
         target_repetitions=target_repetitions,
@@ -291,7 +355,9 @@ def create_session(
         etapa="video_received",
         message="Vídeo recebido com sucesso. Processamento biomecânico iniciado em background.",
         paciente_id=paciente_id,
-        exercicio_id=exercicio_id,
+        slot_id=slot_id,
+        exercicio_id=resolved_exercise_id,
+        lgpd_aceite=lgpd_aceite,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -312,9 +378,10 @@ def create_session_from_reference(
     background_tasks: BackgroundTasks,
     sync: bool = Query(False, description="Se True, executa síncrono e retorna 201 com o documento completo"),
 ):
+    _validate_lgpd_consent(payload.lgpd_aceite)
     payload.exercicio_id = _normalize_exercise_id(payload.exercicio_id)
     session_id = payload.run_id or f"{payload.exercicio_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-    video_target = _resolve_and_prepare_video(
+    video_target, orig_name, size_bytes = _resolve_and_prepare_video(
         session_id=session_id,
         exercicio_id=payload.exercicio_id,
         dataset_clip=payload.dataset_clip,
@@ -327,6 +394,10 @@ def create_session_from_reference(
         side=payload.side or "auto",
         target_repetitions=payload.target_repetitions,
         video_target=video_target,
+        slot_id=payload.slot_id,
+        lgpd_aceite=payload.lgpd_aceite,
+        original_filename=orig_name,
+        file_size_bytes=size_bytes,
     )
 
     if sync:
@@ -360,7 +431,9 @@ def create_session_from_reference(
         etapa="video_received",
         message="Sessão iniciada via referência. Análise biomecânica em background.",
         paciente_id=payload.paciente_id,
+        slot_id=payload.slot_id,
         exercicio_id=payload.exercicio_id,
+        lgpd_aceite=payload.lgpd_aceite,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -681,6 +754,8 @@ def get_session_report(session_id: str) -> SessionReportResponse:
     return SessionReportResponse(
         session_id=session.session_id,
         paciente_id=session.paciente_id or "PAC-001",
+        slot_id=session.slot_id,
+        lgpd_aceite=session.lgpd_aceite if session.lgpd_aceite is not None else True,
         exercicio_id=session.exercicio_id,
         exercicio_nome=exercicio_nome,
         case_id=session.case_id,

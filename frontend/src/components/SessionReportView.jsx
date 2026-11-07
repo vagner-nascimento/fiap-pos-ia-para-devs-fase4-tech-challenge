@@ -5,7 +5,7 @@ import { StatusChip } from './ds/StatusChip';
 import { VideoPlayer } from './ds/VideoPlayer';
 import { Timeline } from './ds/Timeline';
 import { getSessionReport } from '../api/sessions';
-import { Printer, ArrowLeft, CheckCircle2, ZoomIn, X } from 'lucide-react';
+import { Printer, ArrowLeft, CheckCircle2, ZoomIn, X, ShieldCheck } from 'lucide-react';
 
 /**
  * SessionReportView — Tela 5 (Relatório da Sessão):
@@ -131,10 +131,22 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
       <header className="report-header">
         <div>
           <h1>Relatório da sessão</h1>
-          <p className="mu">
-            {report.paciente_id || 'Paciente'} · {report.case_id || report.exercicio_id} {report.exercicio_nome} ·{' '}
-            {report.valid_repetitions} de {report.target_repetitions || 5} repetições válidas
-          </p>
+          <div className="f" style={{ flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+            <p className="mu">
+              {report.paciente_id || 'Paciente'}
+              {report.slot_id ? ` · ${report.slot_id}` : ''} · {report.case_id || report.exercicio_id}{' '}
+              {report.exercicio_nome} · {report.valid_repetitions} de {report.target_repetitions || 5}{' '}
+              repetições válidas
+            </p>
+            {report.lgpd_aceite !== false && (
+              <span
+                className="ch ok"
+                title="O paciente aceitou o Termo de Consentimento LGPD para imagem e voz nesta sessão"
+              >
+                <ShieldCheck size={13} /> ● Termo LGPD aceito
+              </span>
+            )}
+          </div>
         </div>
         <StatusChip
           level={riskLevel}
@@ -323,6 +335,17 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
               <StatusChip
                 level="info"
                 label={report.comparacao_clinica?.inconsistencia?.label || 'Nenhuma detectada'}
+              />
+            </div>
+            <div className="clinical-row">
+              <span>Consentimento LGPD</span>
+              <StatusChip
+                level={report.lgpd_aceite !== false ? 'ok' : 'warn'}
+                label={
+                  report.lgpd_aceite !== false
+                    ? 'Termo LGPD aceito (imagem e voz)'
+                    : 'Pendente de registro'
+                }
               />
             </div>
 

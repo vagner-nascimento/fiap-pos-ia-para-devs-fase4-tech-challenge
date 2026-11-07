@@ -43,17 +43,17 @@ uv run python -m src.main
   * `POST /api/pacientes/{id}/laudo` · `GET /api/pacientes/{id}/laudo`: Salva e consulta o laudo médico estruturado do paciente;
   * `POST /api/pacientes/{id}/plano` · `GET /api/pacientes/{id}/plano`: Salva e consulta o plano de prescrição de exercícios e limites clínicos do paciente;
   * `GET /api/pacientes/catalogo-exercicios`: Catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`) para prescrição.
-* **Rotas de Sessões e Biomecânica:**
-  * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`), registra sessão e processa em background (`202 Accepted`);
+* **Rotas de Sessões e Biomecânica (Issues #5 e #6):**
+  * `POST /api/sessoes`: Recebe upload multipart de vídeo (`.mp4`, `.mov`, `.webm` de até `200 MB`) com `paciente_id`, `slot_id`, `exercicio` (ou `exercicio_id`) e `lgpd_aceite=true`, registra sessão e processa em background (`202 Accepted`);
   * `GET /api/datasets/fisio/status`: Consulta se o dataset oficial está disponível;
   * `POST /api/datasets/fisio/download`: Clona o dataset oficial para a área persistente do backend;
   * `GET /api/datasets/fisio/clips`: Lista os vídeos reais disponíveis;
-  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe catalogado do dataset;
+  * `POST /api/sessoes/referencia`: Dispara a análise a partir de clipe catalogado do dataset (suportando também `slot_id` e `lgpd_aceite`);
   * `GET /api/sessoes/clips-referencia`: Alias do catálogo de clipes reais;
   * `GET /api/sessoes`: Lista sessões persistidas no MongoDB (com filtro opcional `?paciente_id=`);
   * `GET /api/sessoes/{id}`: Detalhes da sessão com resumo, score, classificação de risco e progresso (`processing_steps`, `current_step`, `current_step_index`, `total_steps`, `progress_percent` e `progress_message`);
   * `GET /api/sessoes/{id}/eventos`: Linha do tempo de repetições, desvios e falas de dor;
-  * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico;
+  * `GET /api/sessoes/{id}/relatorio`: Relatório analítico individual estruturado para o frontend e laudo médico (incluindo `slot_id`, `lgpd_aceite` e `comparacao_clinica`);
   * `GET /api/sessoes/exercicios`: Catálogo de exercícios com os equipamentos obrigatórios;
   * `GET /media/...`: Serve os vídeos anotados transcodificados em H.264 e snapshots de evidência em JPG.
 
@@ -149,7 +149,7 @@ backend/
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (137 testes)
+    └── unit/                           # Testes unitários com Pytest (139 testes)
 ```
 
 ---
@@ -189,3 +189,4 @@ Para uma visão detalhada sobre a arquitetura do motor de visão e persistência
 * 📑 [ADR 0010: Transcrição Local com Faster-Whisper](../docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
 * 📑 [ADR 0011: Detecção de Dor por Transcrição](../docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
 * 📑 [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](../docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
+* 📑 [ADR 0013: Busca Privada de Prescrição, Upload por Slot e Consentimento LGPD](../docs/arquitetura/adrs/0013-upload-de-videos-por-slot-e-consentimento-lgpd.md)

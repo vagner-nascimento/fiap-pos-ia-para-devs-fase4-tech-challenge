@@ -52,9 +52,48 @@ export async function getSessionReport(sessionId) {
 }
 
 /**
- * Envia um novo arquivo de vídeo via multipart/form-data
+ * Envia um novo arquivo de vídeo via multipart/form-data.
+ * Quando onProgress é informado, utiliza XMLHttpRequest para reportar o percentual de upload (0..100).
  */
-export async function createSessionUpload(formData) {
+export async function createSessionUpload(formData, { onProgress } = {}) {
+  if (typeof onProgress === 'function' && typeof XMLHttpRequest !== 'undefined') {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${apiBaseUrl}/sessoes`);
+
+      if (xhr.upload) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+            onProgress(percent);
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        let parsed = null;
+        try {
+          parsed = JSON.parse(xhr.responseText);
+        } catch {
+          parsed = null;
+        }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          onProgress(100);
+          resolve(parsed);
+        } else {
+          const detail = parsed?.detail || 'Falha ao enviar vídeo para análise.';
+          reject(new Error(detail));
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('Falha de rede durante o upload do vídeo. Verifique sua conexão e tente novamente.'));
+      };
+
+      xhr.send(formData);
+    });
+  }
+
   const response = await fetch(`${apiBaseUrl}/sessoes`, {
     method: 'POST',
     body: formData,

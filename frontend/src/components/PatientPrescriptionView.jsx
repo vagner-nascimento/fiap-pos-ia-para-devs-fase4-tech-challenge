@@ -1,8 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card } from './ds/Card';
 import { Button } from './ds/Button';
 import { StatusChip } from './ds/StatusChip';
 import { listPatients, getPatientBundle } from '../api/patients';
+import {
+  createSessionUpload,
+  createSessionReference,
+  listReferenceClips,
+} from '../api/sessions';
 import {
   Search,
   RefreshCw,
@@ -13,14 +18,49 @@ import {
   ClipboardCheck,
   Dumbbell,
   UserCheck,
+  Upload,
+  Film,
+  X,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 
+const MAX_UPLOAD_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB (DESIGN.md seção 4)
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v'];
+
+function formatFileSize(bytes) {
+  if (bytes == null || Number.isNaN(Number(bytes))) return '';
+  const num = Number(bytes);
+  if (num < 1024 * 1024) {
+    return `${Math.max(1, Math.round(num / 1024))} KB`;
+  }
+  return `${(num / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+}
+
+function validateVideoFile(file) {
+  if (!file) return 'Nenhum arquivo selecionado.';
+  const lowerName = (file.name || '').toLowerCase();
+  const hasValidExt = ALLOWED_VIDEO_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+  const hasVideoMime = file.type && file.type.startsWith('video/');
+
+  if (!hasValidExt && !hasVideoMime) {
+    return 'Formato inválido. Selecione um arquivo de vídeo (.mp4, .mov ou .webm).';
+  }
+  if (file.size <= 0) {
+    return 'O arquivo selecionado está vazio.';
+  }
+  if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+    return `O arquivo (${formatFileSize(file.size)}) excede o limite máximo de 200 MB.`;
+  }
+  return null;
+}
+
 /**
- * PatientPrescriptionView — Tela 2 ("Minha prescrição" — Visão do Paciente, Issue #4)
- * Implementa o Passo 2 da Jornada Principal (docs/jornada-proposta-001.md e PRD v1.2),
+ * PatientPrescriptionView — Telas 2 e 3 ("Minha prescrição" e "Enviar sessões" — Visão do Paciente, Issues #4 e #5)
+ * Implementa os Passos 2 e 3 da Jornada Principal (docs/jornada-proposta-001.md e PRD v1.2),
  * alinhada ao Design System (docs/design/DESIGN.md) e ao Mock 02-Paciente-Envio.dc.html.
- * Por privacidade (LGPD), não lista outros pacientes: o paciente deve buscar seu próprio
- * cadastro informando seu nome ou código identificador (ex.: PAC-001).
+ * Por privacidade (LGPD), não lista outros pacientes: o paciente busca seu próprio cadastro
+ * informando seu nome ou código identificador (ex.: PAC-001) e realiza 1 envio de vídeo por sessão prescrita.
  */
 export function PatientPrescriptionView({ onSelectSession, onSelectProcessing }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +69,34 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
   const [error, setError] = useState(null);
   const [searchEmpty, setSearchEmpty] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Estado de seleção e upload por slot (Issue #5)
+  // slotSelections[slotKey] = { mode: 'file' | 'reference', file?: File, datasetClip?: string, validationError?: string }
+  const [slotSelections, setSlotSelections] = useState({});
+  // slotUploadStates[slotKey] = { status: 'idle' | 'uploading' | 'done' | 'error', progress: number, error?: string, sessionId?: string }
+  const [slotUploadStates, setSlotUploadStates] = useState({});
+  const [lgpdConsent, setLgpdConsent] = useState(false);
+  const [uploadFormError, setUploadFormError] = useState(null);
+  const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [batchSuccessSessions, setBatchSuccessSessions] = useState([]);
+  const [referenceClips, setReferenceClips] = useState([]);
+  const [openDemoPickerSlot, setOpenDemoPickerSlot] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    listReferenceClips()
+      .then((clips) => {
+        if (active && Array.isArray(clips)) {
+          setReferenceClips(clips);
+        }
+      })
+      .catch(() => {
+        // Clipes de referência são opcionais na tela do paciente
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadPatientPrescription = useCallback(async (pacienteId) => {
     if (!pacienteId) return;
@@ -49,6 +117,8 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     const trimmed = searchQuery.trim();
     setError(null);
     setSearchEmpty(false);
+    setUploadFormError(null);
+    setBatchSuccessSessions([]);
 
     if (trimmed.length < 2) {
       setError('Por favor, informe pelo menos 2 caracteres do seu nome ou seu código (ex.: PAC-001).');
@@ -74,6 +144,8 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               p.nome.toLowerCase() === normalizedQuery
           ) || results[0];
 
+        setSlotSelections({});
+        setSlotUploadStates({});
         await loadPatientPrescription(bestMatch.paciente_id);
       }
     } catch (err) {
@@ -89,6 +161,10 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     setHasSearched(false);
     setError(null);
     setBundle(null);
+    setSlotSelections({});
+    setSlotUploadStates({});
+    setBatchSuccessSessions([]);
+    setUploadFormError(null);
   };
 
   const formatDateTime = (isoString) => {
@@ -112,18 +188,267 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
   const recentSessions = bundle?.sessoes_recentes || [];
   const prescribedExercises = plano?.exercicios || [];
 
-  // Associa cada slot prescrito à sessão mais recente correspondente do paciente
-  const getSlotSession = (exerciseItem) => {
+  const getSlotKey = (exerciseItem, idx) => exerciseItem.slot_id || `SLOT-${idx + 1}`;
+
+  // Associa cada slot prescrito à sessão mais recente correspondente do paciente (priorizando slot_id)
+  const getSlotSession = (exerciseItem, slotKey) => {
+    const bySlotId = recentSessions.find((sess) => sess.slot_id && sess.slot_id === slotKey);
+    if (bySlotId) return bySlotId;
+
     return recentSessions.find(
       (sess) =>
-        sess.exercicio_id === exerciseItem.exercicio_id ||
-        sess.case_id === exerciseItem.exercicio_id
+        !sess.slot_id &&
+        (sess.exercicio_id === exerciseItem.exercicio_id ||
+          sess.case_id === exerciseItem.exercicio_id)
     );
   };
 
-  const completedSlotsCount = prescribedExercises.filter((ex) => {
-    const sess = getSlotSession(ex);
+  const completedSlotsCount = prescribedExercises.filter((ex, idx) => {
+    const sess = getSlotSession(ex, getSlotKey(ex, idx));
     return sess && (sess.status === 'concluido' || sess.status === 'processando');
+  }).length;
+
+  // Manipulação de arquivo selecionado por slot
+  const handleFileChangeForSlot = (slotKey, fileList) => {
+    const file = fileList?.[0];
+    if (!file) return;
+
+    const validationError = validateVideoFile(file);
+    setUploadFormError(null);
+    setBatchSuccessSessions([]);
+    setOpenDemoPickerSlot(null);
+
+    setSlotSelections((prev) => ({
+      ...prev,
+      [slotKey]: {
+        mode: 'file',
+        file,
+        validationError,
+      },
+    }));
+
+    setSlotUploadStates((prev) => ({
+      ...prev,
+      [slotKey]: { status: 'idle', progress: 0, error: null },
+    }));
+  };
+
+  const handleSelectDemoClipForSlot = (slotKey, clipFilename) => {
+    if (!clipFilename) return;
+    setUploadFormError(null);
+    setBatchSuccessSessions([]);
+    setOpenDemoPickerSlot(null);
+
+    setSlotSelections((prev) => ({
+      ...prev,
+      [slotKey]: {
+        mode: 'reference',
+        datasetClip: clipFilename,
+        validationError: null,
+      },
+    }));
+
+    setSlotUploadStates((prev) => ({
+      ...prev,
+      [slotKey]: { status: 'idle', progress: 0, error: null },
+    }));
+  };
+
+  const handleClearSlotSelection = (slotKey) => {
+    setSlotSelections((prev) => {
+      const next = { ...prev };
+      delete next[slotKey];
+      return next;
+    });
+    setSlotUploadStates((prev) => {
+      const next = { ...prev };
+      delete next[slotKey];
+      return next;
+    });
+  };
+
+  // Envia um único slot (via multipart/form-data ou referência)
+  const uploadSingleSlot = async (exerciseItem, slotKey) => {
+    const selection = slotSelections[slotKey];
+    if (!selection || selection.validationError || !patient) {
+      return null;
+    }
+
+    setSlotUploadStates((prev) => ({
+      ...prev,
+      [slotKey]: { status: 'uploading', progress: 5, error: null },
+    }));
+
+    try {
+      let created = null;
+      if (selection.mode === 'reference' && selection.datasetClip) {
+        setSlotUploadStates((prev) => ({
+          ...prev,
+          [slotKey]: { status: 'uploading', progress: 45, error: null },
+        }));
+        created = await createSessionReference({
+          exercicio_id: exerciseItem.exercicio_id,
+          paciente_id: patient.paciente_id,
+          slot_id: slotKey,
+          dataset_clip: selection.datasetClip,
+          side: exerciseItem.lado || 'auto',
+          target_repetitions: Number(exerciseItem.repeticoes) || 5,
+          lgpd_aceite: true,
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('file', selection.file);
+        formData.append('paciente_id', patient.paciente_id);
+        formData.append('slot_id', slotKey);
+        formData.append('exercicio_id', exerciseItem.exercicio_id);
+        formData.append('exercicio', exerciseItem.exercicio_id);
+        formData.append('side', exerciseItem.lado || 'auto');
+        formData.append('target_repetitions', String(exerciseItem.repeticoes || 5));
+        formData.append('lgpd_aceite', 'true');
+
+        created = await createSessionUpload(formData, {
+          onProgress: (percent) => {
+            setSlotUploadStates((prev) => ({
+              ...prev,
+              [slotKey]: { status: 'uploading', progress: percent, error: null },
+            }));
+          },
+        });
+      }
+
+      setSlotUploadStates((prev) => ({
+        ...prev,
+        [slotKey]: {
+          status: 'done',
+          progress: 100,
+          error: null,
+          sessionId: created?.session_id,
+        },
+      }));
+
+      // Limpa a seleção pendente do slot concluído
+      setSlotSelections((prev) => {
+        const next = { ...prev };
+        delete next[slotKey];
+        return next;
+      });
+
+      return created;
+    } catch (err) {
+      const errMsg = err.message || 'Falha no envio do vídeo desta sessão.';
+      setSlotUploadStates((prev) => ({
+        ...prev,
+        [slotKey]: { status: 'error', progress: 0, error: errMsg },
+      }));
+      throw err;
+    }
+  };
+
+  // Dispara o envio de todos os slots selecionados (1 upload por sessão de fisioterapia)
+  const handleSendAllSelectedSlots = async () => {
+    setUploadFormError(null);
+    setBatchSuccessSessions([]);
+
+    const slotsToUpload = prescribedExercises
+      .map((item, idx) => ({ item, slotKey: getSlotKey(item, idx), idx }))
+      .filter(({ slotKey }) => Boolean(slotSelections[slotKey]));
+
+    if (slotsToUpload.length === 0) {
+      setUploadFormError(
+        'Escolha um vídeo (.mp4) em pelo menos uma sessão prescrita antes de clicar em "Enviar para análise".'
+      );
+      return;
+    }
+
+    const invalidSlot = slotsToUpload.find(
+      ({ slotKey }) => Boolean(slotSelections[slotKey]?.validationError)
+    );
+    if (invalidSlot) {
+      setUploadFormError(
+        `Corrija o arquivo inválido na Sessão ${invalidSlot.idx + 1} (${invalidSlot.item.exercicio_nome}) antes de enviar.`
+      );
+      return;
+    }
+
+    if (!lgpdConsent) {
+      setUploadFormError(
+        'Para enviar seus vídeos, marque o aceite do Termo de Consentimento LGPD (uso de imagem e voz).'
+      );
+      return;
+    }
+
+    setIsBatchUploading(true);
+    const createdList = [];
+    let hadError = false;
+
+    for (const { item, slotKey, idx } of slotsToUpload) {
+      try {
+        const created = await uploadSingleSlot(item, slotKey);
+        if (created?.session_id) {
+          createdList.push({
+            session_id: created.session_id,
+            slotKey,
+            sessionNumber: idx + 1,
+            exercicio_nome: item.exercicio_nome,
+          });
+        }
+      } catch {
+        hadError = true;
+      }
+    }
+
+    if (patient?.paciente_id) {
+      await loadPatientPrescription(patient.paciente_id);
+    }
+
+    setIsBatchUploading(false);
+
+    if (createdList.length === 1 && !hadError && onSelectProcessing) {
+      // Conforme DESIGN.md seção 3: ao concluir envio individual, navega para /sessoes/:id/processamento
+      onSelectProcessing(createdList[0].session_id);
+    } else if (createdList.length > 0) {
+      setBatchSuccessSessions(createdList);
+    }
+  };
+
+  // Reenvio individual quando um slot falhou ("Tentar novamente" — DESIGN.md seção 4)
+  const handleRetrySlotUpload = async (exerciseItem, slotKey, idx) => {
+    setUploadFormError(null);
+    if (!lgpdConsent) {
+      setUploadFormError(
+        'Marque o aceite do Termo de Consentimento LGPD antes de tentar enviar novamente.'
+      );
+      return;
+    }
+
+    setIsBatchUploading(true);
+    try {
+      const created = await uploadSingleSlot(exerciseItem, slotKey);
+      if (patient?.paciente_id) {
+        await loadPatientPrescription(patient.paciente_id);
+      }
+      if (created?.session_id && onSelectProcessing) {
+        onSelectProcessing(created.session_id);
+      } else if (created?.session_id) {
+        setBatchSuccessSessions([
+          {
+            session_id: created.session_id,
+            slotKey,
+            sessionNumber: idx + 1,
+            exercicio_nome: exerciseItem.exercicio_nome,
+          },
+        ]);
+      }
+    } catch {
+      // Erro já registrado em slotUploadStates[slotKey]
+    } finally {
+      setIsBatchUploading(false);
+    }
+  };
+
+  const selectedSlotsCount = prescribedExercises.filter((ex, idx) => {
+    const key = getSlotKey(ex, idx);
+    return Boolean(slotSelections[key] && !slotSelections[key].validationError);
   }).length;
 
   return (
@@ -136,8 +461,8 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
         <div>
           <h1>Minha prescrição</h1>
           <p className="mu">
-            Consulte seu laudo, limites clínicos e a lista de exercícios prescritos · Passo 2 da
-            jornada
+            Consulte seu laudo, limites clínicos e envie seus vídeos por sessão de fisioterapia ·
+            Passos 2 e 3 da jornada
           </p>
         </div>
 
@@ -146,7 +471,7 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
             type="button"
             variant="secondary"
             onClick={() => loadPatientPrescription(patient.paciente_id)}
-            disabled={loading}
+            disabled={loading || isBatchUploading}
           >
             <RefreshCw size={16} className={loading ? 'spin' : ''} />
             <span>Atualizar dados</span>
@@ -167,8 +492,9 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               placeholder="Digite seu nome (ex.: Marina T.) ou código (ex.: PAC-001)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={isBatchUploading}
             />
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || isBatchUploading}>
               <Search size={16} />
               <span>{loading ? 'Buscando...' : 'Buscar'}</span>
             </Button>
@@ -235,7 +561,7 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
         </Card>
       )}
 
-      {/* Grid Principal: Laudo e Limites (Esquerda) + Exercícios Prescritos (Direita) */}
+      {/* Grid Principal: Laudo e Limites (Esquerda) + Enviar Sessões (Direita — Mock 02-Paciente-Envio) */}
       {!loading && !searchEmpty && patient && (
         <div
           className="g prescription-main-grid"
@@ -360,13 +686,13 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
             </div>
           </Card>
 
-          {/* Coluna Direita: Exercícios Prescritos / Sessões da Prescrição (Mock 2) */}
+          {/* Coluna Direita: Enviar Sessões (Mock 02-Paciente-Envio — Issue #5) */}
           <Card>
             <div
               className="f"
               style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}
             >
-              <h2 style={{ margin: 0 }}>Exercícios prescritos (Sessões)</h2>
+              <h2 style={{ margin: 0 }}>Enviar sessões</h2>
               {prescribedExercises.length > 0 && (
                 <span className="ch ne">
                   <ClipboardCheck size={13} />
@@ -381,6 +707,38 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               Um envio por sessão de fisioterapia. Grave de frente, com boa luz, corpo e rosto
               visíveis, e fale como está a dor.
             </p>
+
+            {/* Banner de Sucesso quando múltiplas sessões foram enviadas em lote */}
+            {batchSuccessSessions.length > 0 && (
+              <div className="batch-upload-success-banner">
+                <div className="f" style={{ gap: '8px', marginBottom: '8px' }}>
+                  <CheckCircle2 size={18} />
+                  <strong>
+                    ● {batchSuccessSessions.length} sessão(ões) enviada(s) para análise!
+                  </strong>
+                </div>
+                <p className="mu" style={{ marginBottom: '10px', color: 'inherit' }}>
+                  O processamento biomecânico e de áudio iniciou em segundo plano. Escolha uma
+                  sessão abaixo para acompanhar:
+                </p>
+                <div className="f" style={{ flexWrap: 'wrap', gap: '8px' }}>
+                  {batchSuccessSessions.map((item) => (
+                    <Button
+                      key={item.session_id}
+                      type="button"
+                      variant="secondary"
+                      style={{ height: '36px', padding: '0 12px', fontSize: '13px' }}
+                      onClick={() => onSelectProcessing && onSelectProcessing(item.session_id)}
+                    >
+                      <PlayCircle size={14} />
+                      <span>
+                        Acompanhar Sessão {item.sessionNumber} ({item.exercicio_nome})
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {prescribedExercises.length === 0 ? (
               <div
@@ -399,17 +757,23 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
             ) : (
               <div>
                 {prescribedExercises.map((item, idx) => {
-                  const slotSession = getSlotSession(item);
+                  const slotKey = getSlotKey(item, idx);
+                  const slotSession = getSlotSession(item, slotKey);
                   const isDone = slotSession?.status === 'concluido';
                   const isProc =
                     slotSession?.status === 'processando' || slotSession?.status === 'enviado';
 
+                  const selection = slotSelections[slotKey];
+                  const uploadState = slotUploadStates[slotKey];
+                  const isUploadingThisSlot = uploadState?.status === 'uploading';
+                  const fileInputId = `slot-video-input-${slotKey}`;
+                  const compatibleClips = referenceClips.filter(
+                    (c) => c.case_id === item.exercicio_id
+                  );
+
                   return (
-                    <div
-                      key={`${item.slot_id || idx}-${item.exercicio_id}`}
-                      className="prescription-slot-row"
-                    >
-                      <div style={{ flex: 1 }}>
+                    <div key={`${slotKey}-${item.exercicio_id}`} className="prescription-slot-row">
+                      <div style={{ flex: 1, minWidth: '220px' }}>
                         <b>
                           Sessão {idx + 1} · {item.exercicio_nome}
                         </b>
@@ -423,46 +787,191 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
                             Orientação: &ldquo;{item.instrucoes}&rdquo;
                           </p>
                         )}
-                        {slotSession ? (
+
+                        {/* Linha de status do arquivo selecionado ou sessão enviada (Mock 02-Paciente-Envio) */}
+                        {selection ? (
+                          <div className="slot-selected-file-pill">
+                            {selection.mode === 'reference' ? (
+                              <span>
+                                <Film size={13} style={{ verticalAlign: 'text-bottom' }} /> Clipe
+                                demo: <strong>{selection.datasetClip}</strong>
+                              </span>
+                            ) : (
+                              <span>
+                                <Upload size={13} style={{ verticalAlign: 'text-bottom' }} />{' '}
+                                <strong>{selection.file.name}</strong> ·{' '}
+                                {formatFileSize(selection.file.size)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="slot-remove-file-btn"
+                              onClick={() => handleClearSlotSelection(slotKey)}
+                              disabled={isBatchUploading}
+                              aria-label={`Remover vídeo selecionado da Sessão ${idx + 1}`}
+                              title="Remover arquivo selecionado"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : slotSession ? (
                           <p className="mu" style={{ marginTop: '4px', fontSize: '12px' }}>
-                            Último envio: <strong>{slotSession.session_id}</strong>
+                            {slotSession.original_filename ? (
+                              <>
+                                <strong>{slotSession.original_filename}</strong>
+                                {slotSession.file_size_bytes
+                                  ? ` · ${formatFileSize(slotSession.file_size_bytes)}`
+                                  : ''}{' '}
+                                ·{' '}
+                              </>
+                            ) : null}
+                            Sessão <strong>{slotSession.session_id}</strong>
                             {slotSession.created_at
                               ? ` (${formatDateTime(slotSession.created_at)})`
                               : ''}
                             {isDone && slotSession.compliance_score != null
                               ? ` · Conformidade: ${slotSession.compliance_score.toFixed(0)}%`
                               : ''}
+                            {slotSession.lgpd_aceite !== false && (
+                              <span
+                                className="ch ok"
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 8px',
+                                  marginLeft: '8px',
+                                  verticalAlign: 'middle',
+                                }}
+                                title="Consentimento LGPD (imagem e voz) registrado nesta sessão"
+                              >
+                                <ShieldCheck size={12} /> ● Termo LGPD aceito
+                              </span>
+                            )}
                           </p>
                         ) : (
                           <p className="mu" style={{ marginTop: '4px', fontSize: '12px' }}>
-                            Nenhum arquivo enviado para esta sessão
+                            Nenhum arquivo
                           </p>
+                        )}
+
+                        {/* Erro de validação do arquivo selecionado (ex: > 200 MB ou formato inválido) */}
+                        {selection?.validationError && (
+                          <p className="slot-validation-error">■ {selection.validationError}</p>
+                        )}
+
+                        {/* Barra de progresso durante o upload (DESIGN.md seção 4) */}
+                        {isUploadingThisSlot && (
+                          <div className="slot-upload-progress-wrap">
+                            <div className="slot-upload-progress-bar">
+                              <div
+                                className="slot-upload-progress-fill"
+                                style={{ width: `${uploadState.progress || 10}%` }}
+                              />
+                            </div>
+                            <span className="mu" style={{ fontSize: '12px' }}>
+                              Enviando vídeo... {uploadState.progress || 10}%
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Erro de upload neste slot com botão "Tentar novamente" (DESIGN.md seção 4) */}
+                        {uploadState?.status === 'error' && (
+                          <div className="slot-upload-error-box">
+                            <span>■ {uploadState.error}</span>
+                            {selection && !selection.validationError && (
+                              <button
+                                type="button"
+                                className="btn-link-inline"
+                                onClick={() => handleRetrySlotUpload(item, slotKey, idx)}
+                                disabled={isBatchUploading}
+                              >
+                                <RotateCcw size={13} /> Tentar novamente
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Seletor rápido opcional de clipe de demonstração do dataset */}
+                        {openDemoPickerSlot === slotKey && compatibleClips.length > 0 && (
+                          <div className="slot-demo-picker">
+                            <label htmlFor={`demo-select-${slotKey}`} style={{ fontSize: '12px' }}>
+                              Selecionar clipe de demonstração ({item.exercicio_id}):
+                            </label>
+                            <div className="f" style={{ gap: '8px', flexWrap: 'wrap' }}>
+                              <select
+                                id={`demo-select-${slotKey}`}
+                                className="in"
+                                style={{ height: '36px', fontSize: '13px', flex: 1 }}
+                                defaultValue=""
+                                onChange={(e) =>
+                                  handleSelectDemoClipForSlot(slotKey, e.target.value)
+                                }
+                              >
+                                <option value="" disabled>
+                                  Escolha um clipe do dataset...
+                                </option>
+                                {compatibleClips.map((clip) => (
+                                  <option key={clip.filename} value={clip.filename}>
+                                    {clip.filename} — {clip.descricao}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                className="btn-link-inline"
+                                onClick={() => setOpenDemoPickerSlot(null)}
+                              >
+                                Fechar
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
 
+                      {/* Ações à direita da linha do slot */}
                       <div className="f" style={{ gap: '8px', flexWrap: 'wrap' }}>
-                        {isDone ? (
+                        {/* Input file oculto acessível via label/botão */}
+                        <input
+                          id={fileInputId}
+                          type="file"
+                          accept="video/mp4,video/quicktime,video/webm,video/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            handleFileChangeForSlot(slotKey, e.target.files);
+                            e.target.value = '';
+                          }}
+                          disabled={isBatchUploading}
+                        />
+
+                        {isDone && !selection ? (
                           <>
                             <StatusChip level="ok" label="Enviada" />
                             {onSelectSession && (
                               <Button
                                 type="button"
                                 variant="secondary"
-                                style={{ height: '36px', padding: '0 12px', fontSize: '13px' }}
+                                style={{ height: '38px', padding: '0 12px', fontSize: '13px' }}
                                 onClick={() => onSelectSession(slotSession.session_id)}
                               >
                                 <FileText size={14} /> Relatório
                               </Button>
                             )}
+                            <label
+                              htmlFor={fileInputId}
+                              className="btn s slot-choose-video-label"
+                              style={{ height: '38px', padding: '0 12px', fontSize: '13px' }}
+                              title="Enviar uma nova gravação para esta sessão"
+                            >
+                              <Upload size={14} /> Novo vídeo
+                            </label>
                           </>
-                        ) : isProc ? (
+                        ) : isProc && !selection ? (
                           <>
                             <StatusChip level="info" label="Em análise" />
                             {onSelectProcessing && (
                               <Button
                                 type="button"
                                 variant="secondary"
-                                style={{ height: '36px', padding: '0 12px', fontSize: '13px' }}
+                                style={{ height: '38px', padding: '0 12px', fontSize: '13px' }}
                                 onClick={() => onSelectProcessing(slotSession.session_id)}
                               >
                                 <PlayCircle size={14} /> Acompanhar
@@ -470,12 +979,86 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
                             )}
                           </>
                         ) : (
-                          <span className="ch ne">Pendente de envio</span>
+                          <>
+                            <label
+                              htmlFor={fileInputId}
+                              className="btn s slot-choose-video-label"
+                              aria-label={`Escolher vídeo para Sessão ${idx + 1} (${item.exercicio_nome})`}
+                            >
+                              <Upload size={15} />
+                              <span>{selection ? 'Trocar vídeo' : 'Escolher vídeo'}</span>
+                            </label>
+
+                            {compatibleClips.length > 0 && !selection && (
+                              <button
+                                type="button"
+                                className="btn-link-inline"
+                                onClick={() =>
+                                  setOpenDemoPickerSlot(
+                                    openDemoPickerSlot === slotKey ? null : slotKey
+                                  )
+                                }
+                                disabled={isBatchUploading}
+                                title="Usar um vídeo de demonstração do dataset sintético"
+                              >
+                                <Film size={13} /> Clipe demo
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
                   );
                 })}
+
+                {/* Termo de Consentimento LGPD (Imagem e Voz) */}
+                <div className="lgpd-consent-box">
+                  <label htmlFor="lgpd-consent-checkbox" className="lgpd-consent-label">
+                    <input
+                      id="lgpd-consent-checkbox"
+                      type="checkbox"
+                      checked={lgpdConsent}
+                      onChange={(e) => {
+                        setLgpdConsent(e.target.checked);
+                        if (e.target.checked) setUploadFormError(null);
+                      }}
+                      disabled={isBatchUploading}
+                    />
+                    <span>
+                      <strong>Termo de Consentimento (LGPD):</strong> Autorizo a gravação e o
+                      processamento automatizado da minha imagem (postura e equipamento) e voz
+                      (transcrição local de relato de dor) exclusivamente para análise biomecânica
+                      de apoio à decisão do fisioterapeuta. Dados fictícios de demonstração.
+                    </span>
+                  </label>
+                </div>
+
+                {/* Alerta de erro geral do formulário de envio */}
+                {uploadFormError && (
+                  <div className="upload-form-error-banner" role="alert">
+                    <CircleAlert size={18} />
+                    <span>■ {uploadFormError}</span>
+                  </div>
+                )}
+
+                {/* Botão Principal de Envio (Mock 02-Paciente-Envio: width 100%, margin-top 12px) */}
+                <Button
+                  type="button"
+                  style={{ marginTop: '12px', width: '100%' }}
+                  onClick={handleSendAllSelectedSlots}
+                  disabled={isBatchUploading}
+                >
+                  <Upload size={16} />
+                  <span>
+                    {isBatchUploading
+                      ? 'Enviando sessões para análise...'
+                      : selectedSlotsCount > 0
+                      ? `Enviar para análise (${selectedSlotsCount} ${
+                          selectedSlotsCount === 1 ? 'sessão selecionada' : 'sessões selecionadas'
+                        })`
+                      : 'Enviar para análise'}
+                  </span>
+                </Button>
               </div>
             )}
           </Card>

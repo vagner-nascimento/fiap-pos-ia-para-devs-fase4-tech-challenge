@@ -154,13 +154,38 @@ class MongoResultSink(ResultSink):
         except Exception:
             pass
 
+        # Preserva metadados cadastrais/slot previamente registrados na criação da sessão
+        existing_session = None
+        try:
+            existing_session = self.session_repo.get_session(run_id)
+        except Exception:
+            existing_session = None
+
+        merged_extra = dict(existing_session.extra if existing_session and existing_session.extra else {})
+        merged_extra.update(result.extra or {})
+
         # Criação do documento da sessão
         session_doc = SessionDocument(
             session_id=run_id,
-            paciente_id=paciente_id,
+            paciente_id=paciente_id or (existing_session.paciente_id if existing_session else None),
+            slot_id=kwargs.get("slot_id") or (existing_session.slot_id if existing_session else None),
             exercicio_id=result.session_summary.exercise_id,
             case_id=result.session_summary.case_id,
             side_evaluated=result.session_summary.side_evaluated,
+            lgpd_aceite=(
+                kwargs["lgpd_aceite"]
+                if "lgpd_aceite" in kwargs
+                else (existing_session.lgpd_aceite if existing_session else True)
+            ),
+            original_filename=(
+                kwargs.get("original_filename")
+                or (existing_session.original_filename if existing_session else None)
+            ),
+            file_size_bytes=(
+                kwargs.get("file_size_bytes")
+                if kwargs.get("file_size_bytes") is not None
+                else (existing_session.file_size_bytes if existing_session else None)
+            ),
             status=SessionStatus.CONCLUIDO,
             etapa="pose_concluida",
             risk_classification=risk,
@@ -176,7 +201,8 @@ class MongoResultSink(ResultSink):
             total_deviations=len(result.deviations),
             summary=result.session_summary,
             justificativas=justifications,
-            extra=result.extra,
+            created_at=existing_session.created_at if existing_session else SessionDocument.model_fields["created_at"].default_factory(),
+            extra=merged_extra,
         )
 
         # Mapeamento dos eventos de repetição

@@ -78,8 +78,8 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 * **Download/status do dataset:** `GET /api/datasets/fisio/status` · `POST /api/datasets/fisio/download`
 * **Disparo assíncrono por clipe do dataset (retorna 202 com BackgroundTasks):**
   `POST http://localhost:3000/api/sessoes/referencia`
-* **Upload multipart de vídeo gravado pelo paciente:**
-  `POST http://localhost:3000/api/sessoes`
+* **Upload multipart de vídeo gravado pelo paciente por slot da prescrição (Issue #5):**
+  `POST http://localhost:3000/api/sessoes` (`paciente_id`, `slot_id`, `exercicio`/`exercicio_id`, `lgpd_aceite=true` e `file` até 200 MB)
 * **Listagem e detalhes da sessão no MongoDB:**
   `GET http://localhost:3000/api/sessoes` · `GET http://localhost:3000/api/sessoes/{id}`
 * **Linha do tempo de repetições e desvios:**
@@ -100,15 +100,15 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 2. **No Banco de Dados MongoDB (`fiap-pos-ia-db`):**
    * **Coleção `pacientes`**: Cadastro sintético dos pacientes (`paciente_id`, `nome`, `idade`, `observacoes`), com seed inicial (`PAC-001` a `PAC-004`);
    * **Coleção `laudos`**: Laudo médico estruturado com região anatômica, lesão, movimentos restritos e limite angular máximo extraídos do texto e revisados pelo profissional;
-   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com séries, repetições, lado e equipamento);
-   * **Coleção `sessoes`**: Documento executivo consolidado com status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
+   * **Coleção `planos`**: Plano de prescrição de exercícios do paciente (dor máxima aceitável `0–10`, faixa de amplitude esperada e lista de exercícios prescritos com `slot_id`, séries, repetições, lado e equipamento);
+   * **Coleção `sessoes`**: Documento executivo consolidado com vínculo ao slot da prescrição (`slot_id`), aceite LGPD (`lgpd_aceite`), arquivo original (`original_filename`, `file_size_bytes`), status (`enviado`, `processando`, `concluido`, `erro`), classificação clínica de risco (`verde`, `atencao`, `critico`), justificativas explicáveis e caminhos relativos de mídia;
    * **Coleção `eventos`**: Repetições biomecânicas (pico, duração, validade), desvios posturais com referências às evidências fotográficas e falas relacionadas à dor (`fala_dor`).
 
 ---
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **137 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **139 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -133,8 +133,10 @@ uv run pytest tests -v
   * [ADR 0010: Transcrição Local com Faster-Whisper](docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md)
   * [ADR 0011: Detecção de Dor por Transcrição](docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md)
   * [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
+  * [ADR 0013: Busca Privada de Prescrição, Upload por Slot e Consentimento LGPD](docs/arquitetura/adrs/0013-upload-de-videos-por-slot-e-consentimento-lgpd.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
 * 🗂️ **[Plano – Issue #3 (Inserção de Dados de Laudo e Prescrições)](plans/plano-issue-3-insercao-laudo-prescricoes.md)** — Especificação de backend, extração clínica e frontend para planos e laudos;
 * 🗂️ **[Plano – Issue #4 (Busca de Dados de Laudo e Prescrições pelo Paciente)](plans/plano-issue-4-busca-laudo-prescricoes.md)** — Especificação da visão do paciente (Tela 2 — *"Minha prescrição"*), busca tolerante a acentos e status por slot;
+* 🗂️ **[Plano – Issue #5 (Upload de Vídeo de Seção de Exercícios pelo Paciente)](plans/plano-issue-5-upload-videos-paciente.md)** — Especificação do upload de vídeos por slot prescrito (Tela 3 — *"Enviar sessões"*), progresso via XHR e aceite LGPD;
 * 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
 * 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).

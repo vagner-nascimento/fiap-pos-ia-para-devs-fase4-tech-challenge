@@ -108,6 +108,15 @@
   * Implementação da **Tela 2 ("Minha prescrição")** seguindo o Mock `02-Paciente-Envio.dc.html` e o Design System (`tokens.css`), onde o paciente busca exclusivamente seu próprio cadastro por nome ou ID (sem expor outros pacientes por privacidade/LGPD), visualizando o card **"Laudo e limites"** e a listagem dos **slots de exercícios prescritos** com status (`● Enviada`, `Em análise` ou `Pendente de envio`).
 - **Testes Automatizados:** 137 testes passando no backend (`pytest tests/ -v`).
 
+### Etapa 10: Upload de Vídeos de Sessão pelo Paciente por Slot Prescrito (Issue #5 - Concluída)
+- **Backend (`SessionDocument`, `MongoResultSink` e `/api/sessoes`):**
+  * Inclusão de `slot_id`, `lgpd_aceite`, `original_filename` e `file_size_bytes` em `SessionDocument`, preservados em `MongoResultSink.save` após o processamento em background e expostos também em `GET /api/sessoes/{id}/relatorio`.
+  * Evolução de `POST /api/sessoes` (`multipart/form-data`) e `POST /api/sessoes/referencia` para aceitar `slot_id`, `lgpd_aceite` e o alias `exercicio` (além de `exercicio_id`), validando consentimento LGPD obrigatório (`422`), extensão de vídeo válida (`.mp4`, `.mov`, `.webm`, `.mkv`, `.avi`) e limite máximo de tamanho (`200 MB`, retornando `413` quando excedido).
+- **Frontend (`PatientPrescriptionView.jsx`, `SessionsListView.jsx`, `SessionReportView.jsx` e `api/sessions.js`):**
+  * Implementação da **Tela 3 ("Enviar sessões")** integrada à visão do paciente conforme Mock `02-Paciente-Envio.dc.html` e `DESIGN.md`: seletor **"Escolher vídeo"** (ou clipe de demonstração do dataset) em cada slot prescrito (`SLOT-1`, `SLOT-2`, ...), validação imediata de arquivo, checkbox obrigatório de **Termo de Consentimento LGPD** (imagem e voz), barra de progresso de upload via `XMLHttpRequest`, tratamento de falha com botão **"Tentar novamente"** e disparo de `POST /api/sessoes` por sessão (`Enviar para análise`).
+  * Exibição do selo visual de auditoria **`● Termo LGPD aceito`** nas sessões enviadas por slot, na tabela geral de sessões e no Relatório da Sessão (cabeçalho e quadro de comparação clínica).
+- **Testes Automatizados:** 139 testes passando no backend (`pytest tests/ -v`).
+
 ---
 
 ## 2. Progresso da tela de processamento
@@ -132,6 +141,6 @@ implementadas não fazem parte dessa lista.
 
 ## 3. Próximos Passos Imediatos
 
-1. Upload de vídeos pelo paciente diretamente nos slots de exercícios prescritos com termo de aceite LGPD (Issue #5).
-2. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).
+1. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).
+2. Melhorias mapeadas em backlog: validação de múltiplas séries de repetições por exercício (Issue #21) e histórico de múltiplas execuções por slot para comparativo evolutivo (Issue #22).
 3. Evolução da análise de dor e expansão dos datasets de validação.

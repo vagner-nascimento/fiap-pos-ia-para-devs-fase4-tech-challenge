@@ -229,4 +229,22 @@ Accept: application/json
 GET {{baseUrl}}/pacientes/PAC-001/sessoes
 Accept: application/json
 
+### ============================================================
+### 21. Disparar Sessão Vinculada a Slot da Prescrição com Aceite LGPD (Issue #5)
+### ============================================================
+POST {{baseUrl}}/sessoes/referencia
+Content-Type: application/json
+Accept: application/json
+
+{
+  "exercicio_id": "FISIO-006",
+  "paciente_id": "PAC-001",
+  "slot_id": "SLOT-1",
+  "dataset_clip": "FISIO-006-correto.mp4",
+  "side": "direito",
+  "target_repetitions": 10,
+  "lgpd_aceite": true
+}
+
+
 
