@@ -240,11 +240,110 @@ Accept: application/json
   "exercicio_id": "FISIO-006",
   "paciente_id": "PAC-001",
   "slot_id": "SLOT-1",
+  "dia_tratamento": 1,
+  "series_prescritas": 3,
+  "repeticoes_por_serie": 10,
   "dataset_clip": "FISIO-006-correto.mp4",
   "side": "direito",
   "target_repetitions": 10,
   "lgpd_aceite": true
 }
+
+### ============================================================
+### 22. Salvar Plano Multi-Dias com Exercícios Diferentes por Dia (Issue #7)
+### ============================================================
+POST {{baseUrl}}/pacientes/PAC-001/plano
+Content-Type: application/json
+Accept: application/json
+
+{
+  "dias_tratamento": 3,
+  "dor_maxima_aceitavel": 4,
+  "amplitude_esperada_texto": "90° a 140°",
+  "exercicios": [
+    {
+      "slot_id": "SLOT-1",
+      "exercicio_id": "FISIO-006",
+      "dias_prescritos": [1, 2, 3],
+      "series": 3,
+      "repeticoes": 10,
+      "lado": "direito",
+      "equipamento": "faixa_elastica",
+      "instrucoes": "Manter tronco alinhado sem compensação lombar."
+    },
+    {
+      "slot_id": "SLOT-2",
+      "exercicio_id": "FISIO-003",
+      "dias_prescritos": [1, 3],
+      "series": 3,
+      "repeticoes": 10,
+      "lado": "ambos",
+      "equipamento": "nenhum",
+      "instrucoes": "Descer até próximo de 90° nos joelhos."
+    },
+    {
+      "slot_id": "SLOT-3",
+      "exercicio_id": "FISIO-001",
+      "dias_prescritos": [2],
+      "series": 3,
+      "repeticoes": 10,
+      "lado": "direito",
+      "equipamento": "nenhum",
+      "instrucoes": "Elevar o braço até o limite confortável."
+    }
+  ]
+}
+
+### ============================================================
+### 23. Simular/Popular Jornada Multi-Dias de Evolução do Paciente (Issue #7)
+### ============================================================
+POST {{baseUrl}}/pacientes/PAC-001/seed-evolucao
+Accept: application/json
+
+### ============================================================
+### 24. Obter Relatório Final de Evolução Longitudinal do Paciente (Issue #7)
+### ============================================================
+GET {{baseUrl}}/pacientes/PAC-001/relatorio-evolucao
+Accept: application/json
+
+### ============================================================
+### 25. Registrar Avaliação Final de Evolução pelo Fisioterapeuta (Issue #7)
+### ============================================================
+POST {{baseUrl}}/pacientes/PAC-001/avaliar-evolucao
+Content-Type: application/json
+Accept: application/json
+
+{
+  "avaliado": true,
+  "observacoes": "Paciente apresentou evolução positiva de amplitude articular e redução progressiva de dor entre os Dias 1 e 3."
+}
+
+### ============================================================
+### 26. Marcar Sessão Individual como Avaliada pelo Fisioterapeuta (Issue #7)
+### ============================================================
+PATCH {{baseUrl}}/sessoes/{{sessionId}}/avaliar
+Content-Type: application/json
+Accept: application/json
+
+{
+  "avaliado": true
+}
+
+### ============================================================
+### 27. Listar Painel de Alertas Clínicos e Atualizar Status (Issue #7)
+### ============================================================
+GET {{baseUrl}}/alertas?paciente_id=PAC-001
+Accept: application/json
+
+### Atualizar status de um alerta para "tratado"
+PATCH {{baseUrl}}/alertas/ALT-SEED-001
+Content-Type: application/json
+Accept: application/json
+
+{
+  "estado": "tratado"
+}
+
 
 
 
