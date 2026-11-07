@@ -59,10 +59,12 @@ O **Fisio Coach** analisa vídeos de sessões de fisioterapia e verifica se o pa
 - **RF-03** Comparar com a postura de referência do exercício e marcar desvios (amplitude insuficiente, compensações, assimetria).
 - **RF-04** Detectar com YOLO o equipamento prescrito nos exercícios que o exigem: faixa elástica no FISIO-006 e halter no FISIO-007. Os demais exercícios não executam essa detecção.
 
-### 5.2 Dor por expressão facial (vídeo)
-- **RF-05** Detectar o rosto e extrair landmarks/Action Units faciais relacionadas à dor (sobrancelha abaixada, olhos contraídos, nariz franzido, lábio superior elevado, olhos fechados).
-- **RF-06** Calcular um **índice facial de dor** por janela de tempo (0–10), baseado na escala PSPI (*Prkachin and Solomon Pain Intensity*) ou equivalente simplificado.
-- **RF-07** Tratar rosto fora de quadro ou ocluído como "sem dado" e nunca como "sem dor".
+### 5.2 Dor por expressão facial (vídeo — Opcional)
+> **Nota de escopo:** Funcionalidade classificada como **opcional / evolução futura**. No MVP, a estimativa de dor é realizada pela modalidade de áudio/fala local (Seção 5.3).
+
+- **RF-05 (Opcional)** Detectar o rosto e extrair landmarks/Action Units faciais relacionadas à dor (sobrancelha abaixada, olhos contraídos, nariz franzido, lábio superior elevado, olhos fechados).
+- **RF-06 (Opcional)** Calcular um **índice facial de dor** por janela de tempo (0–10), baseado na escala PSPI (*Prkachin and Solomon Pain Intensity*) ou equivalente simplificado.
+- **RF-07 (Opcional)** Tratar rosto fora de quadro ou ocluído como "sem dado" e nunca como "sem dor".
 
 ### 5.3 Dor por áudio (transcrição local e regras de domínio)
 - **RF-08** Transcrever o áudio em pt-BR com **Faster-Whisper executado localmente**, com timestamps por segmento. O áudio é convertido para mono/16 kHz, tem ruído reduzido e pico normalizado antes da inferência.
@@ -253,19 +255,19 @@ Os períodos encerram aos sábados. A exceção está na última janela: como a 
 
 | Exigência do edital | Onde é atendida | Situação |
 |---|---|---|
-| OpenPose (postura) | RF-01 a RF-03 | Atendido |
-| YOLOv8 (objetos/áreas críticas) | RF-04 | Atendido |
+| OpenPose (postura) | RF-01 a RF-03 (MediaPipe Pose em CPU — ADR 0001) | Atendido |
+| YOLOv8 (objetos/áreas críticas) | RF-04 (YOLO customizado para `faixa_elastica` e `halter` — ADR 0009) | Atendido |
 | Relatório automático de desvios | RF-17 | Atendido |
-| Azure Speech to Text | RF-08 | **Substituído** por transcrição local por redução de custos. Requer validação com o professor |
-| Azure Text Analytics (termos críticos e sentimento) | RF-09 | Atendido |
+| Azure Speech to Text | RF-08 | **Substituído** por transcrição local (`faster-whisper` em CPU) por redução de custos (ADR 0010) |
+| Azure Text Analytics (termos críticos e sentimento) | RF-09 | **Substituído** por classificador determinístico local de domínio em pt-BR por redução de custos (ADR 0011 e ADR 0012) |
 | Alterações vocais | RF-10 | Atendido |
 | Anomalias em padrões de movimentação | RF-03, RF-14 | Atendido |
-| Anomalias na evolução de prescrições | RF-14, RF-19 (comparação sessão a sessão com o plano) | Atendido na forma proposta. Validar com o professor |
+| Anomalias na evolução de prescrições | RF-14, RF-19 (comparação longitudinal multi-dias com o plano — ADR 0014) | Atendido |
 | Alertas automáticos | RF-18 | Atendido |
 | Fusão multimodal | RF-12, RF-13, RF-15 | Atendido |
 | Código-fonte e relatório técnico | Repositório (boilerplate) + `docs/` | Atendido |
 
-**Fora do escopo por decisão do grupo:** anomalias em **sinais vitais** (batimentos, pressão, oxigenação). O grupo entende que não são obrigatórias neste momento; a decisão está registrada na seção 13.
+**Fora do escopo por decisão do grupo:** anomalias em **sinais vitais** (batimentos, pressão, oxigenação). Os itens do edital são exemplos norteadores de domínio e o foco do projeto está nas anomalias biomecânicas, relatos de dor e evolução longitudinal da prescrição fisioterapêutica.
 
 ## 12. Riscos
 

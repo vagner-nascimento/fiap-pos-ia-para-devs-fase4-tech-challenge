@@ -68,37 +68,24 @@ Dessa forma, **todos os requisitos funcionais e técnicos de código (`R01` a `R
 
 ## 🟡 Melhorias Importantes (Qualidade, Robustez e Apresentação)
 
-### M01 — Sincronização do `PRD v1.2` com as Decisões Arquiteturais Finais
+### ~~M01~~ ✅ Resolvido — Sincronização do `PRD v1.2` com as Decisões Arquiteturais Finais
 
 **Situação atual:**
-- O documento [prd-fisio-coach-tech-challenge-fase4-v1_2.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/prd-fisio-coach-tech-challenge-fase4-tech-challenge/docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md) (escrito no início do projeto) ainda mantém na Seção 5.2 (`RF-05` a `RF-07`, linhas 62–65) a previsão de *"Dor por expressão facial (índice PSPI)"*, na Seção 11 (linha 260) cita `Azure Text Analytics` como se estivesse ativo e na Seção 13 (linha 299) lista a validação com o professor como pendência em aberto.
-- Na implementação final — e conforme documentado em [frontend/README.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/frontend/README.md#L84-L85), [ADR 0010](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0010-transcricao-local-com-faster-whisper.md) e [ADR 0011](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0011-deteccao-de-dor-por-transcricao.md) — a estimativa de dor é realizada integralmente pela modalidade de áudio/fala local e as decisões de escopo já foram validadas.
-- **Impacto:** Um avaliador que leia o PRD antes dos ADRs pode achar que `RF-05` a `RF-07` ou `Azure Text Analytics` ficaram incompletos por esquecimento, quando na verdade foram decisões deliberadas de escopo e custo.
-
-**Ação recomendada:**
-- Atualizar [prd-fisio-coach-tech-challenge-fase4-v1_2.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md) (ou adicionar nota de fechamento v1.3 no cabeçalho e nas Seções 11 e 13) registrando que a dor foi consolidada via transcrição local de áudio + regras de domínio e que o recorte sem sinais vitais e sem custos de cloud foi validado com o professor.
+- O documento [prd-fisio-coach-tech-challenge-fase4-v1_2.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md) foi atualizado na Seção 5.2 para explicitar `RF-05` a `RF-07` (Dor por expressão facial) como **Opcional / Evolução Futura**, e a Seção 11 (`Mapeamento com o edital`) foi ajustada para refletir a substituição dos serviços Azure por componentes locais em CPU por redução de custos e sem pendências de validação.
 
 ---
 
-### M02 — Tabela Executiva de Aderência ao Edital no `README.md` Raiz
+### ~~M02~~ ✅ Resolvido — Tabela Executiva de Aderência ao Edital no `README.md` Raiz
 
 **Situação atual:**
-- O arquivo [README.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/README.md) explica com clareza como executar o sistema e quais são as coleções e endpoints, mas não apresenta uma tabela direta mapeando os tópicos do Edital (`1. Análise de Vídeo`, `2. Análise de Áudio`, `3. Detecção de Anomalias`, `4. Relatório Técnico`, `5. Vídeo`) para as respectivas implementações e ADRs.
-- **Impacto:** Facilitar a correção pela banca avaliadora, deixando explícito logo na página inicial do repositório como cada requisito do edital foi atendido e onde estão documentadas as decisões de engenharia (como a escolha por execução local em CPU sem custo e o foco em anomalias biomecânicas e de prescrição).
-
-**Ação recomendada:**
-- Adicionar uma seção `## 🎯 Mapeamento de Requisitos do Edital (Fase 4)` no [README.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/README.md) com links diretos para os módulos de código e para os ADRs `0001`, `0009`, `0010`, `0011`, `0012`, `0013` e `0014`.
+- Adicionada a seção `## 🎯 Aderência ao Edital (Tech Challenge – Fase 4)` no topo do [README.md](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/README.md) mapeando cada eixo do Edital (`1. Análise de Vídeo`, `2. Análise de Áudio`, `3. Detecção de Anomalias e Alertas` e `4. Fusão Multimodal e Privacidade`) para os módulos e ADRs correspondentes.
 
 ---
 
-### M03 — Documentação das Métricas do Treinamento YOLO (`best.pt`) no ADR 0009
+### ~~M03~~ ✅ Resolvido — Documentação das Métricas do Treinamento YOLO (`best.pt`) no ADR 0009
 
 **Situação atual:**
-- O projeto inclui o checkpoint treinado [`backend/src/yolo/best.pt`](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/backend/src/yolo/best.pt), o dataset anotado em [`docs/code-examples/yolo_dataset/`](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/code-examples/yolo_dataset) e os artefatos de treinamento em [`docs/code-examples/runs/yolo_training/`](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/code-examples/runs/yolo_training), mas o [ADR 0009](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md) descreve o treinamento apenas de forma qualitativa.
-- **Impacto:** Incluir os números do treinamento (quantidade de imagens/épocas e métricas obtidas para `faixa_elastica` e `halter`) valoriza o trabalho de Visão Computacional realizado pela equipe.
-
-**Ação recomendada:**
-- Adicionar no [ADR 0009](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md) (e no Relatório Técnico) uma tabela resumindo os hiperparâmetros e resultados de validação do treinamento em `docs/code-examples/runs/yolo_training/`.
+- O [ADR 0009](file:///home/luizbaroni/Projetos/fiap/fiap-pos-ia-para-devs-fase4-tech-challenge/docs/arquitetura/adrs/0009-deteccao-de-equipamentos-com-yolo.md) foi enriquecido com as tabelas de hiperparâmetros (`args.yaml`, 23 imagens rotuladas, 100 épocas com `yolo11n.pt`) e de evolução das métricas de validação (`results.csv`, atingindo **76,36% de precisão**, **75,00% de recall**, **67,60% de mAP50** e **44,97% de mAP50-95** no melhor checkpoint).
 
 ---
 
@@ -136,8 +123,8 @@ Dessa forma, **todos os requisitos funcionais e técnicos de código (`R01` a `R
 |---|---|---|---|
 | 🔴 Alta | G01 | Consolidar seção/documento de Relatório Técnico com resultados obtidos no dataset e exemplos de anomalias detectadas | 2h |
 | 🔴 Alta | G02 | Elaborar roteiro, gravar vídeo demonstrativo de até 15 min (YouTube/Vimeo) e incluir link no `README.md` | 4h |
-| 🟡 Média | M02 | Adicionar tabela executiva de rastreabilidade "Edital Fase 4 × Solução Fisio Coach" no `README.md` raiz | 0.5h |
-| 🟡 Média | M01 | Atualizar `PRD v1.2` alinhando escopo de dor por áudio local e decisões já validadas com o professor | 0.5h |
-| 🟡 Média | M03 | Documentar métricas do treinamento YOLO (`best.pt`) no `ADR 0009` e no Relatório Técnico | 1h |
+| ✅ Concluído | ~~M02~~ | Adicionar tabela executiva de rastreabilidade "Edital Fase 4 × Solução Fisio Coach" no `README.md` raiz | 0.5h |
+| ✅ Concluído | ~~M01~~ | Atualizar `PRD v1.2` alinhando escopo opcional da Seção 5.2 e ajustes na Seção 11 | 0.5h |
+| ✅ Concluído | ~~M03~~ | Documentar métricas do treinamento YOLO (`best.pt`) no `ADR 0009` | 1h |
 | 🟢 Baixa | M04 | Criar arquivo `backend/.env.example` padronizado com `backend/README.md` | 0.5h |
 

@@ -39,19 +39,35 @@ inferência. A configuração usa `device="cpu"` e as dependências PyTorch/
 Torchvision CPU-only, evitando a instalação dos runtimes CUDA e dos pacotes
 NVIDIA.
 
-## 3. Treinamento e limitações
+## 3. Treinamento, Métricas e Limitações
 
-O checkpoint usado nesta demonstração foi obtido a partir de um conjunto
-pequeno e específico para as duas classes. Os pesos são copiados para a pasta
-`backend/src/yolo` e versionados como artefato de inferência; a aplicação não
-possui fluxo de treinamento, fine-tuning ou atualização automática do modelo.
+O checkpoint usado nesta demonstração foi treinado fora da API a partir do script [`docs/code-examples/yolo_training.py`](../../code-examples/yolo_training.py), utilizando o dataset rotulado em [`docs/code-examples/yolo_dataset/`](../../code-examples/yolo_dataset) e registrando os artefatos de execução em [`docs/code-examples/runs/yolo_training/two_objects/`](../../code-examples/runs/yolo_training/two_objects). Os pesos finais foram versionados em [`backend/src/yolo/best.pt`](../../../backend/src/yolo/best.pt) exclusivamente para inferência em CPU.
 
-Esse conjunto é suficiente para demonstrar o fluxo, mas não caracteriza um
-modelo pronto para produção. Em um projeto real, o treinamento deveria usar
-uma base muito maior e diversa, com exemplos dos objetos em diferentes
-distâncias, ângulos, cores, iluminações, oclusões e tamanhos. Também seria
-necessário separar conjuntos de treino, validação e teste e acompanhar
-precisão, recall e falsos positivos por cenário.
+### Resumo do Dataset e Hiperparâmetros de Treinamento (`args.yaml`)
+
+| Parâmetro | Valor Utilizado |
+|---|---|
+| **Modelo Base** | `yolo11n.pt` (Ultralytics YOLO11 Nano, pré-treinado) |
+| **Classes (`2`)** | `0: faixa_elastica` (FISIO-006) · `1: halter` (FISIO-007) |
+| **Dataset Anotado** | **23 imagens** rotuladas no formato YOLO (`19` treino / `4` validação, `val_fraction=0.2`, `seed=42`) |
+| **Distribuição por Classe** | Treino: `9` `faixa_elastica` + `10` `halter` · Validação: `2` `faixa_elastica` + `2` `halter` |
+| **Épocas / Resolução / Batch** | `epochs=100` · `imgsz=640` · `batch=2` |
+| **Otimizador e Taxa de Aprendizado** | `optimizer=auto` · `lr0=0.01` · `lrf=0.01` · `warmup_epochs=3.0` |
+| **Data Augmentation** | `mosaic=1.0`, `fliplr=0.5`, `auto_augment=randaugment`, `erasing=0.4` |
+| **Tempo Total de Treinamento** | `188,8 s` (~3,1 minutos para 100 épocas) |
+
+### Métricas de Validação Obtidas (`results.csv`)
+
+| Marco do Treinamento | Precision (`B`) | Recall (`B`) | mAP50 (`B`) | mAP50-95 (`B`) | `val/box_loss` | `val/cls_loss` |
+|---|---:|---:|---:|---:|---:|---:|
+| **Época 1 (Início)** | 0,31% | 50,00% | 2,12% | 0,69% | 1,5431 | 5,9862 |
+| **Época 49 (Convergência Intermediária)** | 72,27% | 67,18% | 66,17% | 44,14% | 1,8348 | 1,9582 |
+| **Época 68 (Pico de mAP50)** | 61,50% | 73,16% | **68,34%** | 40,14% | 1,9154 | 1,5203 |
+| **Época 74 (Pico de Precisão)** | **93,90%** | 50,00% | 67,64% | 40,98% | 2,1569 | 1,5057 |
+| **Épocas 93–96 (Melhor mAP50-95 / `best.pt`)** | **76,36%** | **75,00%** | **67,60%** | **44,97%** | 2,0942 | 1,2435 |
+| **Época 100 (Final)** | 79,12% | 75,00% | 67,60% | 42,48% | 2,0702 | 1,2158 |
+
+Esse conjunto é suficiente para demonstrar o fluxo nos vídeos do projeto (com **76,36% de precisão**, **75,00% de recall** e **67,60% de mAP50** no checkpoint selecionado), mas não caracteriza um modelo pronto para produção clínica generalizada. Em um projeto real, o treinamento deveria usar uma base muito maior e diversa, com exemplos dos objetos em diferentes distâncias, ângulos, cores, iluminações, oclusões e tamanhos, separando conjuntos de treino, validação e teste por participante.
 
 ## 4. Alternativas consideradas
 
