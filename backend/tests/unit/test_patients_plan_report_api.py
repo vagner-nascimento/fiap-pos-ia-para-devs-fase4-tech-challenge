@@ -339,3 +339,94 @@ def test_list_patient_sessions_and_bundle_includes_recent_sessions(client):
     assert res_404.status_code == 404
 
 
+# -------------------------------------------------------------------------
+# 4. Testes de Upload de Vídeos por Slot da Prescrição e LGPD (Issue #5)
+# -------------------------------------------------------------------------
+
+def test_patient_slot_video_upload_and_lgpd_validation(client, tmp_path):
+    import cv2
+    import numpy as np
+
+    # Garante seed de PAC-001 (Marina T.)
+    client.get("/api/pacientes")
+
+    # Cria vídeo sintético válido (.mp4)
+    video_path = tmp_path / "sessao_slot1.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(str(video_path), fourcc, 30.0, (320, 240))
+    for _ in range(15):
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        out.write(frame)
+    out.release()
+    video_bytes = video_path.read_bytes()
+
+    # 1. Recusa envio sem aceite LGPD (422)
+    res_no_lgpd = client.post(
+        "/api/sessoes",
+        data={
+            "paciente_id": "PAC-001",
+            "slot_id": "SLOT-1",
+            "exercicio": "FISIO-006",
+            "lgpd_aceite": "false",
+        },
+        files={"file": ("sessao_slot1.mp4", video_bytes, "video/mp4")},
+    )
+    assert res_no_lgpd.status_code == 422
+    assert "LGPD" in res_no_lgpd.json()["detail"]
+
+    # 2. Recusa formato de arquivo inválido (400)
+    res_bad_ext = client.post(
+        "/api/sessoes",
+        data={
+            "paciente_id": "PAC-001",
+            "slot_id": "SLOT-1",
+            "exercicio": "FISIO-006",
+            "lgpd_aceite": "true",
+        },
+        files={"file": ("documento.txt", b"conteudo invalido", "text/plain")},
+    )
+    assert res_bad_ext.status_code == 400
+    assert "Formato de arquivo inválido" in res_bad_ext.json()["detail"]
+
+    # 3. Upload válido por slot com alias 'exercicio' e 'slot_id'
+    res_ok = client.post(
+        "/api/sessoes",
+        data={
+            "paciente_id": "PAC-001",
+            "slot_id": "SLOT-2",
+            "exercicio": "FISIO-005",
+            "side": "ambos",
+            "target_repetitions": "8",
+            "lgpd_aceite": "true",
+        },
+        files={"file": ("sessao_slot2_bastao.mp4", video_bytes, "video/mp4")},
+    )
+    assert res_ok.status_code == 202
+    created = res_ok.json()
+    assert created["paciente_id"] == "PAC-001"
+    assert created["slot_id"] == "SLOT-2"
+    assert created["exercicio_id"] == "FISIO-005"
+    assert created["lgpd_aceite"] is True
+
+    # 4. Verifica persistência de slot_id, original_filename e file_size_bytes no bundle do paciente
+    bundle = client.get("/api/pacientes/PAC-001").json()
+    slot2_sess = next(
+        (s for s in bundle["sessoes_recentes"] if s["session_id"] == created["session_id"]),
+        None,
+    )
+    assert slot2_sess is not None
+    assert slot2_sess["slot_id"] == "SLOT-2"
+    assert slot2_sess["lgpd_aceite"] is True
+    assert slot2_sess["original_filename"] == "sessao_slot2_bastao.mp4"
+    assert slot2_sess["file_size_bytes"] == len(video_bytes)
+
+    # 5. Verifica que o endpoint de relatório também retorna slot_id e lgpd_aceite
+    report_res = client.get(f"/api/sessoes/{created['session_id']}/relatorio")
+    assert report_res.status_code == 200
+    report_json = report_res.json()
+    assert report_json["slot_id"] == "SLOT-2"
+    assert report_json["lgpd_aceite"] is True
+
+
+
+

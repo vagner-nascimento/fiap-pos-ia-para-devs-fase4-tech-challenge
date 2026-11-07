@@ -276,3 +276,50 @@ def test_session_repository_crud():
     deleted = repo.delete_session("sess_101")
     assert deleted is True
     assert repo.get_session("sess_101") is None
+
+
+def test_mongo_result_sink_preserves_slot_and_file_metadata(
+    tmp_path: Path, sample_result: ExerciseAnalysisResult
+):
+    storage = MediaStorage(media_root=tmp_path)
+    mock_client = mongomock.MongoClient()
+    db = mock_client["test_db"]
+    session_repo = SessionRepository(collection=db["sessoes"])
+    event_repo = EventRepository(collection=db["eventos"])
+
+    # Simula registro inicial criado no POST /api/sessoes (status processando)
+    session_repo.save_session(
+        SessionDocument(
+            session_id="run_slot_preserve",
+            paciente_id="PAC-001",
+            slot_id="SLOT-1",
+            exercicio_id="FISIO-001",
+            case_id="FISIO-001",
+            side_evaluated="direito",
+            lgpd_aceite=True,
+            original_filename="gravacao_paciente.mp4",
+            file_size_bytes=50331648,
+            status=SessionStatus.PROCESSANDO,
+        )
+    )
+
+    sink = MongoResultSink(
+        session_repository=session_repo,
+        event_repository=event_repo,
+        media_storage=storage,
+    )
+    sink.save(
+        result=sample_result,
+        run_id="run_slot_preserve",
+        video_path="inputs/sessions/run_slot_preserve/original.mp4",
+        paciente_id="PAC-001",
+    )
+
+    final_doc = session_repo.get_session("run_slot_preserve")
+    assert final_doc is not None
+    assert final_doc.status == SessionStatus.CONCLUIDO
+    assert final_doc.slot_id == "SLOT-1"
+    assert final_doc.lgpd_aceite is True
+    assert final_doc.original_filename == "gravacao_paciente.mp4"
+    assert final_doc.file_size_bytes == 50331648
+

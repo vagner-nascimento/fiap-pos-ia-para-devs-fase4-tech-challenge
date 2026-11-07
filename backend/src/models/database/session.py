@@ -32,9 +32,19 @@ class SessionDocument(BaseModel):
 
     session_id: str = Field(..., description="Identificador único da sessão (run_id)")
     paciente_id: Optional[str] = Field(default=None, description="Identificador sintético do paciente")
+    slot_id: Optional[str] = Field(default=None, description="Identificador do slot na prescrição (ex: SLOT-1)")
     exercicio_id: str = Field(..., description="Identificador do exercício (ex: FISIO-001)")
     case_id: str = Field(..., description="Identificador do caso clínico de referência")
     side_evaluated: str = Field(..., description="Lado avaliado: direito, esquerdo ou ambos")
+    lgpd_aceite: bool = Field(
+        default=True, description="Indica se o paciente aceitou o termo de consentimento LGPD (imagem e voz)"
+    )
+    original_filename: Optional[str] = Field(
+        default=None, description="Nome original do arquivo de vídeo ou clipe enviado"
+    )
+    file_size_bytes: Optional[int] = Field(
+        default=None, ge=0, description="Tamanho do arquivo de vídeo enviado em bytes"
+    )
     status: SessionStatus = Field(default=SessionStatus.CONCLUIDO, description="Status do processamento da sessão")
     etapa: str = Field(default="result_persistence", description="Etapa atual da esteira de IA")
     processing_steps: list[ProcessingStep] = Field(
