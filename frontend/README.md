@@ -41,8 +41,8 @@ O frontend acessa o backend por meio das seguintes rotas REST e estáticas:
 | `GET` / `POST` | `/api/pacientes/{id}/laudo` | Consulta e salva o laudo médico estruturado do paciente. |
 | `GET` / `POST` | `/api/pacientes/{id}/plano` | Consulta e salva o plano de prescrição de exercícios e limites de dor/amplitude. |
 | `GET` | `/api/pacientes/catalogo-exercicios` | Retorna o catálogo completo dos 7 exercícios clínicos (`FISIO-001` a `FISIO-007`). |
-| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`) de até 250MB e inicia a análise (`202 Accepted`). |
-| `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON. |
+| `POST` | `/api/sessoes` | Envia upload de vídeo (`multipart/form-data`, até 200MB) por slot (`slot_id`, `paciente_id`, `exercicio`/`exercicio_id`, `lgpd_aceite`) com progresso via `XMLHttpRequest` e inicia a análise (`202 Accepted`). |
+| `POST` | `/api/sessoes/referencia` | Dispara análise a partir de clipe de dataset de referência via JSON (suportando `slot_id` e `lgpd_aceite`). |
 | `GET` | `/api/sessoes/clips-referencia` | Alias de compatibilidade para o catálogo real do dataset baixado. |
 | `GET` | `/api/datasets/fisio/status` | Consulta se o dataset oficial já foi baixado. |
 | `POST` | `/api/datasets/fisio/download` | Solicita o download idempotente do dataset pelo backend. |
