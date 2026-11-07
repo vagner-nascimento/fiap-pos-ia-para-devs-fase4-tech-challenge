@@ -27,7 +27,7 @@ import {
  * PlanAndReportView — Tela 1 ("Plano e laudo") e Tela 8 ("Cadastro de paciente")
  * Alinhada ao Design System Oficial (docs/design/DESIGN.md e Mock 01-Plano-Laudo.dc.html).
  */
-export function PlanAndReportView() {
+export function PlanAndReportView({ onOpenEvolution }) {
   // Lista de pacientes e catálogo de exercícios
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('PAC-001');
@@ -46,16 +46,19 @@ export function PlanAndReportView() {
   const [isExtracting, setIsExtracting] = useState(false);
 
   // Estado dos Limites do Plano
+  const [diasTratamento, setDiasTratamento] = useState(3);
   const [dorMaxima, setDorMaxima] = useState(4);
   const [amplitudeEsperada, setAmplitudeEsperada] = useState('60 – 90');
 
-  // Estado dos Exercícios Prescritos
+  // Estado dos Exercícios Prescritos (com suporte a exercícios diferentes por dia)
   const [prescribedExercises, setPrescribedExercises] = useState([]);
+  const [selectedDayFilter, setSelectedDayFilter] = useState('all'); // 'all' | 1 | 2 | ...
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [newExCaseId, setNewExCaseId] = useState('FISIO-006');
   const [newExSeries, setNewExSeries] = useState(3);
   const [newExReps, setNewExReps] = useState(10);
   const [newExLado, setNewExLado] = useState('direito');
+  const [newExDays, setNewExDays] = useState([1, 2, 3]);
   const [newExInstrucoes, setNewExInstrucoes] = useState('');
 
   // Salvamento geral
@@ -93,10 +96,12 @@ export function PlanAndReportView() {
       }
 
       if (plano) {
+        setDiasTratamento(plano.dias_tratamento ?? 3);
         setDorMaxima(plano.dor_maxima_aceitavel ?? 4);
         setAmplitudeEsperada(plano.amplitude_esperada_texto || '60 – 90');
         setPrescribedExercises(plano.exercicios || []);
       } else {
+        setDiasTratamento(3);
         setDorMaxima(4);
         setAmplitudeEsperada('60 – 90');
         setPrescribedExercises([]);
@@ -169,9 +174,61 @@ export function PlanAndReportView() {
     }
   };
 
+  const totalDaysCount = Math.max(1, Number(diasTratamento) || 3);
+
+  const getResolvedDaysForItem = (item, maxDays = totalDaysCount) => {
+    if (Array.isArray(item.dias_prescritos) && item.dias_prescritos.length > 0) {
+      return item.dias_prescritos
+        .map(Number)
+        .filter((d) => d >= 1 && d <= maxDays)
+        .sort((a, b) => a - b);
+    }
+    if (item.dia_tratamento != null && Number(item.dia_tratamento) >= 1) {
+      return [Number(item.dia_tratamento)];
+    }
+    return Array.from({ length: maxDays }, (_, idx) => idx + 1);
+  };
+
+  const handleToggleExerciseDay = (index, dayNum) => {
+    setPrescribedExercises((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        const currentDays = getResolvedDaysForItem(item, totalDaysCount);
+        const exists = currentDays.includes(dayNum);
+        // Garante que pelo menos 1 dia permaneça selecionado
+        if (exists && currentDays.length === 1) {
+          return item;
+        }
+        const nextDays = exists
+          ? currentDays.filter((d) => d !== dayNum)
+          : [...currentDays, dayNum].sort((a, b) => a - b);
+        return {
+          ...item,
+          dias_prescritos: nextDays,
+          dia_tratamento: nextDays.length === 1 ? nextDays[0] : null,
+        };
+      })
+    );
+    setSaveMessage('');
+  };
+
+  const handleOpenAddExercise = () => {
+    if (selectedDayFilter !== 'all') {
+      setNewExDays([Number(selectedDayFilter)]);
+    } else {
+      setNewExDays(Array.from({ length: totalDaysCount }, (_, i) => i + 1));
+    }
+    setIsAddingExercise(true);
+  };
+
   const handleAddExerciseToPlan = () => {
     const catItem = exerciseCatalog.find((c) => c.case_id === newExCaseId);
     if (!catItem) return;
+
+    const chosenDays =
+      Array.isArray(newExDays) && newExDays.length > 0
+        ? [...new Set(newExDays.map(Number))].sort((a, b) => a - b)
+        : Array.from({ length: totalDaysCount }, (_, i) => i + 1);
 
     const nextSlotNumber = prescribedExercises.length + 1;
     const newItem = {
@@ -182,6 +239,8 @@ export function PlanAndReportView() {
       lado: newExLado || catItem.lado_padrao || 'auto',
       series: Number(newExSeries) || 3,
       repeticoes: Number(newExReps) || 10,
+      dias_prescritos: chosenDays,
+      dia_tratamento: chosenDays.length === 1 ? chosenDays[0] : null,
       instrucoes: newExInstrucoes.trim() || null,
     };
 
@@ -233,17 +292,23 @@ export function PlanAndReportView() {
       }
 
       const savedPlano = await savePatientPlan(selectedPatientId, {
+        dias_tratamento: totalDaysCount,
         dor_maxima_aceitavel: Number(dorMaxima) || 0,
         amplitude_esperada_texto: amplitudeEsperada.trim() || '60 – 90',
-        exercicios: prescribedExercises.map((ex, idx) => ({
-          slot_id: `SLOT-${idx + 1}`,
-          exercicio_id: ex.exercicio_id,
-          series: Number(ex.series) || 3,
-          repeticoes: Number(ex.repeticoes) || 10,
-          lado: ex.lado || 'auto',
-          equipamento: ex.equipamento || null,
-          instrucoes: ex.instrucoes || null,
-        })),
+        exercicios: prescribedExercises.map((ex, idx) => {
+          const resolvedDays = getResolvedDaysForItem(ex, totalDaysCount);
+          return {
+            slot_id: `SLOT-${idx + 1}`,
+            exercicio_id: ex.exercicio_id,
+            series: Number(ex.series) || 3,
+            repeticoes: Number(ex.repeticoes) || 10,
+            dia_tratamento: resolvedDays.length === 1 ? resolvedDays[0] : null,
+            dias_prescritos: resolvedDays,
+            lado: ex.lado || 'auto',
+            equipamento: ex.equipamento || null,
+            instrucoes: ex.instrucoes || null,
+          };
+        }),
       });
 
       setPrescribedExercises(savedPlano.exercicios || []);
@@ -337,6 +402,17 @@ export function PlanAndReportView() {
           >
             <UserPlus size={16} /> Novo paciente
           </Button>
+
+          {onOpenEvolution && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => onOpenEvolution(selectedPatientId)}
+              disabled={loading || isSaving}
+            >
+              <span>Ver evolução</span>
+            </Button>
+          )}
 
           <Button
             type="button"
@@ -503,18 +579,33 @@ export function PlanAndReportView() {
         {/* Card 2: Limites do Plano */}
         <Card>
           <h2>Limites do plano</h2>
-          <Field
-            id="p1"
-            label="Dor máxima aceitável (0–10)"
-            type="number"
-            min="0"
-            max="10"
-            value={dorMaxima}
-            onChange={(e) => {
-              setDorMaxima(e.target.value);
-              setSaveMessage('');
-            }}
-          />
+          <div className="g" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Field
+              id="p-dias"
+              label="Dias de tratamento previstos"
+              type="number"
+              min="1"
+              max="60"
+              value={diasTratamento}
+              onChange={(e) => {
+                setDiasTratamento(e.target.value);
+                setSaveMessage('');
+              }}
+            />
+
+            <Field
+              id="p1"
+              label="Dor máxima aceitável (0–10)"
+              type="number"
+              min="0"
+              max="10"
+              value={dorMaxima}
+              onChange={(e) => {
+                setDorMaxima(e.target.value);
+                setSaveMessage('');
+              }}
+            />
+          </div>
 
           <Field
             id="p2"
@@ -538,19 +629,61 @@ export function PlanAndReportView() {
             }}
           >
             <p className="mu">
-              <strong>Resumo de segurança clínica:</strong> Alertas serão gerados caso o relato de
-              dor ultrapasse <strong>{dorMaxima}/10</strong> ou a amplitude viole as restrições do
-              laudo.
+              <strong>Resumo de segurança clínica:</strong> Plano previsto para{' '}
+              <strong>{diasTratamento} dia(s)</strong> de tratamento. Alertas serão gerados caso o
+              relato de dor ultrapasse <strong>{dorMaxima}/10</strong> ou a amplitude viole as
+              restrições do laudo.
             </p>
           </div>
         </Card>
       </div>
 
-      {/* Card 3: Exercícios Prescritos conforme Mock 1 */}
+      {/* Card 3: Exercícios Prescritos conforme Mock 1 + Prescrição por Dia de Tratamento */}
       <Card style={{ marginTop: '20px' }}>
-        <div className="f" style={{ justifyContent: 'space-between', marginBottom: '8px' }}>
-          <h2 style={{ margin: 0 }}>Exercícios prescritos</h2>
-          <span className="mu">{prescribedExercises.length} exercício(s) no plano</span>
+        <div className="f" style={{ justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Exercícios prescritos por dia de tratamento</h2>
+            <p className="mu" style={{ marginTop: '2px' }}>
+              Você pode prescrever exercícios diferentes para cada dia (clique nos dias de cada exercício ou filtre por dia abaixo).
+            </p>
+          </div>
+          <span className="mu">
+            {prescribedExercises.length} exercício(s) no plano · {totalDaysCount} dia(s)
+          </span>
+        </div>
+
+        {/* Barra de Abas por Dia de Tratamento */}
+        <div className="fc-day-tabs-bar" role="tablist" aria-label="Filtrar exercícios por dia">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedDayFilter === 'all'}
+            className={`fc-day-tab-btn ${selectedDayFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedDayFilter('all')}
+          >
+            <span>Todos os dias</span>
+            <span className="fc-day-tab-counter">{prescribedExercises.length}</span>
+          </button>
+
+          {Array.from({ length: totalDaysCount }, (_, idx) => idx + 1).map((dayNum) => {
+            const countInDay = prescribedExercises.filter((ex) =>
+              getResolvedDaysForItem(ex, totalDaysCount).includes(dayNum)
+            ).length;
+            const isSelected = selectedDayFilter === dayNum;
+            return (
+              <button
+                key={dayNum}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`fc-day-tab-btn ${isSelected ? 'active' : ''}`}
+                onClick={() => setSelectedDayFilter(dayNum)}
+              >
+                <span>Dia {dayNum}</span>
+                <span className="fc-day-tab-counter">{countInDay} ex.</span>
+              </button>
+            );
+          })}
         </div>
 
         {prescribedExercises.length === 0 ? (
@@ -560,60 +693,92 @@ export function PlanAndReportView() {
           </p>
         ) : (
           <div>
-            {prescribedExercises.map((item, idx) => (
-              <div key={`${item.slot_id || idx}-${item.exercicio_id}`} className="plan-exercise-row">
-                <div>
-                  <b>
-                    {item.exercicio_id} · {item.exercicio_nome}
-                  </b>
-                  <p className="mu">
-                    Equipamento: {item.equipamento || 'Nenhum'} · Lado: {item.lado || 'auto'}
-                    {item.instrucoes ? ` · ${item.instrucoes}` : ''}
-                  </p>
-                </div>
-
-                <div className="f" style={{ gap: '10px', flexWrap: 'wrap' }}>
-                  <div className="f" style={{ gap: '6px' }}>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      aria-label={`Séries de ${item.exercicio_id}`}
-                      className="in"
-                      style={{ width: '64px', height: '36px', textAlign: 'center', padding: '0 6px' }}
-                      value={item.series}
-                      onChange={(e) =>
-                        handleUpdateExerciseField(idx, 'series', Number(e.target.value) || 1)
-                      }
-                    />
-                    <span className="mu">séries ×</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      aria-label={`Repetições de ${item.exercicio_id}`}
-                      className="in"
-                      style={{ width: '68px', height: '36px', textAlign: 'center', padding: '0 6px' }}
-                      value={item.repeticoes}
-                      onChange={(e) =>
-                        handleUpdateExerciseField(idx, 'repeticoes', Number(e.target.value) || 1)
-                      }
-                    />
-                    <span className="mu">reps</span>
+            {prescribedExercises.map((item, idx) => {
+              const itemDays = getResolvedDaysForItem(item, totalDaysCount);
+              if (selectedDayFilter !== 'all' && !itemDays.includes(Number(selectedDayFilter))) {
+                return null;
+              }
+              return (
+                <div key={`${item.slot_id || idx}-${item.exercicio_id}`} className="plan-exercise-row">
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <b>
+                      {item.slot_id || `SLOT-${idx + 1}`} · {item.exercicio_id} · {item.exercicio_nome}
+                    </b>
+                    <p className="mu">
+                      Equipamento: {item.equipamento || 'Nenhum'} · Lado: {item.lado || 'auto'} · Meta no dia:{' '}
+                      <strong>{(Number(item.series) || 1) * (Number(item.repeticoes) || 1)} reps</strong>
+                      {item.instrucoes ? ` · ${item.instrucoes}` : ''}
+                    </p>
+                    {/* Seletor interativo de dias em que este exercício ocorre */}
+                    <div className="f" style={{ gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      <span className="mu" style={{ fontSize: '12px' }}>
+                        Dias prescritos:
+                      </span>
+                      {Array.from({ length: totalDaysCount }, (_, dIdx) => dIdx + 1).map((dayNum) => {
+                        const activeOnDay = itemDays.includes(dayNum);
+                        return (
+                          <button
+                            key={dayNum}
+                            type="button"
+                            onClick={() => handleToggleExerciseDay(idx, dayNum)}
+                            className={`fc-filter-pill ${activeOnDay ? 'active' : ''}`}
+                            style={{ padding: '2px 10px', fontSize: '11px' }}
+                            title={
+                              activeOnDay
+                                ? `Clique para remover do Dia ${dayNum}`
+                                : `Clique para incluir no Dia ${dayNum}`
+                            }
+                          >
+                            Dia {dayNum}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="btn-icon-danger"
-                    onClick={() => handleRemoveExercise(idx)}
-                    aria-label={`Remover exercício ${item.exercicio_id}`}
-                    title="Remover exercício"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="f" style={{ gap: '10px', flexWrap: 'wrap' }}>
+                    <div className="f" style={{ gap: '6px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        aria-label={`Séries de ${item.exercicio_id}`}
+                        className="in"
+                        style={{ width: '64px', height: '36px', textAlign: 'center', padding: '0 6px' }}
+                        value={item.series}
+                        onChange={(e) =>
+                          handleUpdateExerciseField(idx, 'series', Number(e.target.value) || 1)
+                        }
+                      />
+                      <span className="mu">séries ×</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        aria-label={`Repetições de ${item.exercicio_id}`}
+                        className="in"
+                        style={{ width: '68px', height: '36px', textAlign: 'center', padding: '0 6px' }}
+                        value={item.repeticoes}
+                        onChange={(e) =>
+                          handleUpdateExerciseField(idx, 'repeticoes', Number(e.target.value) || 1)
+                        }
+                      />
+                      <span className="mu">reps</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-icon-danger"
+                      onClick={() => handleRemoveExercise(idx)}
+                      aria-label={`Remover exercício ${item.exercicio_id}`}
+                      title="Remover exercício"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -622,6 +787,7 @@ export function PlanAndReportView() {
           <div className="add-exercise-box">
             <h3 style={{ fontSize: '15px', margin: '0 0 12px', fontWeight: 700 }}>
               Adicionar exercício à prescrição
+              {selectedDayFilter !== 'all' ? ` (Dia ${selectedDayFilter})` : ''}
             </h3>
             <div
               className="g"
@@ -684,6 +850,55 @@ export function PlanAndReportView() {
               />
             </div>
 
+            {/* Seleção dos dias de tratamento para o novo exercício */}
+            <div style={{ marginTop: '12px' }}>
+              <div className="f" style={{ justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ margin: 0 }}>Dias do tratamento para este exercício</label>
+                <div className="f" style={{ gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn-link-inline"
+                    onClick={() =>
+                      setNewExDays(Array.from({ length: totalDaysCount }, (_, i) => i + 1))
+                    }
+                  >
+                    Marcar todos os dias
+                  </button>
+                  {selectedDayFilter !== 'all' && (
+                    <button
+                      type="button"
+                      className="btn-link-inline"
+                      onClick={() => setNewExDays([Number(selectedDayFilter)])}
+                    >
+                      Apenas Dia {selectedDayFilter}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="f" style={{ gap: '8px', flexWrap: 'wrap' }}>
+                {Array.from({ length: totalDaysCount }, (_, i) => i + 1).map((dayNum) => {
+                  const isChecked = newExDays.includes(dayNum);
+                  return (
+                    <button
+                      key={dayNum}
+                      type="button"
+                      className={`fc-filter-pill ${isChecked ? 'active' : ''}`}
+                      onClick={() => {
+                        if (isChecked && newExDays.length === 1) return;
+                        setNewExDays((prev) =>
+                          isChecked
+                            ? prev.filter((d) => d !== dayNum)
+                            : [...prev, dayNum].sort((a, b) => a - b)
+                        );
+                      }}
+                    >
+                      Dia {dayNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <Field
               id="add-ex-notes"
               label="Instruções específicas (opcional)"
@@ -711,9 +926,12 @@ export function PlanAndReportView() {
             type="button"
             variant="secondary"
             style={{ marginTop: '12px' }}
-            onClick={() => setIsAddingExercise(true)}
+            onClick={handleOpenAddExercise}
           >
-            <Plus size={16} /> + Adicionar exercício
+            <Plus size={16} />{' '}
+            {selectedDayFilter === 'all'
+              ? '+ Adicionar exercício'
+              : `+ Adicionar exercício ao Dia ${selectedDayFilter}`}
           </Button>
         )}
       </Card>

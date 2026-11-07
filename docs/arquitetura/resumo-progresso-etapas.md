@@ -117,6 +117,23 @@
   * Exibição do selo visual de auditoria **`● Termo LGPD aceito`** nas sessões enviadas por slot, na tabela geral de sessões e no Relatório da Sessão (cabeçalho e quadro de comparação clínica).
 - **Testes Automatizados:** 139 testes passando no backend (`pytest tests/ -v`).
 
+### Etapa 11: Relatório Final de Evolução Longitudinal Multi-Dias e Painel de Alertas (Issue #7 - Concluída)
+- **Modelagem Multi-Dias e Decomposição em Séries (`PlanDocument`, `SessionDocument`, `AlertDocument`):**
+  * Inclusão de `dias_tratamento`, `avaliado_evolucao` e `observacoes_avaliacao_final` em `PlanDocument`.
+  * Inclusão de `dia_tratamento`, `series_prescritas`, `repeticoes_por_serie`, `serie_index`, `amplitude_maxima`, `amplitude_media`, `consistencia_score`, `dor_score_0_10`, `dor_percentual_tempo`, `series_breakdown` (`Série 1..N`) e `avaliado_fisioterapeuta` em `SessionDocument`.
+  * Criação de `AlertDocument` (`alertas`) e `AlertRepository` com severidade (`critico`, `atencao`, `verde`) e status (`novo`, `lido`, `tratado`).
+- **Serviço de Evolução Longitudinal (`backend/src/services/evolution_service.py`):**
+  * Cálculo determinístico dos 3 pilares clínicos ao longo dos dias e sessões de exercícios: **Amplitude Articular (°)**, **Consistência Biomecânica (0–100%)** e **Nível de Dor (0–10)**, além da decomposição por série (`Série 1..N`) e geração automática de alertas clínicos em `MongoResultSink.save`.
+- **Novos Endpoints REST:**
+  * `GET /api/pacientes/{id}/relatorio-evolucao`, `POST /api/pacientes/{id}/seed-evolucao`, `POST /api/pacientes/{id}/avaliar-evolucao`;
+  * `PATCH /api/sessoes/{id}/avaliar`;
+  * `GET /api/alertas` e `PATCH /api/alertas/{id}`.
+- **Frontend (`PatientEvolutionReportView.jsx`, `AlertsPanelView.jsx`, `PlanAndReportView.jsx`, `PatientPrescriptionView.jsx`, `SessionReportView.jsx`):**
+  * **Tela 7 (`PatientEvolutionReportView.jsx`):** Cards comparativos dos 3 pilares (Amplitude, Consistência e Dor), 3 gráficos SVG longitudinais por dia (`Dia 1..D`), tabela por dia, evolução por exercício prescrito com decomposição expansível por série (`Série 1..N`), parecer clínico de apoio à decisão e formulário de avaliação final do fisioterapeuta/médico.
+  * **Tela 6 (`AlertsPanelView.jsx`):** Painel de alertas com contadores de severidade (`■ Crítico`, `▲ Atenção`, `● Adequado`), filtros e ação `"Marcar como tratado"`.
+  * Seletores de dia de tratamento (`Dia 1..D`) na visão do paciente (`PatientPrescriptionView.jsx`), configuração de `dias_tratamento` no plano (`PlanAndReportView.jsx`) e card de desempenho por série no relatório individual (`SessionReportView.jsx`).
+- **Testes Automatizados:** 146 testes passando no backend (`pytest tests/ -v`).
+
 ---
 
 ## 2. Progresso da tela de processamento
@@ -141,6 +158,5 @@ implementadas não fazem parte dessa lista.
 
 ## 3. Próximos Passos Imediatos
 
-1. Relatório final de evolução entre sessões e painel de alertas consolidado (Issue #7).
-2. Melhorias mapeadas em backlog: validação de múltiplas séries de repetições por exercício (Issue #21) e histórico de múltiplas execuções por slot para comparativo evolutivo (Issue #22).
-3. Evolução da análise de dor e expansão dos datasets de validação.
+1. Evolução da análise multimodal (expressão facial complementar e expansão dos datasets de validação).
+2. Refinamento contínuo dos limiares biomecânicos por articulação.

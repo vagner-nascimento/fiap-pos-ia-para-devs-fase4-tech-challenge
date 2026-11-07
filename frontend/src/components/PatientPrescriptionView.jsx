@@ -62,13 +62,14 @@ function validateVideoFile(file) {
  * Por privacidade (LGPD), não lista outros pacientes: o paciente busca seu próprio cadastro
  * informando seu nome ou código identificador (ex.: PAC-001) e realiza 1 envio de vídeo por sessão prescrita.
  */
-export function PatientPrescriptionView({ onSelectSession, onSelectProcessing }) {
+export function PatientPrescriptionView({ onSelectSession, onSelectProcessing, onOpenEvolution }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchEmpty, setSearchEmpty] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(1);
 
   // Estado de seleção e upload por slot (Issue #5)
   // slotSelections[slotKey] = { mode: 'file' | 'reference', file?: File, datasetClip?: string, validationError?: string }
@@ -187,15 +188,32 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
   const plano = bundle?.plano;
   const recentSessions = bundle?.sessoes_recentes || [];
   const prescribedExercises = plano?.exercicios || [];
+  const totalDays = Math.max(1, Number(plano?.dias_tratamento || 3));
 
   const getSlotKey = (exerciseItem, idx) => exerciseItem.slot_id || `SLOT-${idx + 1}`;
 
-  // Associa cada slot prescrito à sessão mais recente correspondente do paciente (priorizando slot_id)
-  const getSlotSession = (exerciseItem, slotKey) => {
-    const bySlotId = recentSessions.find((sess) => sess.slot_id && sess.slot_id === slotKey);
+  const exerciseAppliesToDay = (exerciseItem, day) => {
+    if (Array.isArray(exerciseItem.dias_prescritos) && exerciseItem.dias_prescritos.length > 0) {
+      return exerciseItem.dias_prescritos.map(Number).includes(Number(day));
+    }
+    if (exerciseItem.dia_tratamento != null && Number(exerciseItem.dia_tratamento) >= 1) {
+      return Number(exerciseItem.dia_tratamento) === Number(day);
+    }
+    return true;
+  };
+
+  const getExercisesForDay = (day) =>
+    prescribedExercises
+      .map((item, idx) => ({ item, idx, slotKey: getSlotKey(item, idx) }))
+      .filter(({ item }) => exerciseAppliesToDay(item, day));
+
+  // Associa cada slot prescrito à sessão mais recente correspondente do paciente no dia selecionado
+  const getSlotSession = (exerciseItem, slotKey, day = selectedDay) => {
+    const daySessions = recentSessions.filter((sess) => Number(sess.dia_tratamento || 1) === Number(day));
+    const bySlotId = daySessions.find((sess) => sess.slot_id && sess.slot_id === slotKey);
     if (bySlotId) return bySlotId;
 
-    return recentSessions.find(
+    return daySessions.find(
       (sess) =>
         !sess.slot_id &&
         (sess.exercicio_id === exerciseItem.exercicio_id ||
@@ -203,10 +221,14 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     );
   };
 
-  const completedSlotsCount = prescribedExercises.filter((ex, idx) => {
-    const sess = getSlotSession(ex, getSlotKey(ex, idx));
-    return sess && (sess.status === 'concluido' || sess.status === 'processando');
-  }).length;
+  const countCompletedForDay = (day) =>
+    getExercisesForDay(day).filter(({ item, slotKey }) => {
+      const sess = getSlotSession(item, slotKey, day);
+      return sess && (sess.status === 'concluido' || sess.status === 'processando');
+    }).length;
+
+  const exercisesForSelectedDay = getExercisesForDay(selectedDay);
+  const completedSlotsCount = countCompletedForDay(selectedDay);
 
   // Manipulação de arquivo selecionado por slot
   const handleFileChangeForSlot = (slotKey, fileList) => {
@@ -281,6 +303,10 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
 
     try {
       let created = null;
+      const seriesNum = Math.max(1, Number(exerciseItem.series) || 3);
+      const repsPerSerie = Math.max(1, Number(exerciseItem.repeticoes) || 5);
+      const totalDailyReps = seriesNum * repsPerSerie;
+
       if (selection.mode === 'reference' && selection.datasetClip) {
         setSlotUploadStates((prev) => ({
           ...prev,
@@ -290,9 +316,12 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
           exercicio_id: exerciseItem.exercicio_id,
           paciente_id: patient.paciente_id,
           slot_id: slotKey,
+          dia_tratamento: selectedDay,
+          series_prescritas: seriesNum,
+          repeticoes_por_serie: repsPerSerie,
           dataset_clip: selection.datasetClip,
           side: exerciseItem.lado || 'auto',
-          target_repetitions: Number(exerciseItem.repeticoes) || 5,
+          target_repetitions: totalDailyReps,
           lgpd_aceite: true,
         });
       } else {
@@ -300,10 +329,13 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
         formData.append('file', selection.file);
         formData.append('paciente_id', patient.paciente_id);
         formData.append('slot_id', slotKey);
+        formData.append('dia_tratamento', String(selectedDay));
+        formData.append('series_prescritas', String(seriesNum));
+        formData.append('repeticoes_por_serie', String(repsPerSerie));
         formData.append('exercicio_id', exerciseItem.exercicio_id);
         formData.append('exercicio', exerciseItem.exercicio_id);
         formData.append('side', exerciseItem.lado || 'auto');
-        formData.append('target_repetitions', String(exerciseItem.repeticoes || 5));
+        formData.append('target_repetitions', String(totalDailyReps));
         formData.append('lgpd_aceite', 'true');
 
         created = await createSessionUpload(formData, {
@@ -349,9 +381,9 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     setUploadFormError(null);
     setBatchSuccessSessions([]);
 
-    const slotsToUpload = prescribedExercises
-      .map((item, idx) => ({ item, slotKey: getSlotKey(item, idx), idx }))
-      .filter(({ slotKey }) => Boolean(slotSelections[slotKey]));
+    const slotsToUpload = exercisesForSelectedDay.filter(({ slotKey }) =>
+      Boolean(slotSelections[slotKey])
+    );
 
     if (slotsToUpload.length === 0) {
       setUploadFormError(
@@ -446,9 +478,8 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
     }
   };
 
-  const selectedSlotsCount = prescribedExercises.filter((ex, idx) => {
-    const key = getSlotKey(ex, idx);
-    return Boolean(slotSelections[key] && !slotSelections[key].validationError);
+  const selectedSlotsCount = exercisesForSelectedDay.filter(({ slotKey }) => {
+    return Boolean(slotSelections[slotKey] && !slotSelections[slotKey].validationError);
   }).length;
 
   return (
@@ -467,15 +498,28 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
         </div>
 
         {patient && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => loadPatientPrescription(patient.paciente_id)}
-            disabled={loading || isBatchUploading}
-          >
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-            <span>Atualizar dados</span>
-          </Button>
+          <div className="f" style={{ gap: '8px', flexWrap: 'wrap' }}>
+            {onOpenEvolution && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenEvolution(patient.paciente_id)}
+                disabled={loading || isBatchUploading}
+              >
+                <FileText size={16} />
+                <span>Ver evolução do tratamento</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => loadPatientPrescription(patient.paciente_id)}
+              disabled={loading || isBatchUploading}
+            >
+              <RefreshCw size={16} className={loading ? 'spin' : ''} />
+              <span>Atualizar dados</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -686,27 +730,59 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
             </div>
           </Card>
 
-          {/* Coluna Direita: Enviar Sessões (Mock 02-Paciente-Envio — Issue #5) */}
+          {/* Coluna Direita: Enviar Sessões (Mock 02-Paciente-Envio — Issue #5 e Jornada Multi-Dias Issue #7) */}
           <Card>
             <div
               className="f"
               style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}
             >
-              <h2 style={{ margin: 0 }}>Enviar sessões</h2>
-              {prescribedExercises.length > 0 && (
+              <h2 style={{ margin: 0 }}>Enviar sessões — Dia {selectedDay} de {totalDays}</h2>
+              {exercisesForSelectedDay.length > 0 && (
                 <span className="ch ne">
                   <ClipboardCheck size={13} />
                   <span>
-                    {completedSlotsCount}/{prescribedExercises.length} enviada(s)
+                    {completedSlotsCount}/{exercisesForSelectedDay.length} enviada(s) no Dia {selectedDay}
                   </span>
                 </span>
               )}
             </div>
 
             <p className="mu" style={{ marginBottom: '12px' }}>
-              Um envio por sessão de fisioterapia. Grave de frente, com boa luz, corpo e rosto
-              visíveis, e fale como está a dor.
+              Selecione o dia do seu tratamento e envie um vídeo por exercício prescrito para aquele dia
+              (contendo as séries e repetições prescritas). Grave de frente, com boa luz, e relate se houver dor.
             </p>
+
+            {/* Seletor de Dia de Tratamento (Jornada Multi-Dias — Issue #7) */}
+            {totalDays > 1 && (
+              <div className="fc-day-tabs-bar" role="tablist" aria-label="Dias do tratamento">
+                {Array.from({ length: totalDays }, (_, idx) => idx + 1).map((dayNum) => {
+                  const doneInDay = countCompletedForDay(dayNum);
+                  const totalInDay = getExercisesForDay(dayNum).length;
+                  const isCurrentDay = selectedDay === dayNum;
+                  return (
+                    <button
+                      key={dayNum}
+                      type="button"
+                      role="tab"
+                      aria-selected={isCurrentDay}
+                      className={`fc-day-tab-btn ${isCurrentDay ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedDay(dayNum);
+                        setSlotSelections({});
+                        setSlotUploadStates({});
+                        setBatchSuccessSessions([]);
+                        setUploadFormError(null);
+                      }}
+                    >
+                      <span>Dia {dayNum}</span>
+                      <span className="fc-day-tab-counter">
+                        {doneInDay}/{totalInDay}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Banner de Sucesso quando múltiplas sessões foram enviadas em lote */}
             {batchSuccessSessions.length > 0 && (
@@ -740,7 +816,7 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               </div>
             )}
 
-            {prescribedExercises.length === 0 ? (
+            {exercisesForSelectedDay.length === 0 ? (
               <div
                 style={{
                   textAlign: 'center',
@@ -751,13 +827,12 @@ export function PatientPrescriptionView({ onSelectSession, onSelectProcessing })
               >
                 <Dumbbell size={28} className="mu" style={{ margin: '0 auto 8px' }} />
                 <p className="mu">
-                  Nenhum exercício foi prescrito no plano deste paciente até o momento.
+                  Nenhum exercício foi prescrito para o Dia {selectedDay} neste plano.
                 </p>
               </div>
             ) : (
               <div>
-                {prescribedExercises.map((item, idx) => {
-                  const slotKey = getSlotKey(item, idx);
+                {exercisesForSelectedDay.map(({ item, idx, slotKey }) => {
                   const slotSession = getSlotSession(item, slotKey);
                   const isDone = slotSession?.status === 'concluido';
                   const isProc =

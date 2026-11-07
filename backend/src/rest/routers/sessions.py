@@ -20,6 +20,7 @@ from fastapi import (
 )
 
 from config.media_paths import MediaStorage
+from infra.database.repositories.alert_repository import AlertRepository
 from infra.database.repositories.event_repository import EventRepository
 from infra.database.repositories.medical_report_repository import MedicalReportRepository
 from infra.database.repositories.plan_repository import PlanRepository
@@ -42,6 +43,7 @@ from models.rest.session import (
     ReferenceClipInfo,
     SessionReportResponse,
 )
+from services.evolution_service import ensure_session_metrics_populated
 from services.pose.registry import canonical_case_id
 from services.dataset_service import DatasetError, DatasetService
 from services.pose.object_detector import detection_config
@@ -229,6 +231,10 @@ def _init_session_record(
     target_repetitions: Optional[int],
     video_target: Path,
     slot_id: Optional[str] = None,
+    dia_tratamento: int = 1,
+    series_prescritas: int = 1,
+    repeticoes_por_serie: int = 5,
+    serie_index: Optional[int] = None,
     lgpd_aceite: bool = True,
     original_filename: Optional[str] = None,
     file_size_bytes: Optional[int] = None,
@@ -247,6 +253,10 @@ def _init_session_record(
         session_id=session_id,
         paciente_id=paciente_id,
         slot_id=slot_id,
+        dia_tratamento=max(1, int(dia_tratamento or 1)),
+        series_prescritas=max(1, int(series_prescritas or 1)),
+        repeticoes_por_serie=max(1, int(repeticoes_por_serie or target_repetitions or 5)),
+        serie_index=serie_index,
         exercicio_id=exercicio_id,
         case_id=exercicio_id,
         side_evaluated=side or "auto",
@@ -292,6 +302,10 @@ def create_session(
     exercicio: Optional[str] = Form(None, description="Alias do identificador do exercício conforme PRD v1.2"),
     paciente_id: Optional[str] = Form(None, description="Identificador sintético do paciente (ex: 'PAC-001')"),
     slot_id: Optional[str] = Form(None, description="Identificador do slot na prescrição (ex: 'SLOT-1')"),
+    dia_tratamento: int = Form(1, description="Dia de tratamento na jornada do plano (1..D)"),
+    series_prescritas: int = Form(1, description="Quantidade de séries prescritas para o exercício"),
+    repeticoes_por_serie: int = Form(5, description="Meta de repetições por série"),
+    serie_index: Optional[int] = Form(None, description="Índice da série quando enviado individualmente"),
     lgpd_aceite: bool = Form(True, description="Aceite do termo de consentimento LGPD para imagem e voz"),
     dataset_clip: Optional[str] = Form(None, description="Nome do clipe dentro de datasets se não enviar arquivo direto"),
     video_path: Optional[str] = Form(None, description="Caminho do vídeo já presente no filesystem"),
@@ -319,6 +333,10 @@ def create_session(
         target_repetitions=target_repetitions,
         video_target=video_target,
         slot_id=slot_id,
+        dia_tratamento=dia_tratamento,
+        series_prescritas=series_prescritas,
+        repeticoes_por_serie=repeticoes_por_serie,
+        serie_index=serie_index,
         lgpd_aceite=lgpd_aceite,
         original_filename=orig_name,
         file_size_bytes=size_bytes,
@@ -356,6 +374,10 @@ def create_session(
         message="Vídeo recebido com sucesso. Processamento biomecânico iniciado em background.",
         paciente_id=paciente_id,
         slot_id=slot_id,
+        dia_tratamento=dia_tratamento,
+        series_prescritas=series_prescritas,
+        repeticoes_por_serie=repeticoes_por_serie,
+        serie_index=serie_index,
         exercicio_id=resolved_exercise_id,
         lgpd_aceite=lgpd_aceite,
         created_at=datetime.now(timezone.utc).isoformat(),
@@ -395,6 +417,10 @@ def create_session_from_reference(
         target_repetitions=payload.target_repetitions,
         video_target=video_target,
         slot_id=payload.slot_id,
+        dia_tratamento=payload.dia_tratamento,
+        series_prescritas=payload.series_prescritas,
+        repeticoes_por_serie=payload.repeticoes_por_serie,
+        serie_index=payload.serie_index,
         lgpd_aceite=payload.lgpd_aceite,
         original_filename=orig_name,
         file_size_bytes=size_bytes,
@@ -432,6 +458,10 @@ def create_session_from_reference(
         message="Sessão iniciada via referência. Análise biomecânica em background.",
         paciente_id=payload.paciente_id,
         slot_id=payload.slot_id,
+        dia_tratamento=payload.dia_tratamento,
+        series_prescritas=payload.series_prescritas,
+        repeticoes_por_serie=payload.repeticoes_por_serie,
+        serie_index=payload.serie_index,
         exercicio_id=payload.exercicio_id,
         lgpd_aceite=payload.lgpd_aceite,
         created_at=datetime.now(timezone.utc).isoformat(),
@@ -720,6 +750,23 @@ def get_session_report(session_id: str) -> SessionReportResponse:
     plano_doc = PlanRepository().get_plan_by_patient(session.paciente_id) if session.paciente_id else None
     laudo_doc = MedicalReportRepository().get_report_by_patient(session.paciente_id) if session.paciente_id else None
 
+    plan_item = None
+    if plano_doc and plano_doc.exercicios:
+        plan_item = next(
+            (
+                ex for ex in plano_doc.exercicios
+                if (session.slot_id and ex.slot_id == session.slot_id)
+                or ex.exercicio_id == (session.case_id or session.exercicio_id)
+            ),
+            None,
+        )
+
+    populated_metrics = ensure_session_metrics_populated(
+        session=session,
+        events=events,
+        plan_item=plan_item,
+    )
+
     plano_label = "Conforme prescrição" if deviations_count == 0 else f"{deviations_count} desvio(s) detectado(s)"
     if plano_doc:
         plano_label = (
@@ -755,7 +802,12 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         session_id=session.session_id,
         paciente_id=session.paciente_id or "PAC-001",
         slot_id=session.slot_id,
+        dia_tratamento=session.dia_tratamento or 1,
+        series_prescritas=populated_metrics["series_prescritas"],
+        repeticoes_por_serie=populated_metrics["repeticoes_por_serie"],
+        serie_index=session.serie_index,
         lgpd_aceite=session.lgpd_aceite if session.lgpd_aceite is not None else True,
+        avaliado_fisioterapeuta=bool(session.avaliado_fisioterapeuta),
         exercicio_id=session.exercicio_id,
         exercicio_nome=exercicio_nome,
         case_id=session.case_id,
@@ -763,10 +815,15 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         created_at=session.created_at,
         status=session.status.value if hasattr(session.status, "value") else str(session.status),
         compliance_score=session.compliance_score,
+        amplitude_maxima=populated_metrics["amplitude_maxima"],
+        amplitude_media=populated_metrics["amplitude_media"],
+        consistencia_score=populated_metrics["consistencia_score"],
+        dor_score_0_10=populated_metrics["dor_score_0_10"],
+        series_breakdown=populated_metrics["series_breakdown"],
         risk_classification=risk_val,
         risk_symbol=risk_symbol,
         justificativas=session.justificativas or [],
-        target_repetitions=session.target_repetitions,
+        target_repetitions=session.target_repetitions or populated_metrics["target_repetitions"],
         valid_repetitions=session.valid_repetitions,
         invalid_repetitions=session.invalid_repetitions,
         total_deviations=deviations_count,
@@ -780,3 +837,27 @@ def get_session_report(session_id: str) -> SessionReportResponse:
         comparacao_clinica=comparacao_clinica,
         aviso_legal="Apoio à decisão, não diagnóstico.",
     )
+
+
+@router.patch(
+    "/{session_id}/avaliar",
+    response_model=SessionDocument,
+    summary="Marcar sessão como avaliada pelo fisioterapeuta",
+    description=(
+        "Registra a avaliação do fisioterapeuta sobre o relatório da sessão "
+        "e atualiza eventuais alertas vinculados para o estado 'tratado' (DESIGN.md seção 3)."
+    ),
+)
+def mark_session_as_evaluated(session_id: str) -> SessionDocument:
+    session_repo = SessionRepository()
+    updated = session_repo.mark_evaluated(session_id, avaliado=True)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sessão com ID '{session_id}' não encontrada.",
+        )
+    try:
+        AlertRepository().mark_session_alerts_treated(session_id)
+    except Exception as exc:
+        logger.warning("Não foi possível atualizar alertas da sessão '%s': %s", session_id, exc)
+    return updated

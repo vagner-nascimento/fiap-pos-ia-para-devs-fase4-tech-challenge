@@ -118,4 +118,41 @@ export async function listPatientSessions(pacienteId) {
   return handleResponse(response, 'Falha ao carregar o histórico de sessões do paciente.');
 }
 
+/**
+ * Obtém o Relatório Final de Evolução Longitudinal do Paciente (Issue #7).
+ */
+export async function getPatientEvolutionReport(pacienteId, { autoSeed = true } = {}) {
+  const qs = autoSeed ? '?auto_seed=true' : '?auto_seed=false';
+  const response = await fetch(
+    `${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/relatorio-evolucao${qs}`
+  );
+  return handleResponse(response, 'Falha ao carregar o relatório final de evolução do paciente.');
+}
+
+/**
+ * Popula/simula a jornada multi-dias completa de um paciente para demonstração imediata (Issue #7).
+ */
+export async function seedPatientEvolutionDemo(pacienteId) {
+  const response = await fetch(
+    `${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/seed-evolucao`,
+    { method: 'POST' }
+  );
+  return handleResponse(response, 'Falha ao simular jornada multi-dias do paciente.');
+}
+
+/**
+ * Registra a avaliação final do médico/fisioterapeuta sobre a evolução longitudinal do paciente (Issue #7).
+ */
+export async function evaluatePatientEvolution(pacienteId, payload) {
+  const response = await fetch(
+    `${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/avaliar-evolucao`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }
+  );
+  return handleResponse(response, 'Falha ao registrar avaliação do relatório de evolução.');
+}
+
 

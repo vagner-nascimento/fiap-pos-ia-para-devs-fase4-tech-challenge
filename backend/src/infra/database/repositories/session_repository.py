@@ -115,3 +115,14 @@ class SessionRepository:
         """Remove uma sessão pelo seu ID."""
         result = self.collection.delete_one({"session_id": session_id})
         return result.deleted_count > 0
+
+    def mark_evaluated(self, session_id: str, avaliado: bool = True) -> Optional[SessionDocument]:
+        """Marca uma sessão como avaliada pelo fisioterapeuta."""
+        now = datetime.now(timezone.utc).isoformat()
+        result = self.collection.update_one(
+            {"session_id": session_id},
+            {"$set": {"avaliado_fisioterapeuta": avaliado, "updated_at": now}},
+        )
+        if result.matched_count == 0:
+            return None
+        return self.get_session(session_id)

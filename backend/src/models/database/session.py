@@ -33,6 +33,18 @@ class SessionDocument(BaseModel):
     session_id: str = Field(..., description="Identificador único da sessão (run_id)")
     paciente_id: Optional[str] = Field(default=None, description="Identificador sintético do paciente")
     slot_id: Optional[str] = Field(default=None, description="Identificador do slot na prescrição (ex: SLOT-1)")
+    dia_tratamento: int = Field(
+        default=1, ge=1, le=30, description="Dia de tratamento na jornada do plano (1..D)"
+    )
+    series_prescritas: int = Field(
+        default=1, ge=1, le=20, description="Quantidade de séries prescritas para o exercício"
+    )
+    repeticoes_por_serie: int = Field(
+        default=5, ge=1, le=50, description="Meta de repetições por série"
+    )
+    serie_index: Optional[int] = Field(
+        default=None, description="Índice da série quando enviado por série individual"
+    )
     exercicio_id: str = Field(..., description="Identificador do exercício (ex: FISIO-001)")
     case_id: str = Field(..., description="Identificador do caso clínico de referência")
     side_evaluated: str = Field(..., description="Lado avaliado: direito, esquerdo ou ambos")
@@ -66,6 +78,27 @@ class SessionDocument(BaseModel):
     telemetry_path: Optional[str] = Field(default=None, description="Caminho relativo do telemetry.json")
     compliance_score: Optional[float] = Field(
         default=None, description="Score percentual de conformidade (0-100%)"
+    )
+    amplitude_maxima: Optional[float] = Field(
+        default=None, description="Amplitude máxima atingida na sessão em graus"
+    )
+    amplitude_media: Optional[float] = Field(
+        default=None, description="Amplitude média das repetições da sessão em graus"
+    )
+    consistencia_score: Optional[float] = Field(
+        default=None, description="Score de consistência biomecânica e regularidade entre séries (0-100%)"
+    )
+    dor_score_0_10: float = Field(
+        default=0.0, ge=0.0, le=10.0, description="Nível de dor consolidado da sessão na escala 0-10"
+    )
+    dor_percentual_tempo: float = Field(
+        default=0.0, ge=0.0, le=100.0, description="Percentual de tempo do vídeo com dor"
+    )
+    series_breakdown: list[dict[str, Any]] = Field(
+        default_factory=list, description="Detalhamento das métricas por série (Série 1..N)"
+    )
+    avaliado_fisioterapeuta: bool = Field(
+        default=False, description="Indica se a sessão foi avaliada pelo fisioterapeuta"
     )
     target_repetitions: Optional[int] = Field(default=None, description="Meta de repetições prescritas")
     completed_repetitions: int = Field(default=0, description="Total de repetições completadas")

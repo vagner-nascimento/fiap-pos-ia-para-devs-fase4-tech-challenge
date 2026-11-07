@@ -4,16 +4,16 @@ import { Button } from './ds/Button';
 import { StatusChip } from './ds/StatusChip';
 import { VideoPlayer } from './ds/VideoPlayer';
 import { Timeline } from './ds/Timeline';
-import { getSessionReport } from '../api/sessions';
-import { Printer, ArrowLeft, CheckCircle2, ZoomIn, X, ShieldCheck } from 'lucide-react';
+import { getSessionReport, markSessionEvaluated } from '../api/sessions';
+import { Printer, ArrowLeft, CheckCircle2, ZoomIn, X, ShieldCheck, TrendingUp } from 'lucide-react';
 
 /**
  * SessionReportView — Tela 5 (Relatório da Sessão):
  * Exibição analítica individual do vídeo com player anotado, timeline sincronizada,
- * galeria de evidências e apoio à decisão clínica.
+ * galeria de evidências, decomposição por série e apoio à decisão clínica.
  * Conforme Mock 5 (04-Relatorio-Sessao.dc.html).
  */
-export function SessionReportView({ sessionId, onBackToSessions }) {
+export function SessionReportView({ sessionId, onBackToSessions, onOpenEvolution }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,6 +32,7 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
         const data = await getSessionReport(sessionId);
         if (isMounted) {
           setReport(data);
+          setIsEvaluated(Boolean(data.avaliado_fisioterapeuta));
         }
       } catch (err) {
         if (isMounted) {
@@ -48,6 +49,15 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
       isMounted = false;
     };
   }, [sessionId]);
+
+  const handleMarkEvaluated = async () => {
+    setIsEvaluated(true);
+    try {
+      await markSessionEvaluated(sessionId, true);
+    } catch {
+      // Mantém feedback visual otimista mesmo se offline
+    }
+  };
 
   const handleSeek = (timeInSeconds) => {
     setSeekTarget(timeInSeconds);
@@ -108,11 +118,19 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
           <ArrowLeft size={16} /> Voltar para Sessões
         </Button>
         <div className="report-top-actions">
+          {onOpenEvolution && report.paciente_id && (
+            <Button
+              variant="secondary"
+              onClick={() => onOpenEvolution(report.paciente_id)}
+            >
+              <TrendingUp size={16} /> Ver Evolução do Paciente
+            </Button>
+          )}
           <Button variant="secondary" onClick={handlePrint}>
             <Printer size={16} /> Baixar PDF / Imprimir
           </Button>
           <Button
-            onClick={() => setIsEvaluated(true)}
+            onClick={handleMarkEvaluated}
             disabled={isEvaluated}
             className={isEvaluated ? 'btn-evaluated' : ''}
           >
@@ -130,13 +148,14 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
       {/* Cabeçalho do Laudo Clínico */}
       <header className="report-header">
         <div>
-          <h1>Relatório da sessão</h1>
+          <h1>Relatório da sessão — Dia {report.dia_tratamento || 1}</h1>
           <div className="f" style={{ flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
             <p className="mu">
               {report.paciente_id || 'Paciente'}
-              {report.slot_id ? ` · ${report.slot_id}` : ''} · {report.case_id || report.exercicio_id}{' '}
-              {report.exercicio_nome} · {report.valid_repetitions} de {report.target_repetitions || 5}{' '}
-              repetições válidas
+              {report.slot_id ? ` · ${report.slot_id}` : ''} · Dia {report.dia_tratamento || 1} ·{' '}
+              {report.case_id || report.exercicio_id} {report.exercicio_nome} ·{' '}
+              {report.series_prescritas || 3} séries × {report.repeticoes_por_serie || 5} reps ·{' '}
+              {report.valid_repetitions} de {report.target_repetitions || 5} repetições válidas
             </p>
             {report.lgpd_aceite !== false && (
               <span
@@ -220,16 +239,41 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
 
         {/* Coluna Direita: Métricas, Comparação Clínica e Justificativas */}
         <div className="g report-sidebar-column" style={{ alignContent: 'start', gap: '20px' }}>
-          {/* Card: Conformidade Biomecânica */}
+          {/* Card: Conformidade Biomecânica, Amplitude e Consistência */}
           <Card>
-            <h2>Conformidade Biomecânica</h2>
+            <h2>Conformidade, Amplitude e Consistência</h2>
             <div className="compliance-display">
               <span className="compliance-number">{complianceFormatted}</span>
               <span className="mu"> / 100%</span>
             </div>
             <p className="mu" style={{ marginTop: '4px' }}>
-              Válidas: <strong>{report.valid_repetitions}</strong> · Inválidas: <strong>{report.invalid_repetitions}</strong> · Desvios: <strong>{report.total_deviations}</strong>
+              Válidas: <strong>{report.valid_repetitions}</strong> · Inválidas:{' '}
+              <strong>{report.invalid_repetitions}</strong> · Desvios:{' '}
+              <strong>{report.total_deviations}</strong>
             </p>
+            <div className="fc-session-kpi-mini-grid">
+              <div>
+                <span className="mu" style={{ fontSize: '12px', display: 'block' }}>
+                  Amplitude Média / Máx
+                </span>
+                <strong>
+                  {Number(report.amplitude_media || 0).toFixed(1)}° / máx{' '}
+                  {Number(report.amplitude_maxima || 0).toFixed(1)}°
+                </strong>
+              </div>
+              <div>
+                <span className="mu" style={{ fontSize: '12px', display: 'block' }}>
+                  Consistência Biomecânica
+                </span>
+                <strong>{Number(report.consistencia_score || report.compliance_score || 0).toFixed(1)}%</strong>
+              </div>
+              <div>
+                <span className="mu" style={{ fontSize: '12px', display: 'block' }}>
+                  Nível de Dor (0–10)
+                </span>
+                <strong>{Number(report.dor_score_0_10 || 0).toFixed(1)}/10</strong>
+              </div>
+            </div>
             <div style={{ marginTop: '12px' }}>
               <StatusChip
                 level={riskLevel}
@@ -241,6 +285,34 @@ export function SessionReportView({ sessionId, onBackToSessions }) {
               />
             </div>
           </Card>
+
+          {/* Card: Desempenho por Série (n séries × m repetições — Issue #7) */}
+          {report.series_breakdown && report.series_breakdown.length > 0 && (
+            <Card>
+              <h2>
+                Desempenho por Série ({report.series_prescritas || report.series_breakdown.length} séries ×{' '}
+                {report.repeticoes_por_serie || 5} reps)
+              </h2>
+              <div className="fc-series-breakdown-vertical">
+                {report.series_breakdown.map((sb) => (
+                  <div key={sb.serie_index || sb.serie_numero} className="fc-series-row-item">
+                    <div className="f" style={{ justifyContent: 'space-between' }}>
+                      <strong>{sb.label || `Série ${sb.serie_index || sb.serie_numero}`}</strong>
+                      <span className="ch ne">
+                        {sb.repeticoes_validas}/{sb.repeticoes_alvo} válidas (
+                        {sb.repeticoes_completadas ?? sb.repeticoes_executadas} exec.)
+                      </span>
+                    </div>
+                    <p className="mu" style={{ marginTop: '4px', fontSize: '12px' }}>
+                      Amplitude média: <strong>{Number(sb.amplitude_media).toFixed(1)}°</strong> (pico{' '}
+                      {Number(sb.amplitude_maxima).toFixed(1)}°) · Consistência:{' '}
+                      <strong>{Number(sb.consistencia_serie).toFixed(1)}%</strong>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Card: Análise temporal da dor */}
           <Card>

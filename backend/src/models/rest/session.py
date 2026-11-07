@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +12,10 @@ class CreateSessionResponse(BaseModel):
     message: str = Field(..., description="Mensagem informativa sobre o processamento")
     paciente_id: Optional[str] = Field(default=None, description="ID do paciente vinculado")
     slot_id: Optional[str] = Field(default=None, description="Identificador do slot na prescrição (ex: 'SLOT-1')")
+    dia_tratamento: int = Field(default=1, ge=1, description="Dia de tratamento na jornada do plano (1..D)")
+    series_prescritas: int = Field(default=1, ge=1, description="Séries prescritas para o exercício")
+    repeticoes_por_serie: int = Field(default=5, ge=1, description="Repetições por série")
+    serie_index: Optional[int] = Field(default=None, description="Índice da série quando enviado individualmente")
     exercicio_id: str = Field(..., description="Exercício selecionado")
     lgpd_aceite: bool = Field(default=True, description="Registro de aceite do termo LGPD")
     created_at: str = Field(..., description="Timestamp de criação")
@@ -23,6 +27,10 @@ class CreateSessionPayload(BaseModel):
     exercicio_id: str = Field(..., description="Identificador do caso ou exercício (ex: 'FISIO-001')")
     paciente_id: Optional[str] = Field(None, description="Identificador sintético do paciente (ex: 'PAC-001')")
     slot_id: Optional[str] = Field(None, description="Identificador do slot da prescrição (ex: 'SLOT-1')")
+    dia_tratamento: int = Field(1, ge=1, le=30, description="Dia de tratamento na jornada do plano (1..D)")
+    series_prescritas: int = Field(1, ge=1, le=20, description="Quantidade de séries prescritas")
+    repeticoes_por_serie: int = Field(5, ge=1, le=50, description="Meta de repetições por série")
+    serie_index: Optional[int] = Field(None, description="Índice da série quando enviado por série individual")
     dataset_clip: Optional[str] = Field(
         None, description="Nome do clipe de referência do dataset (ex: 'FISIO-001-correto.mp4')"
     )
@@ -101,7 +109,12 @@ class SessionReportResponse(BaseModel):
     session_id: str
     paciente_id: Optional[str] = None
     slot_id: Optional[str] = None
+    dia_tratamento: int = 1
+    series_prescritas: int = 1
+    repeticoes_por_serie: int = 5
+    serie_index: Optional[int] = None
     lgpd_aceite: bool = True
+    avaliado_fisioterapeuta: bool = False
     exercicio_id: str
     exercicio_nome: str
     case_id: Optional[str] = None
@@ -109,6 +122,11 @@ class SessionReportResponse(BaseModel):
     created_at: Optional[str | datetime] = None
     status: str
     compliance_score: Optional[float] = None
+    amplitude_maxima: Optional[float] = None
+    amplitude_media: Optional[float] = None
+    consistencia_score: Optional[float] = None
+    dor_score_0_10: float = 0.0
+    series_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     risk_classification: Optional[str] = None
     risk_symbol: Optional[str] = None
     justificativas: list[str] = Field(default_factory=list)
