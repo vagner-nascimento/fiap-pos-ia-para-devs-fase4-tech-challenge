@@ -71,10 +71,10 @@ uv run ./backend/src/cli/analyze_video.py \
 
 Com a stack ativa, você pode disparar análises e consultar sessões/eventos diretamente pelo VS Code usando o arquivo de conveniência [`api.http`](api.http):
 
-* **Cadastro e consulta de pacientes, laudos e prescrições (Issue #3):**
-  `GET http://localhost:3000/api/pacientes` · `POST http://localhost:3000/api/pacientes` · `GET http://localhost:3000/api/pacientes/{id}`
-* **Inserção de laudo médico com extração automática e plano de exercícios:**
-  `POST http://localhost:3000/api/pacientes/{id}/laudo` · `POST http://localhost:3000/api/pacientes/{id}/plano`
+* **Cadastro e consulta de pacientes, laudos e prescrições (Issues #3 e #4):**
+  `GET http://localhost:3000/api/pacientes?nome=` · `POST http://localhost:3000/api/pacientes` · `GET http://localhost:3000/api/pacientes/{id}` · `GET http://localhost:3000/api/pacientes/{id}/sessoes`
+* **Inserção e consulta de laudo médico com extração automática e plano de exercícios:**
+  `POST/GET http://localhost:3000/api/pacientes/{id}/laudo` · `POST/GET http://localhost:3000/api/pacientes/{id}/plano`
 * **Download/status do dataset:** `GET /api/datasets/fisio/status` · `POST /api/datasets/fisio/download`
 * **Disparo assíncrono por clipe do dataset (retorna 202 com BackgroundTasks):**
   `POST http://localhost:3000/api/sessoes/referencia`
@@ -108,7 +108,7 @@ Com a stack ativa, você pode disparar análises e consultar sessões/eventos di
 
 ## 🧪 Testes Automatizados
 
-O backend conta com suíte automatizada de **130 testes unitários e de integração** (Pytest + `mongomock`):
+O backend conta com suíte automatizada de **137 testes unitários e de integração** (Pytest + `mongomock`):
 
 ```sh
 cd backend
@@ -135,5 +135,6 @@ uv run pytest tests -v
   * [ADR 0012: Extração Estruturada de Laudos e Persistência de Prescrições](docs/arquitetura/adrs/0012-extracao-estruturada-laudos-e-prescricoes.md)
 * 📋 **[PRD Oficial do Projeto](docs/prd-fisio-coach-tech-challenge-fase4-v1_2.md)** — Requisitos funcionais (RF-01 a RF-21), regras de negócio e personas;
 * 🗂️ **[Plano – Issue #3 (Inserção de Dados de Laudo e Prescrições)](plans/plano-issue-3-insercao-laudo-prescricoes.md)** — Especificação de backend, extração clínica e frontend para planos e laudos;
+* 🗂️ **[Plano – Issue #4 (Busca de Dados de Laudo e Prescrições pelo Paciente)](plans/plano-issue-4-busca-laudo-prescricoes.md)** — Especificação da visão do paciente (Tela 2 — *"Minha prescrição"*), busca tolerante a acentos e status por slot;
 * 🛠️ **[Walkthrough – Passo 3 (Relatório Individual e Frontend)](docs/walkthrough-passo-3-relatorio-individual.md)** — Guia de execução e testes da interface web do relatório individual (Issue #6);
 * 🛠️ **[Walkthrough do Motor de Detecção de Pose](docs/walkthrough-motor-deteccao-pose.md)** — Guia de desenvolvimento e calibração via CLI (Passo 1).

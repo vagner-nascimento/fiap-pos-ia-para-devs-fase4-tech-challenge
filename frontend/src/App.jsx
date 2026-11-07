@@ -11,9 +11,11 @@ import {
   LoaderCircle,
   RefreshCw,
   HeartPulse,
+  UserCheck,
 } from 'lucide-react';
 import { fetchHealth } from './api/health';
 import { PlanAndReportView } from './components/PlanAndReportView';
+import { PatientPrescriptionView } from './components/PatientPrescriptionView';
 import { SessionsListView } from './components/SessionsListView';
 import { ProcessingView } from './components/ProcessingView';
 import { SessionReportView } from './components/SessionReportView';
@@ -21,7 +23,7 @@ import { Card } from './components/ds/Card';
 import { Button } from './components/ds/Button';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('sessions'); // 'plan' | 'sessions' | 'processing' | 'report' | 'health'
+  const [currentView, setCurrentView] = useState('sessions'); // 'plan' | 'prescription' | 'sessions' | 'processing' | 'report' | 'health'
   const [activeSessionId, setActiveSessionId] = useState(null);
 
   // Estado da tela de Health Check
@@ -86,6 +88,14 @@ export default function App() {
 
           <button
             type="button"
+            className={`sidebar-nav-item ${currentView === 'prescription' ? 'on' : ''}`}
+            onClick={() => setCurrentView('prescription')}
+          >
+            <UserCheck size={16} /> <span>Minha prescrição</span>
+          </button>
+
+          <button
+            type="button"
             className={`sidebar-nav-item ${currentView === 'sessions' ? 'on' : ''}`}
             onClick={() => setCurrentView('sessions')}
           >
@@ -110,12 +120,19 @@ export default function App() {
             <HeartPulse size={16} /> <span>API Health</span>
           </button>
         </nav>
-        <small>Fisioterapeuta</small>
+        <small>{currentView === 'prescription' ? 'Paciente' : 'Fisioterapeuta'}</small>
       </aside>
 
       {/* Área de Conteúdo Principal */}
       <main className="m">
         {currentView === 'plan' && <PlanAndReportView />}
+
+        {currentView === 'prescription' && (
+          <PatientPrescriptionView
+            onSelectSession={handleOpenReport}
+            onSelectProcessing={handleOpenProcessing}
+          />
+        )}
 
         {currentView === 'sessions' && (
           <SessionsListView

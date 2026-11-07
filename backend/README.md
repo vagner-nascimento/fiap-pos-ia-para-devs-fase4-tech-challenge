@@ -34,10 +34,11 @@ uv run python -m src.main
 
 * **Swagger / OpenAPI:** [http://localhost:3000/docs](http://localhost:3000/docs)
 * **Health Check:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
-* **Rotas de Pacientes, Planos e Laudos (Issue #3):**
-  * `GET /api/pacientes`: Lista pacientes sintéticos cadastrados (com seed inicial `PAC-001` a `PAC-004` e filtro opcional `?nome=`);
+* **Rotas de Pacientes, Planos e Laudos (Issues #3 e #4):**
+  * `GET /api/pacientes`: Lista pacientes sintéticos cadastrados (com seed inicial `PAC-001` a `PAC-004` e filtro opcional `?nome=` insensível a acentos);
   * `POST /api/pacientes`: Cadastra ou atualiza um paciente sintético;
-  * `GET /api/pacientes/{id}`: Retorna os dados consolidados do paciente (`patient` + `laudo` + `plano`);
+  * `GET /api/pacientes/{id}`: Retorna os dados consolidados do paciente (`patient` + `laudo` + `plano` + `sessoes_recentes`);
+  * `GET /api/pacientes/{id}/sessoes`: Retorna o histórico de sessões do paciente ordenadas da mais recente para a mais antiga;
   * `POST /api/pacientes/laudo/extrair`: Extrai automaticamente região, lesão e restrições a partir do texto livre do laudo (preview);
   * `POST /api/pacientes/{id}/laudo` · `GET /api/pacientes/{id}/laudo`: Salva e consulta o laudo médico estruturado do paciente;
   * `POST /api/pacientes/{id}/plano` · `GET /api/pacientes/{id}/plano`: Salva e consulta o plano de prescrição de exercícios e limites clínicos do paciente;
@@ -148,7 +149,7 @@ backend/
 │   ├── server.py                       # Fábrica FastAPI, middlewares de CORS e /media
 │   └── main.py                         # Ponto de entrada do Uvicorn (porta 3000)
 └── tests/
-    └── unit/                           # Testes unitários com Pytest (130 testes)
+    └── unit/                           # Testes unitários com Pytest (137 testes)
 ```
 
 ---

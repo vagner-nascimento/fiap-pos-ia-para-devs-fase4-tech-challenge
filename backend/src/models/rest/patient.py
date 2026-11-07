@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from models.database.medical_report import MedicalReportDocument
 from models.database.patient import PatientDocument
 from models.database.plan import PlanDocument, PrescribedExerciseItem
+from models.database.session import SessionDocument
 
 
 class CreateOrUpdatePatientRequest(BaseModel):
@@ -86,9 +87,13 @@ class SavePlanRequest(BaseModel):
 
 
 class PatientClinicalBundleResponse(BaseModel):
-    """Visão consolidada do paciente com seu laudo e plano de prescrição ativos."""
+    """Visão consolidada do paciente com seu laudo, plano de prescrição e sessões recentes."""
 
     patient: PatientDocument
     laudo: Optional[MedicalReportDocument] = None
     plano: Optional[PlanDocument] = None
+    sessoes_recentes: list[SessionDocument] = Field(
+        default_factory=list,
+        description="Histórico de sessões recentes enviadas ou concluídas pelo paciente",
+    )
 

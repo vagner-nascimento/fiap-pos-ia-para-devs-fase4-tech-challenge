@@ -10,9 +10,11 @@ from fastapi import APIRouter, HTTPException, Query, status
 from infra.database.repositories.medical_report_repository import MedicalReportRepository
 from infra.database.repositories.patient_repository import PatientRepository
 from infra.database.repositories.plan_repository import PlanRepository
+from infra.database.repositories.session_repository import SessionRepository
 from models.database.medical_report import MedicalReportDocument
 from models.database.patient import PatientDocument
 from models.database.plan import PlanDocument, PrescribedExerciseItem
+from models.database.session import SessionDocument
 from models.rest.patient import (
     CreateOrUpdatePatientRequest,
     ExtractReportPreviewRequest,
@@ -443,11 +445,39 @@ def get_patient_bundle(paciente_id: str) -> PatientClinicalBundleResponse:
 
     laudo = report_repo.get_report_by_patient(paciente_id)
     plano = plan_repo.get_plan_by_patient(paciente_id)
+    sessoes = SessionRepository().list_sessions(paciente_id=paciente_id, limit=50)
     return PatientClinicalBundleResponse(
         patient=patient,
         laudo=laudo,
         plano=plano,
+        sessoes_recentes=sessoes,
     )
+
+
+@router.get(
+    "/{paciente_id}/sessoes",
+    response_model=list[SessionDocument],
+    summary="Listar histórico de sessões do paciente",
+    description=(
+        "Retorna as sessões de exercícios enviadas/concluídas pelo paciente, "
+        "ordenadas da mais recente para a mais antiga (PRD v1.2 seção 6.3)."
+    ),
+)
+def list_patient_sessions(
+    paciente_id: str,
+    limit: int = Query(50, ge=1, le=200, description="Número máximo de sessões a retornar"),
+) -> list[SessionDocument]:
+    patient_repo = PatientRepository()
+    ensure_seed_clinical_data(patient_repo=patient_repo)
+
+    if not patient_repo.get_patient(paciente_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Paciente '{paciente_id}' não encontrado.",
+        )
+
+    session_repo = SessionRepository()
+    return session_repo.list_sessions(paciente_id=paciente_id, limit=limit)
 
 
 # -------------------------------------------------------------------------

@@ -976,6 +976,25 @@ label {
   border-color: var(--fc-crit-fg);
 }
 
+/* Tela 2: Minha Prescrição (Mock 02-Paciente-Envio — Issue #4) */
+.prescription-limits-box {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--fc-radius-control);
+  background: var(--fc-bg);
+  border: 1px solid var(--fc-border);
+}
+
+.prescription-slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--fc-border);
+  flex-wrap: wrap;
+}
+
 /* Responsividade Mobile (< 768px) */
 @media (max-width: 768px) {
   .r {
@@ -989,7 +1008,8 @@ label {
     padding: 20px;
   }
   .report-main-grid,
-  .plan-top-grid {
+  .plan-top-grid,
+  .prescription-main-grid {
     grid-template-columns: 1fr !important;
   }
 }

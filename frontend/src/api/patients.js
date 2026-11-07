@@ -94,3 +94,28 @@ export async function savePatientPlan(pacienteId, payload) {
   return handleResponse(response, 'Falha ao salvar o plano de exercícios do paciente.');
 }
 
+/**
+ * Obtém o laudo médico estruturado de um paciente (Issue #4).
+ */
+export async function getPatientMedicalReport(pacienteId) {
+  const response = await fetch(`${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/laudo`);
+  return handleResponse(response, 'Laudo médico não encontrado para este paciente.');
+}
+
+/**
+ * Obtém o plano de prescrição de exercícios ativo de um paciente (Issue #4).
+ */
+export async function getPatientPlan(pacienteId) {
+  const response = await fetch(`${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/plano`);
+  return handleResponse(response, 'Plano de exercícios não encontrado para este paciente.');
+}
+
+/**
+ * Lista o histórico de sessões enviadas/concluídas pelo paciente (Issue #4).
+ */
+export async function listPatientSessions(pacienteId) {
+  const response = await fetch(`${apiBaseUrl}/pacientes/${encodeURIComponent(pacienteId)}/sessoes`);
+  return handleResponse(response, 'Falha ao carregar o histórico de sessões do paciente.');
+}
+
+
