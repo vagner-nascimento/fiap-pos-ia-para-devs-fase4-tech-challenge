@@ -8,6 +8,18 @@ O sistema analisa gravações de vídeo e áudio de pacientes executando exercí
 
 ---
 
+## Entregável principal: Relatório Técnico Final
+
+O relatório técnico da Fase 4 está disponível diretamente em [`docs/tech_report/`]. A versão oficial para entrega é o PDF:
+
+- **[Abrir o Relatório Técnico Final em PDF](docs/tech_report/relatorio-tecnico-fase-4.pdf)**
+- [Versão editável em Markdown](docs/tech_report/relatorio-tecnico-fase-4.md)
+- [Diagrama visual do fluxo ponta a ponta](docs/tech_report/fluxo-ponta-a-ponta.svg)
+
+O documento descreve o fluxo multimodal, os modelos utilizados, os resultados e exemplos de anomalias, a justificativa para o processamento local e as limitações em relação ao edital.
+
+---
+
 ## 🎯 Aderência ao Edital (Tech Challenge – Fase 4)
 
 O quadro abaixo resume como cada requisito do [Edital da Fase 4](docs/edital-tech-challenge-fase4.md) é atendido pela arquitetura do **Fisio Coach**:
