@@ -1,212 +1,212 @@
 # Fisio Coach
-## Relatorio Tecnico - Tech Challenge Fase 4
+## Relatório Técnico - Tech Challenge Fase 4
 
 **Curso:** FIAP Pos-Tech IA para Devs  
 **Projeto:** Fisio Coach  
-**Versao do relatorio:** 1.0  
+**Versão do relatório:** 1.0  
 **Data:** novembro de 2026  
 **Repositorio:** fiap-pos-ia-para-devs-fase4-tech-challenge
 
-> Este documento descreve a implementacao existente no repositorio. Quando um resultado quantitativo de acuracia ou latencia nao esta medido por benchmark versionado, o texto identifica a evidência como funcional/estrutural, sem apresentar numeros estimados como se fossem metricas experimentais.
+> Este documento descreve a implementação existente no repositório. Quando um resultado quantitativo de acurácia ou latência não está medido por benchmark versionado, o texto identifica a evidência como funcional/estrutural, sem apresentar números estimados como se fossem métricas experimentais.
 
 ---
 
 ## Resumo executivo
 
-O Fisio Coach e uma plataforma multimodal para apoio ao fisioterapeuta no acompanhamento remoto de sessoes de reabilitacao. A entrada principal e um video gravado pelo paciente, contendo imagem, movimento e, quando disponivel, a fala relacionada a dor. O sistema combina quatro fontes de informacao:
+O Fisio Coach e uma plataforma multimodal para apoio ao fisioterapeuta no acompanhamento remoto de sessões de reabilitação. A entrada principal e um vídeo gravado pelo paciente, contendo imagem, movimento e, quando disponível, a fala relacionada a dor. O sistema combina quatro fontes de informação:
 
-1. **Video:** landmarks corporais, angulos articulares, fases do movimento, repeticoes, desvios biomecanicos e equipamentos.
-2. **Audio:** extracao da trilha, transcricao local em portugues e classificacao de relatos de dor/desconforto com timestamps.
-3. **Texto clinico:** laudo e prescricao estruturados a partir de texto em portugues, com limites de movimento, dor aceitavel e exercicios prescritos.
-4. **Historico:** comparacao de sessoes ao longo dos dias, produzindo indicadores de amplitude, consistencia e dor.
+1. **Vídeo:** landmarks corporais, ângulos articulares, fases do movimento, repetições, desvios biomecânicos e equipamentos.
+2. **Áudio:** extração da trilha, transcrição local em português e classificação de relatos de dor/desconforto com timestamps.
+3. **Texto clínico:** laudo e prescrição estruturados a partir de texto em português, com limites de movimento, dor aceitável e exercícios prescritos.
+4. **Histórico:** comparação de sessões ao longo dos dias, produzindo indicadores de amplitude, consistência e dor.
 
-Os resultados sao persistidos em arquivos e MongoDB, apresentados em relatorios de sessao e evolucao, e convertidos em alertas com severidade `verde`, `atencao` ou `critico`. O frontend apresenta o video anotado, a linha do tempo de eventos, evidencias fotograficas e o painel de alertas.
+Os resultados são persistidos em arquivos e MongoDB, apresentados em relatórios de sessão e evolução, e convertidos em alertas com severidade `verde`, `atencao` ou `critico`. O frontend apresenta o vídeo anotado, a linha do tempo de eventos, evidências fotográficas e o painel de alertas.
 
-A solucao atende diretamente ao nucleo de analise de video, audio, texto, anomalias e fusao multimodal. Ha uma diferenca importante em relacao ao enunciado: a implementacao atual usa Faster-Whisper local e um classificador deterministico de dominio, em vez de Azure Speech to Text e Azure Text Analytics. Essa decisao esta documentada nos ADRs e prioriza custo zero, reprodutibilidade e execucao local. A integracao Azure permanece como extensao planejada, e nao e apresentada neste relatorio como funcionalidade concluida.
+A solução atende diretamente ao núcleo de análise de vídeo, áudio, texto, anomalias e fusão multimodal. Há uma diferença importante em relação ao enunciado: a implementação atual usa Faster-Whisper local e um classificador determinístico de domínio, em vez de Azure Speech to Text e Azure Text Analytics. Essa decisão está documentada nos ADRs e prioriza custo zero, reprodutibilidade e execução local. A integração Azure permanece como extensão planejada, e não é apresentada neste relatório como funcionalidade concluída.
 
 ---
 
 ## 1. Contexto, objetivo e escopo
 
-O desafio da Fase 4 propoe integrar IA a processos medicos, analisando dados multimodais para identificar sinais precoces de risco e alertar a equipe. O recorte escolhido foi o acompanhamento de exercicios de fisioterapia, no qual o paciente grava uma sessao e o fisioterapeuta precisa verificar se o movimento foi executado conforme a prescricao.
+O desafio da Fase 4 propõe integrar IA a processos médicos, analisando dados multimodais para identificar sinais precoces de risco e alertar a equipe. O recorte escolhido foi o acompanhamento de exercícios de fisioterapia, no qual o paciente grava uma sessão e o fisioterapeuta precisa verificar se o movimento foi executado conforme a prescrição.
 
 ### 1.1 Objetivo do produto
 
-O objetivo do Fisio Coach e reduzir o trabalho manual de revisao de sessoes, oferecendo ao profissional:
+O objetivo do Fisio Coach e reduzir o trabalho manual de revisão de sessões, oferecendo ao profissional:
 
-- contagem automatica de repeticoes;
+- contagem automática de repetições;
 - verificacao de amplitude e fase do movimento;
 - identificacao de compensacoes biomecanicas;
-- verificacao de equipamento quando aplicavel;
-- correlacao entre eventos do video e relatos de dor;
-- comparacao longitudinal entre dias de tratamento;
-- evidencias auditaveis para justificar cada alerta.
+- verificacao de equipamento quando aplicável;
+- correlação entre eventos do vídeo e relatos de dor;
+- comparação longitudinal entre dias de tratamento;
+- evidências auditáveis para justificar cada alerta.
 
-O sistema nao substitui avaliacao clinica. Ele produz sinais, medidas e evidencias para apoiar a decisao do fisioterapeuta.
+O sistema não substitui avaliação clínica. Ele produz sinais, medidas e evidências para apoiar a decisão do fisioterapeuta.
 
 ### 1.2 Escopo implementado
 
-O MVP suporta quatro exercicios:
+O MVP suporta quatro exercícios:
 
-| Codigo | Exercicio |
+| Codigo | Exercício |
 |---|---|
 | FISIO-001 | Extensao de joelho sentado |
 | FISIO-002 | Pendulo de ombro (Codman) |
-| FISIO-006 | Abducao de ombro com elastico |
+| FISIO-006 | Abdução de ombro com elástico |
 | FISIO-007 | Flexao de cotovelo com halter |
 
-A aplicacao suporta cadastro de paciente, laudo, prescricao, upload por slot prescrito, processamento assincrono, relatorio individual, evolucao longitudinal e painel de alertas. O armazenamento de demonstracao usa dados sinteticos.
+A aplicação suporta cadastro de paciente, laudo, prescrição, upload por slot prescrito, processamento assíncrono, relatório individual, evolução longitudinal e painel de alertas. O armazenamento de demonstração usa dados sintéticos.
 
 ### 1.3 Fora do escopo atual
 
-Nao fazem parte da implementacao atual:
+Não fazem parte da implementação atual:
 
-- analise de cirurgias;
-- sinais vitais como batimentos, pressao arterial e oxigenacao;
-- diagnostico medico;
-- treinamento de um modelo proprio de visao ou fala durante a execucao;
-- integracao efetiva com Azure Cognitive Services;
-- garantia clinica de acuracia sem validacao com dataset anotado e avaliacao profissional.
+- análise de cirurgias;
+- sinais vitais como batimentos, pressão arterial e oxigenação;
+- diagnóstico médico;
+- treinamento de um modelo próprio de visão ou fala durante a execução;
+- integração efetiva com Azure Cognitive Services;
+- garantia clínica de acurácia sem validação com dataset anotado e avaliação profissional.
 
 ---
 
-## 2. Aderencia aos entregaveis da Fase 4
+## 2. Aderencia aos entregáveis da Fase 4
 
-O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, alem de video demonstrativo. Este arquivo e o relatorio tecnico do repositorio. O video de demonstracao sera entregue separadamente, conforme a orientacao do edital; o link nao fica no repositorio e, por isso, nao e incorporado a este documento.
+O edital solicita repositório Git, relatório técnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, além de vídeo demonstrativo. Este arquivo é o relatório técnico do repositório. O vídeo de demonstração será entregue separadamente, conforme a orientação do edital; o link não fica no repositório e, por isso, não é incorporado a este documento.
 
-| Entregavel ou requisito | Evidencia no projeto | Situacao |
+| Entregavel ou requisito | Evidência no projeto | Situacao |
 |---|---|---|
-| Repositorio com codigo-fonte | Backend FastAPI, frontend React/Vite, Docker Compose, testes e documentacao | Implementado |
-| Fluxo multimodal | Pipeline de video, audio, texto clinico e evolucao | Implementado |
-| Modelos de video | MediaPipe Pose, analisadores de exercicio e YOLO para equipamentos | Implementado |
-| Modelos de audio | Faster-Whisper local e regras de classificacao de dor | Implementado com substituicao local |
-| Resultados e exemplos de anomalias | Relatorios JSON, video anotado, telemetria, snapshots e alertas | Implementado |
-| Alertas automaticos | Severidade e persistencia em `alertas`, painel web | Implementado |
-| Azure Speech to Text | Nao ha cliente Azure no codigo atual | Nao implementado, justificativa na secao 9 |
-| Azure Text Analytics | Nao ha cliente Azure no codigo atual | Nao implementado, justificativa na secao 9 |
-| Video de ate 15 minutos | Sera entregue separadamente, fora do repositorio | Entrega externa ao repositorio |
+| Repositorio com código-fonte | Backend FastAPI, frontend React/Vite, Docker Compose, testes e documentacao | Implementado |
+| Fluxo multimodal | Pipeline de vídeo, áudio, texto clínico e evolução | Implementado |
+| Modelos de vídeo | MediaPipe Pose, analisadores de exercício e YOLO para equipamentos | Implementado |
+| Modelos de áudio | Faster-Whisper local e regras de classificação de dor | Implementado com substituição local |
+| Resultados e exemplos de anomalias | Relatórios JSON, vídeo anotado, telemetria, snapshots e alertas | Implementado |
+| Alertas automáticos | Severidade e persistência em `alertas`, painel web | Implementado |
+| Azure Speech to Text | Não há cliente Azure no código atual | Não implementado, justificativa na seção 9 |
+| Azure Text Analytics | Não há cliente Azure no código atual | Não implementado, justificativa na seção 9 |
+| Vídeo de até 15 minutos | Será entregue separadamente, fora do repositório | Entrega externa ao repositório |
 
 ---
 
-## 3. Arquitetura da solucao
+## 3. Arquitetura da solução
 
 ### 3.1 Componentes
 
-A aplicacao e executada com Docker Compose em tres servicos principais:
+A aplicação e executada com Docker Compose em tres serviços principais:
 
 - **Frontend:** React 19, Vite e Nginx, exposto na porta 8080.
 - **Backend:** Python 3.11, FastAPI e motor de IA, exposto na porta 3000.
-- **MongoDB:** MongoDB 7 para persistencia, exposto na porta 27017.
+- **MongoDB:** MongoDB 7 para persistência, exposto na porta 27017.
 
-O diretorio `data` e montado como armazenamento persistente para videos originais, videos anotados, snapshots e arquivos JSON.
+O diretório `data` e montado como armazenamento persistente para vídeos originais, vídeos anotados, snapshots e arquivos JSON.
 
-O backend separa as responsabilidades entre routers REST, services, motor de pose, motor de audio, repositorios, armazenamento de midia e sinks de resultado. O processamento pode gravar simultaneamente em disco e banco por meio do `CompositeResultSink`.
+O backend separa as responsabilidades entre routers REST, services, motor de pose, motor de áudio, repositórios, armazenamento de mídia e sinks de resultado. O processamento pode gravar simultaneamente em disco e banco por meio do `CompositeResultSink`.
 
 ### 3.2 Fluxo ponta a ponta
 
 ![Diagrama do fluxo multimodal ponta a ponta](fluxo-ponta-a-ponta.svg)
 
-A API retorna `202 Accepted` para o processamento assincrono. O frontend consulta o status e atualiza o progresso ate a conclusao ou erro.
+A API retorna `202 Accepted` para o processamento assíncrono. O frontend consulta o status e atualiza o progresso até a conclusão ou erro.
 
-### 3.3 Persistencia e rastreabilidade
+### 3.3 Persistência e rastreabilidade
 
-As principais colecoes MongoDB sao:
+As principais coleções MongoDB são:
 
-- `pacientes`: dados cadastrais sinteticos;
-- `laudos`: regiao, lesao, restricoes e limites angulares;
-- `planos`: dias, exercicios, series, repeticoes, lado, equipamento e dor maxima;
-- `sessoes`: status, metadados, metricas, consentimento e referencias de midia;
-- `eventos`: repeticoes, desvios, evidencias e falas relacionadas a dor;
-- `alertas`: severidade, justificativa, status e vinculo com paciente/sessao.
+- `pacientes`: dados cadastrais sintéticos;
+- `laudos`: região, lesão, restrições e limites angulares;
+- `planos`: dias, exercícios, séries, repetições, lado, equipamento e dor máxima;
+- `sessoes`: status, metadados, métricas, consentimento e referências de mídia;
+- `eventos`: repetições, desvios, evidências e falas relacionadas a dor;
+- `alertas`: severidade, justificativa, status e vínculo com paciente/sessão.
 
-Cada execucao tambem pode produzir:
+Cada execução também pode produzir:
 
-- `annotated.mp4`: video com esqueleto, HUD, eventos e equipamento;
+- `annotated.mp4`: vídeo com esqueleto, HUD, eventos e equipamento;
 - `analysis.json`: resumo executivo estruturado;
-- `telemetry.json`: serie temporal de medidas;
+- `telemetry.json`: série temporal de medidas;
 - `evidence/*.jpg`: quadros que comprovam desvios.
 
 ---
 
-## 4. Modelos e tecnicas aplicados
+## 4. Modelos e técnicas aplicados
 
-### 4.1 Video e postura
+### 4.1 Vídeo e postura
 
-O `MediaPipe Pose` extrai 33 landmarks corporais. As coordenadas sao normalizadas e usadas para calcular angulos e distancias por geometria 2D. O pipeline identifica o lado ativo automaticamente quando o exercicio permite, considerando visibilidade e amplitude observada.
+O `MediaPipe Pose` extrai 33 landmarks corporais. As coordenadas são normalizadas e usadas para calcular ângulos e distancias por geometria 2D. O pipeline identifica o lado ativo automaticamente quando o exercício permite, considerando visibilidade e amplitude observada.
 
-A deteccao de repeticoes usa uma maquina de estados com fases de repouso, movimento concentrico, pico e movimento excentrico. Interpolacao de gaps e suavizacao reduzem o impacto de oclusoes momentaneas e ruido. A histerese evita que oscilacoes proximas do limiar sejam contadas como repeticoes adicionais.
+A detecção de repetições usa uma máquina de estados com fases de repouso, movimento concêntrico, pico e movimento excêntrico. Interpolacao de gaps e suavização reduzem o impacto de oclusões momentâneas e ruído. A histerese evita que oscilações próximas do limiar sejam contadas como repetições adicionais.
 
-O padrao Strategy permite que cada exercicio implemente seus angulos primarios e suas regras de desvio sem duplicar o pipeline comum. Os quatro analisadores ativos ficam registrados em um catalogo de exercicios.
+O padrão Strategy permite que cada exercício implemente seus ângulos primários e suas regras de desvio sem duplicar o pipeline comum. Os quatro analisadores ativos ficam registrados em um catálogo de exercícios.
 
 ### 4.2 Objetos e equipamentos
 
-O detector baseado em YOLO usa o modelo `best.pt` para reconhecer os equipamentos relevantes nos exercicios FISIO-006 e FISIO-007:
+O detector baseado em YOLO usa o modelo `best.pt` para reconhecer os equipamentos relevantes nos exercícios FISIO-006 e FISIO-007:
 
 - `faixa_elastica`;
 - `halter`.
 
-O resultado e associado aos frames e agregado no relatorio. O HUD mostra a caixa e o status do equipamento; a ausencia ou baixa cobertura pode gerar um achado de execucao.
+O resultado e associado aos frames e agregado no relatório. O HUD mostra a caixa e o status do equipamento; a ausência ou baixa cobertura pode gerar um achado de execução.
 
-### 4.3 Audio e fala
+### 4.3 Áudio e fala
 
-A trilha de audio e extraida e convertida para mono, 16 kHz, com reducao de ruido e normalizacao. O `Faster-Whisper` realiza a transcricao local em portugues. O resultado preserva timestamps para a fusao temporal com repeticoes e desvios.
+A trilha de áudio e extraída e convertida para mono, 16 kHz, com redução de ruído e normalização. O `Faster-Whisper` realiza a transcrição local em português. O resultado preserva timestamps para a fusão temporal com repetições e desvios.
 
-A classificacao de dor e deterministica e orientada ao dominio. As categorias sao:
+A classificação de dor e determinística e orientada ao domínio. As categorias são:
 
 - `pouca_ou_nenhuma_dor`;
 - `desconforto`;
 - `dor`;
 - `muita_dor`.
 
-As regras consideram termos e precedencia de negacao para reduzir classificacoes falsas em frases como “nao estou com dor”. O resultado nao e um modelo clinico de sentimento geral; e um classificador explicavel para relatos de dor e desconforto.
+As regras consideram termos e precedencia de negacao para reduzir classificacoes falsas em frases como “não estou com dor”. O resultado não e um modelo clínico de sentimento geral; e um classificador explicável para relatos de dor e desconforto.
 
-### 4.4 Texto clinico
+### 4.4 Texto clínico
 
-O extrator clinico interpreta laudo e prescricao em portugues para obter campos estruturados, como regiao anatomica, lesao, movimentos restritos, limites angulares, dias de tratamento, exercicios, series, repeticoes e dor maxima aceitavel.
+O extrator clínico interpreta laudo e prescrição em português para obter campos estruturados, como região anatômica, lesão, movimentos restritos, limites angulares, dias de tratamento, exercícios, séries, repetições e dor máxima aceitável.
 
-Esses dados funcionam como contexto para avaliar se uma sessao esta dentro da prescricao. A mesma medida biomecanica pode ser aceitavel para um paciente e gerar alerta para outro, dependendo do limite registrado.
+Esses dados funcionam como contexto para avaliar se uma sessão está dentro da prescrição. A mesma medida biomecânica pode ser aceitável para um paciente e gerar alerta para outro, dependendo do limite registrado.
 
 ### 4.5 Evolucao e anomalias
 
-A avaliacao longitudinal organiza as sessoes por dia, exercicio, serie e repeticao. Os indicadores principais sao:
+A avaliação longitudinal organiza as sessões por dia, exercício, série e repetição. Os indicadores principais são:
 
 - **Amplitude articular:** medida em graus, comparada a faixa esperada;
-- **Consistencia biomecanica:** escore de 0 a 100% derivado da regularidade das execucoes;
-- **Dor:** escore de 0 a 10 obtido da prescricao e dos relatos classificados.
+- **Consistencia biomecânica:** escore de 0 a 100% derivado da regularidade das execuções;
+- **Dor:** escore de 0 a 10 obtido da prescrição e dos relatos classificados.
 
-As regras de alerta combinam violacao de limite angular, compensacao, repeticao invalida, dor acima do limite e tendencia desfavoravel na evolucao. A situacao adequada e apresentada visualmente na cor verde; os estados de alerta sao `atencao` e `critico`, sempre com justificativa persistida para permitir revisao humana.
+As regras de alerta combinam violação de limite angular, compensação, repetição inválida, dor acima do limite e tendência desfavorável na evolução. A situação adequada é apresentada visualmente na cor verde; os estados de alerta são `atencao` e `critico`, sempre com justificativa persistida para permitir revisão humana.
 
 ---
 
 ## 5. Exemplos de anomalias detectadas
 
-Os exemplos abaixo representam os tipos de achado gerados pela implementacao e seus artefatos de evidencia. Eles descrevem o comportamento funcional e nao devem ser interpretados como estatistica de desempenho clinico.
+Os exemplos abaixo representam os tipos de achado gerados pela implementação e seus artefatos de evidência. Eles descrevem o comportamento funcional e não devem ser interpretados como estatística de desempenho clínico.
 
 ### 5.1 Desvio de amplitude ou limite angular
 
-Quando o angulo calculado ultrapassa o limite do laudo ou fica fora da faixa prescrita, o evento recebe referencia temporal, exercicio, repeticao e evidencia fotografica. O relatorio pode indicar a amplitude observada, o limite aplicavel e a recomendacao de revisao pelo fisioterapeuta.
+Quando o ângulo calculado ultrapassa o limite do laudo ou fica fora da faixa prescrita, o evento recebe referencia temporal, exercício, repetição e evidência fotográfica. O relatório pode indicar a amplitude observada, o limite aplicável e a recomendação de revisão pelo fisioterapeuta.
 
-**Evidencia produzida:** evento em `eventos`, registro em `analysis.json`, quadro em `evidence/*.jpg` e marcador no video anotado.
+**Evidência produzida:** evento em `eventos`, registro em `analysis.json`, quadro em `evidence/*.jpg` e marcador no vídeo anotado.
 
 ### 5.2 Compensacao postural
 
-Os analisadores verificam regras especificas do exercicio, como inclinacao de tronco, assimetria, movimento de segmento nao desejado ou falha da fase esperada. O achado e vinculado ao ciclo ou frame em que ocorreu.
+Os analisadores verificam regras especificas do exercício, como inclinacao de tronco, assimetria, movimento de segmento não desejado ou falha da fase esperada. O achado e vinculado ao ciclo ou frame em que ocorreu.
 
-**Resposta do sistema:** a repeticao pode ser marcada como invalida, o motivo aparece na timeline e a severidade e recalculada para o resumo da sessao.
+**Resposta do sistema:** a repetição pode ser marcada como inválida, o motivo aparece na timeline e a severidade e recalculada para o resumo da sessão.
 
-### 5.3 Dor relatada durante a execucao
+### 5.3 Dor relatada durante a execução
 
-Uma fala transcrita como “estou com muita dor” e associada ao timestamp do audio. O segmento passa a compor a timeline multimodal e pode elevar o risco quando supera a dor maxima definida na prescricao.
+Uma fala transcrita como “estou com muita dor” e associada ao timestamp do áudio. O segmento passa a compor a timeline multimodal e pode elevar o risco quando supera a dor máxima definida na prescrição.
 
-**Resposta do sistema:** o evento `fala_dor` e persistido, aparece junto ao player e pode alimentar alerta `atencao` ou `critico`, conforme a regra configurada.
+**Resposta do sistema:** o evento `fala_dor` é persistido, aparece junto ao player e pode alimentar alerta `atencao` ou `critico`, conforme a regra configurada.
 
 ### 5.4 Equipamento ausente ou inadequado
 
-Nos exercicios com faixa elastica ou halter, o detector verifica a presenca do objeto. A cobertura temporal e o status sao agregados no relatorio. Um resultado inconsistente e uma evidencia para revisao da sessao, sem afirmar sozinho que o movimento foi clinicamente incorreto.
+Nos exercícios com faixa elastica ou halter, o detector verifica a presença do objeto. A cobertura temporal e o status são agregados no relatório. Um resultado inconsistente e uma evidência para revisão da sessão, sem afirmar sozinho que o movimento foi clínicamente incorreto.
 
 ### 5.5 Piora longitudinal
 
-Se a amplitude diminui, a consistencia cai ou a dor aumenta ao longo dos dias, o servico de evolucao registra a tendencia e gera alerta para o painel do fisioterapeuta. O alerta mantem a justificativa e a relacao com as sessoes que o originaram.
+Se a amplitude diminui, a consistência cai ou a dor aumenta ao longo dos dias, o servico de evolução registra a tendencia e gera alerta para o painel do fisioterapeuta. O alerta mantém a justificativa e a relação com as sessões que o originaram.
 
 ---
 
@@ -214,33 +214,33 @@ Se a amplitude diminui, a consistencia cai ou a dor aumenta ao longo dos dias, o
 
 ### 6.1 Paciente
 
-1. Consulta a prescricao e os slots do dia.
-2. Envia o video correspondente ao exercicio.
-3. Confirma o consentimento LGPD da sessao.
+1. Consulta a prescrição e os slots do dia.
+2. Envia o vídeo correspondente ao exercício.
+3. Confirma o consentimento LGPD da sessão.
 4. Acompanha o processamento.
-5. Consulta o resultado liberado pela aplicacao.
+5. Consulta o resultado liberado pela aplicação.
 
 ### 6.2 Fisioterapeuta
 
 1. Cadastra paciente e laudo.
-2. Registra ou revisa a prescricao estruturada.
-3. Consulta sessoes e relatorios individuais.
-4. Reproduz o video anotado com timeline sincronizada.
-5. Inspeciona snapshots e metricas.
-6. Consulta evolucao multi-dias.
+2. Registra ou revisa a prescrição estruturada.
+3. Consulta sessões e relatórios individuais.
+4. Reproduz o vídeo anotado com timeline sincronizada.
+5. Inspeciona snapshots e métricas.
+6. Consulta evolução multi-dias.
 7. Le, marca e trata alertas.
 
 ### 6.3 Privacidade e governanca
 
-O upload exige aceite explicito de consentimento por sessao. A demonstracao utiliza dados sinteticos e mantem as midias separadas por identificador de execucao. O sistema foi desenhado como apoio a decisao, com justificativas e evidencias para revisao profissional, sem automatizar diagnostico.
+O upload exige aceite explícito de consentimento por sessão. A demonstração utiliza dados sintéticos e mantém as mídias separadas por identificador de execução. O sistema foi desenhado como apoio a decisão, com justificativas e evidências para revisão profissional, sem automatizar diagnóstico.
 
 ---
 
-## 7. Execucao e reproducibilidade
+## 7. Execução e reproducibilidade
 
-### 7.1 Execucao completa
+### 7.1 Execução completa
 
-Na raiz do repositorio:
+Na raiz do repositório:
 
 ```sh
 sh start_app.sh
@@ -266,7 +266,7 @@ sh stop_app.sh
 sh restart_app.sh
 ```
 
-### 7.2 Execucao do backend e testes
+### 7.2 Execução do backend e testes
 
 O backend requer Python `>=3.11,<3.13` e usa `uv` no fluxo documentado:
 
@@ -276,9 +276,9 @@ uv sync
 uv run pytest tests -v
 ```
 
-A suite cobre transcricao, dataset, geometria, repeticoes, analisadores, processador de video, YOLO, HUD, armazenamento de midia, progresso, APIs de sessao, pacientes, evolucao e alertas. Os arquivos de configuracao do repositorio declaram 147 testes automatizados.
+A suite cobre transcrição, dataset, geometria, repetições, analisadores, processador de vídeo, YOLO, HUD, armazenamento de mídia, progresso, APIs de sessão, pacientes, evolução e alertas. Os arquivos de configuração do repositório declaram 147 testes automatizados.
 
-### 7.3 Execucao CLI de um video
+### 7.3 Execução CLI de um vídeo
 
 ```sh
 uv run ./backend/src/cli/analyze_video.py \
@@ -289,7 +289,7 @@ uv run ./backend/src/cli/analyze_video.py \
   --run-id sessao_teste_01
 ```
 
-Para cada caso, o resultado deve ser inspecionado junto com o video anotado, o JSON executivo, a telemetria e as evidencias. A interpretacao clinica continua sendo responsabilidade do profissional.
+Para cada caso, o resultado deve ser inspecionado junto com o vídeo anotado, o JSON executivo, a telemetria e as evidências. A interpretação clínica continua sendo responsabilidade do profissional.
 
 ### 7.4 Frontend isolado
 
@@ -302,90 +302,90 @@ npm run dev
 
 ---
 
-## 8. Validacao, resultados e limites da evidencia
+## 8. Validacao, resultados e limites da evidência
 
-### 8.1 Evidencias de implementacao
+### 8.1 Evidencias de implementação
 
-O repositorio contem:
+O repositório contem:
 
-- codigo dos quatro analisadores ativos (FISIO-001, FISIO-002, FISIO-006 e FISIO-007);
-- testes unitarios e de integracao;
-- diretorios de saida de sessoes com resultados de pose;
+- código dos quatro analisadores ativos (FISIO-001, FISIO-002, FISIO-006 e FISIO-007);
+- testes unitarios e de integração;
+- diretórios de saida de sessões com resultados de pose;
 - documentacao de arquitetura e ADRs;
 - endpoints HTTP documentados em `api.http`;
-- componentes web para relatorio individual, evolucao e alertas.
+- componentes web para relatório individual, evolução e alertas.
 
-Isso comprova a existencia do fluxo implementado e permite uma demonstracao reproduzivel. Nao substitui, porem, uma avaliacao de acuracia contra ground truth clinico.
+Isso comprova a existência do fluxo implementado e permite uma demonstração reproduzível. Não substitui, porém, uma avaliação de acurácia contra ground truth clínico.
 
 ### 8.2 Riscos conhecidos
 
 - Camera, iluminacao, roupa e oclusao podem reduzir a qualidade dos landmarks.
-- A classificacao por regras nao cobre todo o vocabulário de dor, fadiga ou dificuldade respiratoria.
-- Whisper local depende da qualidade do audio e do modelo escolhido.
-- YOLO depende do dominio representado no modelo `best.pt`.
-- A execucao local em CPU pode aumentar o tempo de processamento.
-- Dados sinteticos nao representam a variabilidade de pacientes reais.
-- Alertas sao sinais de apoio e precisam de validacao profissional.
+- A classificação por regras não cobre todo o vocabulário de dor, fadiga ou dificuldade respiratoria.
+- Whisper local depende da qualidade do áudio e do modelo escolhido.
+- YOLO depende do domínio representado no modelo `best.pt`.
+- A execução local em CPU pode aumentar o tempo de processamento.
+- Dados sintéticos não representam a variabilidade de pacientes reais.
+- Alertas são sinais de apoio e precisam de validação profissional.
 
 ---
 
-## 9. Lacunas em relacao ao edital e plano de evolucao
+## 9. Lacunas em relação ao edital e plano de evolução
 
-### 9.1 Justificativa para nao usar Azure nesta versao
+### 9.1 Justificativa para não usar Azure nesta versão
 
-O edital cita Azure Speech to Text e Azure Text Analytics. A equipe avaliou essa alternativa, mas decidiu nao depender de recursos Azure na versao demonstrativa por uma combinacao de restricoes de custo, infraestrutura, privacidade e reproducibilidade. Essa escolha esta registrada nos ADRs 0010 (Faster-Whisper), 0011 (deteccao de dor por transcricao) e 0012 (extracao de laudos e prescricoes).
+O edital cita Azure Speech to Text e Azure Text Analytics. A equipe avaliou essa alternativa, mas decidiu não depender de recursos Azure na versão demonstrativa por uma combinacao de restrições de custo, infraestrutura, privacidade e reproducibilidade. Essa escolha está registrada nos ADRs 0010 (Faster-Whisper), 0011 (detecção de dor por transcrição) e 0012 (extração de laudos e prescrições).
 
-#### Criterios da decisao
+#### Criterios da decisão
 
-1. **Orcamento da demonstracao:** o projeto nao possui orcamento para servicos de nuvem. O uso de APIs gerenciadas introduziria custo recorrente por volume de audio, texto e chamadas, enquanto as alternativas locais nao possuem custo por requisicao.
-2. **Reproducibilidade:** a entrega precisa ser executavel por avaliadores com `docker compose up`, sem criar conta, provisionar recurso, cadastrar endpoint ou configurar chave de API. Os modelos e regras locais permitem repetir a demonstracao com a mesma entrada e o mesmo contrato de dados.
-3. **Execucao em CPU:** MediaPipe Pose, YOLO e Faster-Whisper foram configurados para CPU, com PyTorch/Torchvision CPU-only e Whisper em `int8`. Isso evita GPU dedicada, CUDA e custos de instancias de GPU na nuvem.
-4. **Privacidade e LGPD:** audio, transcricoes, laudos e prescricoes permanecem no ambiente local. Assim, a demonstracao nao precisa enviar dados de saude a um provedor externo; o projeto ainda usa dados sinteticos e registra o consentimento por sessao.
-5. **Explicabilidade:** a dor e extraida de segmentos transcritos com timestamps, normalizacao e regras de dominio, incluindo precedencia de negacao. O laudo usa extracao deterministica e revisao humana antes da persistencia. O profissional consegue ver o texto e revisar os campos, em vez de receber apenas uma classificacao opaca.
-6. **Testabilidade:** os componentes locais sao determinísticos o suficiente para testes unitarios, sem flutuação causada por rede, indisponibilidade, limite de quota ou mudanca de modelo remoto durante a avaliacao.
-7. **Complexidade operacional:** Azure exigiria credenciais, configuracao de recursos, observabilidade, tratamento de falhas de rede e controle de segredos. Remover essa dependencia manteve o backend portavel entre maquina local e container Docker.
+1. **Orcamento da demonstração:** o projeto não possui orçamento para serviços de nuvem. O uso de APIs gerenciadas introduziria custo recorrente por volume de áudio, texto e chamadas, enquanto as alternativas locais não possuem custo por requisição.
+2. **Reproducibilidade:** a entrega precisa ser executavel por avaliadores com `docker compose up`, sem criar conta, provisionar recurso, cadastrar endpoint ou configurar chave de API. Os modelos e regras locais permitem repetir a demonstração com a mesma entrada e o mesmo contrato de dados.
+3. **Execução em CPU:** MediaPipe Pose, YOLO e Faster-Whisper foram configurados para CPU, com PyTorch/Torchvision CPU-only e Whisper em `int8`. Isso evita GPU dedicada, CUDA e custos de instâncias de GPU na nuvem.
+4. **Privacidade e LGPD:** áudio, transcrições, laudos e prescrições permanecem no ambiente local. Assim, a demonstração não precisa enviar dados de saúde a um provedor externo; o projeto ainda usa dados sintéticos e registra o consentimento por sessão.
+5. **Explicabilidade:** a dor e extraída de segmentos transcritos com timestamps, normalização e regras de domínio, incluindo precedencia de negacao. O laudo usa extração determinística e revisão humana antes da persistência. O profissional consegue ver o texto e revisar os campos, em vez de receber apenas uma classificação opaca.
+6. **Testabilidade:** os componentes locais são determinísticos o suficiente para testes unitarios, sem flutuação causada por rede, indisponibilidade, limite de quota ou mudanca de modelo remoto durante a avaliação.
+7. **Complexidade operacional:** Azure exigiria credenciais, configuração de recursos, observabilidade, tratamento de falhas de rede e controle de segredos. Remover essa dependencia manteve o backend portável entre máquina local e container Docker.
 
 #### Recursos locais escolhidos
 
 | Necessidade | Recurso local | Motivo da escolha |
 |---|---|---|
 | Landmarks e postura | MediaPipe Pose | Roda em CPU, possui wheel Python, 33 landmarks e licenca permissiva; evita a dependencia de CUDA e a compilacao complexa do OpenPose (ADR 0001). |
-| Equipamentos | YOLO com `best.pt` | Detecta apenas `faixa_elastica` e `halter` nos exercicios FISIO-006 e FISIO-007, em CPU, sem chamada externa (ADR 0009). |
-| Transcricao | Faster-Whisper local | Mantem audio e timestamps no ambiente local, sem custo por requisicao, rede ou credenciais (ADR 0010). |
-| Dor na fala | Regras deterministicas sobre a transcricao | E explicavel, reproduzivel e adequado ao vocabulario restrito da demonstracao; nao exige um classificador clinico ou NLP em nuvem (ADR 0011). |
-| Laudo e prescricao | `clinical_extractor.py` + revisao humana | Extrai campos em portugues sem serviço pago e permite correcao pelo fisioterapeuta antes de salvar (ADR 0012). |
-| Persistencia e execucao | MongoDB, Docker Compose e armazenamento em `data/` | Mantem a stack local, auditavel e reproduzivel, sem depender de banco ou armazenamento gerenciado. |
+| Equipamentos | YOLO com `best.pt` | Detecta apenas `faixa_elastica` e `halter` nos exercícios FISIO-006 e FISIO-007, em CPU, sem chamada externa (ADR 0009). |
+| Transcrição | Faster-Whisper local | Mantém áudio e timestamps no ambiente local, sem custo por requisição, rede ou credenciais (ADR 0010). |
+| Dor na fala | Regras determinísticas sobre a transcrição | E explicável, reproduzível e adequado ao vocabulario restrito da demonstração; não exige um classificador clínico ou NLP em nuvem (ADR 0011). |
+| Laudo e prescrição | `clinical_extractor.py` + revisão humana | Extrai campos em português sem serviço pago e permite correção pelo fisioterapeuta antes de salvar (ADR 0012). |
+| Persistência e execução | MongoDB, Docker Compose e armazenamento em `data/` | Mantém a stack local, auditavel e reproduzível, sem depender de banco ou armazenamento gerenciado. |
 
-“Gratuito” neste contexto significa sem tarifa de servico por requisicao e baseado em componentes locais/open source ou em artefatos do proprio projeto. Isso nao elimina custos de hardware, energia, armazenamento ou manutencao, nem representa uma afirmacao de que todos os componentes possuem a mesma licenca.
+“Gratuito” neste contexto significa sem tarifa de servico por requisição e baseado em componentes locais/open source ou em artefatos do próprio projeto. Isso não elimina custos de hardware, energia, armazenamento ou manutencao, nem representa uma afirmacao de que todos os componentes possuem a mesma licenca.
 
 #### Trade-offs aceitos
 
-A decisao reduz escalabilidade e pode aumentar a latencia em CPU em comparacao com uma API cloud. O Whisper local tambem pode errar em ruido, sotaques e falas sobrepostas; as regras de dor nao compreendem toda nuance clinica; e o extrator de laudos cobre apenas o vocabulario mapeado. Por isso, os resultados sao apoio a decisao, nao diagnostico, e precisam de validacao com dados anotados e profissionais de saude antes de uso clinico.
+A decisão reduz escalabilidade e pode aumentar a latência em CPU em comparação com uma API cloud. O Whisper local também pode errar em ruído, sotaques e falas sobrepostas; as regras de dor não compreendem toda nuance clínica; e o extrator de laudos cobre apenas o vocabulario mapeado. Por isso, os resultados são apoio a decisão, não diagnóstico, e precisam de validação com dados anotados e profissionais de saúde antes de uso clínico.
 
-### 9.2 Azure Cognitive Services como evolucao compativel
+### 9.2 Azure Cognitive Services como evolução compativel
 
-A decisao local nao fecha a porta para Azure. Para diversificar a cobertura dos requisitos em uma futura implantacao, pode-se criar portas de transcricao e analise de linguagem com duas implementacoes:
+A decisão local não fecha a porta para Azure. Para diversificar a cobertura dos requisitos em uma futura implantação, pode-se criar portas de transcrição e análise de linguagem com duas implementações:
 
 - adaptador local para desenvolvimento, testes e modo offline;
-- adaptador Azure selecionado por configuracao para ambiente de demonstracao ou producao.
+- adaptador Azure selecionado por configuração para ambiente de demonstração ou produção.
 
-As credenciais devem permanecer em variaveis de ambiente e nunca no frontend ou no repositorio. O resultado dos dois adaptadores deve manter o mesmo contrato interno de segmentos, timestamps, texto e classificacao, permitindo trocar o provedor sem alterar o frontend nem a persistencia.
+As credenciais devem permanecer em variaveis de ambiente e nunca no frontend ou no repositório. O resultado dos dois adaptadores deve manter o mesmo contrato interno de segmentos, timestamps, texto e classificação, permitindo trocar o provedor sem alterar o frontend nem a persistência.
 
 ### 9.3 Sinais vitais
 
-A arquitetura de anomalias poderia receber um modulo de series temporais para batimentos, pressao e oxigenacao, com janela, baseline individual e regras de ausencia/outlier. Esse modulo poderia compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.
+A arquitetura de anomalias poderia receber um modulo de séries temporais para batimentos, pressão e oxigenação, com janela, baseline individual e regras de ausência/outlier. Esse modulo poderia compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.
 
 ---
 
 ## 10. Conclusao
 
-O Fisio Coach entrega uma implementacao funcional de acompanhamento multimodal para fisioterapia: processa video e audio, interpreta contexto textual, gera evidencias, persiste resultados e transforma anomalias em alertas revisaveis. A arquitetura separa API, services, motores de IA, persistencia e apresentacao, permitindo evolucao incremental.
+O Fisio Coach entrega uma implementação funcional de acompanhamento multimodal para fisioterapia: processa vídeo e áudio, interpreta contexto textual, gera evidências, persiste resultados e transforma anomalias em alertas revisáveis. A arquitetura separa API, services, motores de IA, persistência e apresentação, permitindo evolução incremental.
 
-O principal ponto de conformidade parcial e a camada de servicos Azure, substituida na versao atual por processamento local documentado. Essa limitacao esta explicitada para que o avaliador diferencie o que foi implementado do que permanece como evolucao. Dentro do recorte de fisioterapia e com dados sinteticos, o projeto oferece o fluxo tecnico necessario para demonstrar analise multimodal, deteccao de anomalias e apoio ao acompanhamento clinico.
+O principal ponto de conformidade parcial e a camada de serviços Azure, substituida na versão atual por processamento local documentado. Essa limitacao está explícitada para que o avaliador diferencie o que foi implementado do que permanece como evolução. Dentro do recorte de fisioterapia e com dados sintéticos, o projeto oferece o fluxo técnico necessário para demonstrar análise multimodal, detecção de anomalias e apoio ao acompanhamento clínico.
 
 ---
 
-## Referencias do repositorio
+## Referências do repositório
 
 - `README.md`
 - `docs/edital-tech-challenge-fase4.md`
