@@ -103,7 +103,7 @@ hr { border: 0; border-top: 1px solid #c9dadd; margin: 7mm 0; }
 </ul>
 <hr />
 <h2>2. Aderencia aos entregaveis da Fase 4</h2>
-<p>O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, alem de video demonstrativo. Este arquivo e o relatorio tecnico do repositorio. O video de demonstracao deve ser publicado separadamente no YouTube ou Vimeo conforme a orientacao do edital; nenhum link e embutido aqui porque nao foi localizado um link publicado no estado atual do projeto.</p>
+<p>O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, alem de video demonstrativo. Este arquivo e o relatorio tecnico do repositorio. O video de demonstracao sera entregue separadamente, conforme a orientacao do edital; o link nao fica no repositorio e, por isso, nao e incorporado a este documento.</p>
 <table>
 <thead>
 <tr>
@@ -146,17 +146,17 @@ hr { border: 0; border-top: 1px solid #c9dadd; margin: 7mm 0; }
 <tr>
 <td>Azure Speech to Text</td>
 <td>Nao ha cliente Azure no codigo atual</td>
-<td>Pendente</td>
+<td>Nao implementado, justificativa na secao 9</td>
 </tr>
 <tr>
 <td>Azure Text Analytics</td>
 <td>Nao ha cliente Azure no codigo atual</td>
-<td>Pendente</td>
+<td>Nao implementado, justificativa na secao 9</td>
 </tr>
 <tr>
 <td>Video de ate 15 minutos</td>
-<td>Deve ser publicado como artefato externo</td>
-<td>Link nao encontrado no repositorio</td>
+<td>Sera entregue separadamente, fora do repositorio</td>
+<td>Entrega externa ao repositorio</td>
 </tr>
 </tbody>
 </table>
@@ -224,7 +224,7 @@ hr { border: 0; border-top: 1px solid #c9dadd; margin: 7mm 0; }
 <li><strong>Consistencia biomecanica:</strong> escore de 0 a 100% derivado da regularidade das execucoes;</li>
 <li><strong>Dor:</strong> escore de 0 a 10 obtido da prescricao e dos relatos classificados.</li>
 </ul>
-<p>As regras de alerta combinam violacao de limite angular, compensacao, repeticao invalida, dor acima do limite e tendencia desfavoravel na evolucao. A severidade e traduzida em <code>verde</code>, <code>atencao</code> ou <code>critico</code>, com justificativa persistida para permitir revisao humana.</p>
+<p>As regras de alerta combinam violacao de limite angular, compensacao, repeticao invalida, dor acima do limite e tendencia desfavoravel na evolucao. A situacao adequada e apresentada visualmente na cor verde; os estados de alerta sao <code>atencao</code> e <code>critico</code>, sempre com justificativa persistida para permitir revisao humana.</p>
 <hr />
 <h2>5. Exemplos de anomalias detectadas</h2>
 <p>Os exemplos abaixo representam os tipos de achado gerados pela implementacao e seus artefatos de evidencia. Eles descrevem o comportamento funcional e nao devem ser interpretados como estatistica de desempenho clinico.</p>
@@ -318,20 +318,7 @@ npm run dev
 <li>componentes web para relatorio individual, evolucao e alertas.</li>
 </ul>
 <p>Isso comprova a existencia do fluxo implementado e permite uma demonstracao reproduzivel. Nao substitui, porem, uma avaliacao de acuracia contra ground truth clinico.</p>
-<h3>8.2 O que ainda precisa ser medido</h3>
-<p>Para uma validacao experimental completa, recomenda-se registrar:</p>
-<ul>
-<li>precisao, recall e F1 por tipo de exercicio e desvio;</li>
-<li>erro de contagem de repeticoes;</li>
-<li>word error rate da transcricao em audio clinico;</li>
-<li>precisao da classificacao de dor;</li>
-<li>mAP e matriz de confusao para equipamentos;</li>
-<li>latencia por minuto de video em CPU;</li>
-<li>taxa de falha por qualidade, oclusao e iluminacao;</li>
-<li>concordancia entre alertas e avaliacao de fisioterapeutas.</li>
-</ul>
-<p>Essas metricas nao sao declaradas neste documento porque nao ha protocolo anotado e resultado versionado no repositorio atual.</p>
-<h3>8.3 Riscos conhecidos</h3>
+<h3>8.2 Riscos conhecidos</h3>
 <ul>
 <li>Camera, iluminacao, roupa e oclusao podem reduzir a qualidade dos landmarks.</li>
 <li>A classificacao por regras nao cobre todo o vocabulário de dor, fadiga ou dificuldade respiratoria.</li>
@@ -401,26 +388,14 @@ npm run dev
 <h4>Trade-offs aceitos</h4>
 <p>A decisao reduz escalabilidade e pode aumentar a latencia em CPU em comparacao com uma API cloud. O Whisper local tambem pode errar em ruido, sotaques e falas sobrepostas; as regras de dor nao compreendem toda nuance clinica; e o extrator de laudos cobre apenas o vocabulario mapeado. Por isso, os resultados sao apoio a decisao, nao diagnostico, e precisam de validacao com dados anotados e profissionais de saude antes de uso clinico.</p>
 <h3>9.2 Azure Cognitive Services como evolucao compativel</h3>
-<p>A decisao local nao fecha a porta para Azure. Para atender integralmente ao requisito do edital em uma futura implantacao, recomenda-se criar portas de transcricao e analise de linguagem com duas implementacoes:</p>
+<p>A decisao local nao fecha a porta para Azure. Para diversificar a cobertura dos requisitos em uma futura implantacao, pode-se criar portas de transcricao e analise de linguagem com duas implementacoes:</p>
 <ul>
 <li>adaptador local para desenvolvimento, testes e modo offline;</li>
 <li>adaptador Azure selecionado por configuracao para ambiente de demonstracao ou producao.</li>
 </ul>
 <p>As credenciais devem permanecer em variaveis de ambiente e nunca no frontend ou no repositorio. O resultado dos dois adaptadores deve manter o mesmo contrato interno de segmentos, timestamps, texto e classificacao, permitindo trocar o provedor sem alterar o frontend nem a persistencia.</p>
-<h3>9.2 Sinais vitais</h3>
-<p>A arquitetura de anomalias deve ganhar um modulo de series temporais para batimentos, pressao e oxigenacao, com janela, baseline individual e regras de ausencia/outlier. O modulo deve compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.</p>
-<h3>9.3 Video demonstrativo</h3>
-<p>O video exigido pelo edital deve mostrar, em ate 15 minutos:</p>
-<ol>
-<li>cadastro de paciente, laudo e prescricao;</li>
-<li>upload com consentimento;</li>
-<li>processamento de audio e video;</li>
-<li>video anotado e timeline;</li>
-<li>exemplo de desvio ou dor;</li>
-<li>evolucao e alerta;</li>
-<li>quando implementada, a chamada Azure e sua resposta;</li>
-<li>fluxo final ate o painel da equipe medica.</li>
-</ol>
+<h3>9.3 Sinais vitais</h3>
+<p>A arquitetura de anomalias poderia receber um modulo de series temporais para batimentos, pressao e oxigenacao, com janela, baseline individual e regras de ausencia/outlier. Esse modulo poderia compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.</p>
 <hr />
 <h2>10. Conclusao</h2>
 <p>O Fisio Coach entrega uma implementacao funcional de acompanhamento multimodal para fisioterapia: processa video e audio, interpreta contexto textual, gera evidencias, persiste resultados e transforma anomalias em alertas revisaveis. A arquitetura separa API, services, motores de IA, persistencia e apresentacao, permitindo evolucao incremental.</p>

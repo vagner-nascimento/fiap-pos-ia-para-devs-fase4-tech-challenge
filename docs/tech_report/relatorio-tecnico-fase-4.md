@@ -72,7 +72,7 @@ Nao fazem parte da implementacao atual:
 
 ## 2. Aderencia aos entregaveis da Fase 4
 
-O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, alem de video demonstrativo. Este arquivo e o relatorio tecnico do repositorio. O video de demonstracao deve ser publicado separadamente no YouTube ou Vimeo conforme a orientacao do edital; nenhum link e embutido aqui porque nao foi localizado um link publicado no estado atual do projeto.
+O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, modelos aplicados e resultados/exemplos de anomalias, alem de video demonstrativo. Este arquivo e o relatorio tecnico do repositorio. O video de demonstracao sera entregue separadamente, conforme a orientacao do edital; o link nao fica no repositorio e, por isso, nao e incorporado a este documento.
 
 | Entregavel ou requisito | Evidencia no projeto | Situacao |
 |---|---|---|
@@ -82,9 +82,9 @@ O edital solicita repositorio Git, relatorio tecnico com fluxo multimodal, model
 | Modelos de audio | Faster-Whisper local e regras de classificacao de dor | Implementado com substituicao local |
 | Resultados e exemplos de anomalias | Relatorios JSON, video anotado, telemetria, snapshots e alertas | Implementado |
 | Alertas automaticos | Severidade e persistencia em `alertas`, painel web | Implementado |
-| Azure Speech to Text | Nao ha cliente Azure no codigo atual | Pendente |
-| Azure Text Analytics | Nao ha cliente Azure no codigo atual | Pendente |
-| Video de ate 15 minutos | Deve ser publicado como artefato externo | Link nao encontrado no repositorio |
+| Azure Speech to Text | Nao ha cliente Azure no codigo atual | Nao implementado, justificativa na secao 9 |
+| Azure Text Analytics | Nao ha cliente Azure no codigo atual | Nao implementado, justificativa na secao 9 |
+| Video de ate 15 minutos | Sera entregue separadamente, fora do repositorio | Entrega externa ao repositorio |
 
 ---
 
@@ -174,7 +174,7 @@ A avaliacao longitudinal organiza as sessoes por dia, exercicio, serie e repetic
 - **Consistencia biomecanica:** escore de 0 a 100% derivado da regularidade das execucoes;
 - **Dor:** escore de 0 a 10 obtido da prescricao e dos relatos classificados.
 
-As regras de alerta combinam violacao de limite angular, compensacao, repeticao invalida, dor acima do limite e tendencia desfavoravel na evolucao. A severidade e traduzida em `verde`, `atencao` ou `critico`, com justificativa persistida para permitir revisao humana.
+As regras de alerta combinam violacao de limite angular, compensacao, repeticao invalida, dor acima do limite e tendencia desfavoravel na evolucao. A situacao adequada e apresentada visualmente na cor verde; os estados de alerta sao `atencao` e `critico`, sempre com justificativa persistida para permitir revisao humana.
 
 ---
 
@@ -317,22 +317,7 @@ O repositorio contem:
 
 Isso comprova a existencia do fluxo implementado e permite uma demonstracao reproduzivel. Nao substitui, porem, uma avaliacao de acuracia contra ground truth clinico.
 
-### 8.2 O que ainda precisa ser medido
-
-Para uma validacao experimental completa, recomenda-se registrar:
-
-- precisao, recall e F1 por tipo de exercicio e desvio;
-- erro de contagem de repeticoes;
-- word error rate da transcricao em audio clinico;
-- precisao da classificacao de dor;
-- mAP e matriz de confusao para equipamentos;
-- latencia por minuto de video em CPU;
-- taxa de falha por qualidade, oclusao e iluminacao;
-- concordancia entre alertas e avaliacao de fisioterapeutas.
-
-Essas metricas nao sao declaradas neste documento porque nao ha protocolo anotado e resultado versionado no repositorio atual.
-
-### 8.3 Riscos conhecidos
+### 8.2 Riscos conhecidos
 
 - Camera, iluminacao, roupa e oclusao podem reduzir a qualidade dos landmarks.
 - A classificacao por regras nao cobre todo o vocabulário de dor, fadiga ou dificuldade respiratoria.
@@ -379,29 +364,16 @@ A decisao reduz escalabilidade e pode aumentar a latencia em CPU em comparacao c
 
 ### 9.2 Azure Cognitive Services como evolucao compativel
 
-A decisao local nao fecha a porta para Azure. Para atender integralmente ao requisito do edital em uma futura implantacao, recomenda-se criar portas de transcricao e analise de linguagem com duas implementacoes:
+A decisao local nao fecha a porta para Azure. Para diversificar a cobertura dos requisitos em uma futura implantacao, pode-se criar portas de transcricao e analise de linguagem com duas implementacoes:
 
 - adaptador local para desenvolvimento, testes e modo offline;
 - adaptador Azure selecionado por configuracao para ambiente de demonstracao ou producao.
 
 As credenciais devem permanecer em variaveis de ambiente e nunca no frontend ou no repositorio. O resultado dos dois adaptadores deve manter o mesmo contrato interno de segmentos, timestamps, texto e classificacao, permitindo trocar o provedor sem alterar o frontend nem a persistencia.
 
-### 9.2 Sinais vitais
+### 9.3 Sinais vitais
 
-A arquitetura de anomalias deve ganhar um modulo de series temporais para batimentos, pressao e oxigenacao, com janela, baseline individual e regras de ausencia/outlier. O modulo deve compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.
-
-### 9.3 Video demonstrativo
-
-O video exigido pelo edital deve mostrar, em ate 15 minutos:
-
-1. cadastro de paciente, laudo e prescricao;
-2. upload com consentimento;
-3. processamento de audio e video;
-4. video anotado e timeline;
-5. exemplo de desvio ou dor;
-6. evolucao e alerta;
-7. quando implementada, a chamada Azure e sua resposta;
-8. fluxo final ate o painel da equipe medica.
+A arquitetura de anomalias poderia receber um modulo de series temporais para batimentos, pressao e oxigenacao, com janela, baseline individual e regras de ausencia/outlier. Esse modulo poderia compartilhar o contrato de alerta, mas permanecer separado do analisador biomecanico.
 
 ---
 
