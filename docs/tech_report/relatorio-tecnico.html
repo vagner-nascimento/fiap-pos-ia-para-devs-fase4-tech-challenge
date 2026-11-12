@@ -318,7 +318,112 @@ npm run dev
 <li>componentes web para relatório individual, evolução e alertas.</li>
 </ul>
 <p>Isso comprova a existência do fluxo implementado e permite uma demonstração reproduzível. Não substitui, porém, uma avaliação de acurácia contra ground truth clínico.</p>
-<h3>8.2 Riscos conhecidos</h3>
+<h3>8.2 Plano e resultados da validação experimental</h3>
+<p>Para complementar as evidências de implementação, o repositório mantém o documento <a href="plano-validacao-experimental.md">Plano e Resultados da Validação Experimental</a>. Seu conteúdo foi incorporado a esta seção como registro do protocolo, das medições e dos resultados observados nas execuções reais.</p>
+<h4>8.2.1 Escopo e protocolo</h4>
+<p>O protocolo avalia oito quesitos do pipeline multimodal: precisão, recall e F1 por exercício e desvio; erro de contagem de repetições; Word Error Rate (WER) da transcrição; classificação de dor; detecção de equipamentos; latência em CPU; taxa de falha sob condições de qualidade, oclusão e iluminação; e concordância entre alertas e avaliação de fisioterapeutas.</p>
+<p>As execuções reais descritas no plano cobrem FISIO-001, FISIO-006 e FISIO-007. FISIO-002 possui sessão preliminar sem rotulagem temporal fina. Os resultados de FISIO-003, FISIO-004 e FISIO-005 presentes no documento original não são tratados como escopo ativo deste relatório, que considera apenas FISIO-001, FISIO-002, FISIO-006 e FISIO-007.</p>
+<h4>8.2.2 Precisão de desvios e equipamentos</h4>
+<table>
+<thead>
+<tr>
+<th>Exercício</th>
+<th>Achado avaliado</th>
+<th style="text-align: right;">Base</th>
+<th style="text-align: right;">Precision</th>
+<th style="text-align: right;">Recall</th>
+<th style="text-align: right;">F1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FISIO-001</td>
+<td><code>amplitude_reduzida</code></td>
+<td style="text-align: right;">6 repetições</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">1,00</td>
+</tr>
+<tr>
+<td>FISIO-001</td>
+<td><code>inclinacao_tronco</code></td>
+<td style="text-align: right;">5 repetições</td>
+<td style="text-align: right;">80,0%</td>
+<td style="text-align: right;">80,0%</td>
+<td style="text-align: right;">0,80</td>
+</tr>
+<tr>
+<td>FISIO-001</td>
+<td><code>velocidade_irregular</code></td>
+<td style="text-align: right;">5 repetições</td>
+<td style="text-align: right;">80,0%</td>
+<td style="text-align: right;">80,0%</td>
+<td style="text-align: right;">0,80</td>
+</tr>
+<tr>
+<td>FISIO-006</td>
+<td><code>inclinacao_tronco</code></td>
+<td style="text-align: right;">16 repetições</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">1,00</td>
+</tr>
+<tr>
+<td>FISIO-006</td>
+<td><code>faixa_elastica</code> via YOLO</td>
+<td style="text-align: right;">4 vídeos</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">1,00</td>
+</tr>
+<tr>
+<td>FISIO-007</td>
+<td><code>amplitude_reduzida</code></td>
+<td style="text-align: right;">16 repetições</td>
+<td style="text-align: right;">91,7%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">0,96</td>
+</tr>
+<tr>
+<td>FISIO-007</td>
+<td><code>balanco_tronco</code></td>
+<td style="text-align: right;">16 repetições</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">1,00</td>
+</tr>
+<tr>
+<td>FISIO-007</td>
+<td><code>halter</code> via YOLO</td>
+<td style="text-align: right;">5 vídeos</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">100,0%</td>
+<td style="text-align: right;">1,00</td>
+</tr>
+<tr>
+<td><strong>Média ponderada</strong></td>
+<td><strong>Desvios em vídeos reais</strong></td>
+<td style="text-align: right;"><strong>52 repetições</strong></td>
+<td style="text-align: right;"><strong>93,9%</strong></td>
+<td style="text-align: right;"><strong>96,9%</strong></td>
+<td style="text-align: right;"><strong>0,95</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Nos vídeos reais, a faixa elástica foi detectada em 83,8% dos frames avaliados e o halter em 61,8%. O checkpoint YOLO11 Nano foi treinado externamente à API com 23 imagens rotuladas e é utilizado apenas para inferência em CPU.</p>
+<h4>8.2.3 Erro de contagem de repetições</h4>
+<p>A base experimental totaliza 52 repetições avaliadas nos três exercícios com vídeos rotulados. O plano registra <strong>MAE = 0,06 repetição por série</strong> e <strong>OEC = 1,1%</strong>, abaixo da meta de 10% definida no PRD. FISIO-006 e FISIO-007 apresentaram aderência exata aos ciclos encenados nas sessões avaliadas.</p>
+<h4>8.2.4 Transcrição e classificação de dor</h4>
+<p>O benchmark de áudio clínico registrou WER médio ponderado de <strong>4,2%</strong>. Os cenários de dor aguda, desconforto, dor residual e ausência de dor obtiveram 0,0% individualmente; o cenário ruidoso obteve 12,5%.</p>
+<p>Para a classificação determinística de dor, a matriz experimental registrou <strong>93,7% de acurácia exata</strong> e <strong>100,0% de tolerância clínica em até um nível</strong>, acima da meta de 80% do PRD. A avaliação considera as classes <code>pouca_ou_nenhuma_dor</code>, <code>desconforto</code>, <code>dor</code>, <code>muita_dor</code> e <code>indeterminado</code>.</p>
+<h4>8.2.5 Latência em CPU</h4>
+<p>Para um minuto de vídeo a 30 fps, o plano registrou <strong>67,4 segundos</strong> para FISIO-001 e <strong>85,8 segundos</strong> para FISIO-006/007. Os fatores de tempo real foram, respectivamente, <strong>RTF = 1,12</strong> e <strong>RTF = 1,43</strong>. A latência registrada para emissão do alerta no painel foi inferior a dois segundos após a fusão.</p>
+<h4>8.2.6 Robustez e concordância de alertas</h4>
+<p>Nas sessões de FISIO-006 e FISIO-007, foram analisados 6.580 frames sem perda de pose quando o paciente permaneceu enquadrado. O protocolo de estresse também registrou aumento de perdas em baixa resolução, oclusão física e contraluz, com marcação de sessão inconclusiva quando o tronco ficou majoritariamente fora do quadro.</p>
+<p>Em um painel simulado com 30 sessões, a concordância absoluta entre o sistema e fisioterapeutas foi de <strong>90,0%</strong>, com <strong>Kappa de Cohen = 0,848</strong>. Não foram observados falsos negativos críticos no conjunto avaliado.</p>
+<h4>8.2.7 Interpretação dos resultados</h4>
+<p>As métricas acima são resultados experimentais do protocolo descrito no documento de validação e não uma garantia de desempenho clínico geral. A base é pequena, sintética e concentrada em condições controladas. Os resultados sustentam a demonstração técnica do pipeline, mas o uso clínico exigiria ampliação da amostra, separação entre treino, validação e teste, rotulagem independente e avaliação por profissionais de saúde.</p>
+<h3>8.3 Riscos conhecidos</h3>
 <ul>
 <li>Camera, iluminacao, roupa e oclusao podem reduzir a qualidade dos landmarks.</li>
 <li>A classificação por regras não cobre todo o vocabulário de dor, fadiga ou dificuldade respiratoria.</li>
