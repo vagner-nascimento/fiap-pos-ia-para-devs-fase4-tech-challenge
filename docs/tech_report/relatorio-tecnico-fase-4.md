@@ -319,7 +319,7 @@ Isso comprova a existência do fluxo implementado e permite uma demonstração r
 
 ### 8.2 Plano e resultados da validação experimental
 
-Para complementar as evidências de implementação, o repositório mantém o documento [Plano e Resultados da Validação Experimental](plano-validacao-experimental.md). Seu conteúdo foi incorporado a esta seção como registro do protocolo, das medições e dos resultados observados nas execuções reais.
+Para complementar as evidências de implementação, o repositório mantém o documento **Plano e Resultados da Validação Experimental**. Seu conteúdo foi incorporado a esta seção como registro do protocolo, das medições e dos resultados observados nas execuções reais.
 
 #### 8.2.1 Escopo e protocolo
 
