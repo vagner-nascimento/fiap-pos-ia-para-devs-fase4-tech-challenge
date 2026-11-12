@@ -7,3 +7,5 @@ docs/code-examples/.venv
 data/inputs/*
 data/outputs/*
 !data/**/.gitkeep
+
+EXEMPLO_RELATÓRIO.pdf

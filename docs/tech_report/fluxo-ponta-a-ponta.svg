@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo ponta a ponta do Fisio Coach</title>
+  <desc id="desc">Fluxo do upload de vídeo pelo paciente até a exibição de relatórios e alertas.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0b5563"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#12343b" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="780" fill="#f7faf9"/>
+  <text x="40" y="48" font-family="DejaVu Sans, sans-serif" font-size="25" font-weight="700" fill="#0b5563">Fluxo multimodal ponta a ponta</text>
+  <text x="40" y="76" font-family="DejaVu Sans, sans-serif" font-size="14" fill="#526970">Da sessão gravada ao alerta revisável pelo fisioterapeuta</text>
+
+  <rect x="35" y="105" width="1130" height="135" rx="14" fill="#e6f2f1" stroke="#9bc7c7"/>
+  <text x="60" y="135" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#0b5563">1. Entrada e consentimento</text>
+  <rect x="60" y="153" width="235" height="62" rx="9" fill="#ffffff" stroke="#4b9da0" filter="url(#shadow)"/>
+  <text x="177" y="180" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#183b43">Paciente</text>
+  <text x="177" y="200" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#526970">vídeo + áudio + aceite LGPD</text>
+  <path d="M 295 184 H 360" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="370" y="153" width="300" height="62" rx="9" fill="#ffffff" stroke="#4b9da0" filter="url(#shadow)"/>
+  <text x="520" y="180" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#183b43">Frontend React</text>
+  <text x="520" y="200" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#526970">upload por slot prescrito</text>
+  <path d="M 670 184 H 735" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="745" y="153" width="360" height="62" rx="9" fill="#ffffff" stroke="#4b9da0" filter="url(#shadow)"/>
+  <text x="925" y="180" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#183b43">FastAPI /api/sessoes</text>
+  <text x="925" y="200" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#526970">retorna 202 e inicia processamento</text>
+
+  <rect x="35" y="265" width="1130" height="135" rx="14" fill="#fff4df" stroke="#e1bd76"/>
+  <text x="60" y="295" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#855b12">2. Registro e armazenamento</text>
+  <rect x="60" y="313" width="300" height="62" rx="9" fill="#ffffff" stroke="#d49b31" filter="url(#shadow)"/>
+  <text x="210" y="340" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#4d3a18">MediaStorage</text>
+  <text x="210" y="360" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#6d5a35">vídeo original em data/inputs</text>
+  <path d="M 360 344 H 430" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="440" y="313" width="300" height="62" rx="9" fill="#ffffff" stroke="#d49b31" filter="url(#shadow)"/>
+  <text x="590" y="340" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#4d3a18">MongoDB</text>
+  <text x="590" y="360" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#6d5a35">sessão: enviado - processando</text>
+  <path d="M 740 344 H 810" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="820" y="313" width="285" height="62" rx="9" fill="#ffffff" stroke="#d49b31" filter="url(#shadow)"/>
+  <text x="962" y="340" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#4d3a18">Background task</text>
+  <text x="962" y="360" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="12" fill="#6d5a35">processamento assíncrono</text>
+
+  <rect x="35" y="425" width="1130" height="160" rx="14" fill="#e9eef8" stroke="#9fb3d8"/>
+  <text x="60" y="455" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#274d86">3. Análise multimodal</text>
+  <rect x="60" y="475" width="285" height="75" rx="9" fill="#ffffff" stroke="#557ab3" filter="url(#shadow)"/>
+  <text x="202" y="503" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#203c68">MediaPipe Pose</text>
+  <text x="202" y="523" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">landmarks, ângulos, repetições</text>
+  <text x="202" y="540" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">e desvios biomecânicos</text>
+  <path d="M 345 512 H 395" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="405" y="475" width="285" height="75" rx="9" fill="#ffffff" stroke="#557ab3" filter="url(#shadow)"/>
+  <text x="547" y="503" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#203c68">YOLO</text>
+  <text x="547" y="523" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">faixa elastica / halter</text>
+  <text x="547" y="540" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">somente FISIO-006/007</text>
+  <path d="M 690 512 H 740" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="750" y="475" width="355" height="75" rx="9" fill="#ffffff" stroke="#557ab3" filter="url(#shadow)"/>
+  <text x="927" y="503" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#203c68">Faster-Whisper + regras</text>
+  <text x="927" y="523" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">transcrição, dor e timestamps</text>
+  <text x="927" y="540" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#52647f">em português</text>
+
+  <rect x="35" y="610" width="1130" height="135" rx="14" fill="#e9f4e9" stroke="#a8cba8"/>
+  <text x="60" y="640" font-family="Deja Vu Sans, sans-serif" font-size="15" font-weight="700" fill="#35663a">4. Fusão, evidências e resposta</text>
+  <rect x="60" y="658" width="250" height="62" rx="9" fill="#ffffff" stroke="#6eaa72" filter="url(#shadow)"/>
+  <text x="185" y="685" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="15" font-weight="700" fill="#315d36">Fusao multimodal</text>
+  <text x="185" y="705" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#526b56">laudo + prescrição + histórico</text>
+  <path d="M 310 689 H 360" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="370" y="658" width="260" height="62" rx="9" fill="#ffffff" stroke="#6eaa72" filter="url(#shadow)"/>
+  <text x="500" y="685" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="15" font-weight="700" fill="#315d36">Resultados</text>
+  <text x="500" y="705" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#526b56">MP4 + JSON + snapshots</text>
+  <path d="M 630 689 H 680" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="690" y="658" width="190" height="62" rx="9" fill="#ffffff" stroke="#6eaa72" filter="url(#shadow)"/>
+  <text x="785" y="685" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="15" font-weight="700" fill="#315d36">Alertas</text>
+  <text x="785" y="705" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#526b56">verde / atenção / crítico</text>
+  <path d="M 880 689 H 930" stroke="#0b5563" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="940" y="658" width="165" height="62" rx="9" fill="#ffffff" stroke="#6eaa72" filter="url(#shadow)"/>
+  <text x="1022" y="685" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#315d36">Fisioterapeuta</text>
+  <text x="1022" y="705" text-anchor="middle" font-family="Deja Vu Sans, sans-serif" font-size="12" fill="#526b56">revisa e trata</text>
+</svg>
